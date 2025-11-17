@@ -1,0 +1,13 @@
+
+> egg9@1.0.0 start
+> expo start
+
+Starting project at /home/j.zejnula/Projects/Egg9
+Starting Metro Bundler
+Waiting on http://localhost:8081
+Logs for your project will appear below.
+λ Bundled 1934ms node_modules/expo-router/node/render.js (613 modules)
+λ  WARN  props.pointerEvents is deprecated. Use style.pointerEvents 
+Web Bundled 3250ms node_modules/expo-router/entry.js (775 modules)
+Web Bundled 450ms node_modules/expo-router/entry.js (691 modules)
+ LOG  [web] Logs will appear in the browser console
