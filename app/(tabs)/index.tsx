@@ -231,7 +231,7 @@ export default function HomeScreen() {
                     Ordered
                   </Chip>
                   <Text variant="headlineSmall" style={styles.orderQuantity}>
-                    {currentWeekOrder.products[0].quantity} eggs
+                    {currentWeekOrder.quantity} eggs
                   </Text>
                   <Text variant="bodyMedium" style={styles.orderPrice}>
                     ${currentWeekOrder.total.toFixed(2)}

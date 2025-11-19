@@ -52,7 +52,7 @@ export default function OrderScreen() {
       setAvailableEggs(available);
       
       if (currentOrder) {
-        setQuantity(currentOrder.products[0].quantity);
+        setQuantity(currentOrder.quantity);
       } else {
         setQuantity(10);
       }
@@ -91,7 +91,7 @@ export default function OrderScreen() {
       setAvailableEggs(available);
       
       if (currentOrder) {
-        setQuantity(currentOrder.products[0].quantity);
+        setQuantity(currentOrder.quantity);
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'Failed to place order');
@@ -140,7 +140,7 @@ export default function OrderScreen() {
   const incrementQuantity = () => {
     let maxAvailable = availableEggs;
     if (currentWeekOrder) {
-      maxAvailable += currentWeekOrder.products[0].quantity;
+      maxAvailable += currentWeekOrder.quantity;
     }
     
     if (quantity < maxAvailable) {
@@ -162,7 +162,7 @@ export default function OrderScreen() {
   const getMaxAvailable = () => {
     let maxAvailable = availableEggs;
     if (currentWeekOrder) {
-      maxAvailable += currentWeekOrder.products[0].quantity;
+      maxAvailable += currentWeekOrder.quantity;
     }
     return maxAvailable;
   };

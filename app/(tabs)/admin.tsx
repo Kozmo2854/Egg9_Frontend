@@ -151,7 +151,7 @@ export default function AdminScreen() {
       .map(order => ({
         id: `order-${order.id}`,
         userName: order.userName || 'Unknown',
-        quantity: order.products[0].quantity,
+        quantity: order.quantity,
         price: order.total,
         type: 'One-time Order' as const,
       }));
@@ -518,7 +518,7 @@ export default function AdminScreen() {
                   </RNView>
                   <RNView style={styles.orderDetails}>
                     <Text variant="titleMedium" style={styles.itemValue}>
-                      {order.products[0].quantity} eggs
+                      {order.quantity} eggs
                     </Text>
                     <Text variant="bodyMedium" style={styles.priceText}>
                       ${order.total.toFixed(2)}
@@ -555,7 +555,7 @@ export default function AdminScreen() {
                   </RNView>
                   <RNView style={styles.orderDetails}>
                     <Text variant="titleMedium" style={[styles.itemValue, styles.deliveredText]}>
-                      {order.products[0].quantity} eggs
+                      {order.quantity} eggs
                     </Text>
                     <Text variant="bodyMedium" style={[styles.priceText, styles.deliveredText]}>
                       ${order.total.toFixed(2)}
