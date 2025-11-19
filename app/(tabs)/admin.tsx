@@ -185,7 +185,11 @@ export default function AdminScreen() {
 
   const getAllPendingItems = () => {
     const pendingOrders = allOrders
-      .filter(order => order.deliveryStatus === 'not_delivered')
+      .filter(order => 
+        order.deliveryStatus === 'not_delivered' && 
+        order.status !== 'declined' &&
+        order.status !== 'completed'
+      )
       .map(order => ({
         id: `order-${order.id}`,
         userName: order.userName || 'Unknown',
@@ -212,7 +216,11 @@ export default function AdminScreen() {
   };
 
   const getPendingOrders = () => {
-    return allOrders.filter(order => order.deliveryStatus === 'not_delivered');
+    return allOrders.filter(order => 
+      order.deliveryStatus === 'not_delivered' && 
+      order.status !== 'declined' &&
+      order.status !== 'completed'
+    );
   };
 
   const getDeliveredOrders = () => {
