@@ -16,7 +16,7 @@ import {
 } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { apiService } from '@/services/api';
-import { useRouter } from 'expo-router';
+import { useRouter, Link } from 'expo-router';
 
 interface FormErrors {
   email?: string;
@@ -183,6 +183,20 @@ export default function LoginScreen() {
                 {loading ? 'Logging in...' : 'Login'}
               </Button>
 
+              {/* Sign Up Link */}
+              <View style={styles.signupSection}>
+                <Text style={styles.signupText}>Don't have an account? </Text>
+                <Link href="/register" asChild>
+                  <Button
+                    mode="text"
+                    compact
+                    labelStyle={{ color: theme.colors.primary }}
+                  >
+                    Sign Up
+                  </Button>
+                </Link>
+              </View>
+
               {/* Test Credentials */}
               <View style={styles.credentialsSection}>
                 <Button
@@ -345,8 +359,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  signupSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+  },
+  signupText: {
+    fontSize: 14,
+    color: '#666',
+  },
   credentialsSection: {
-    marginTop: 20,
+    marginTop: 16,
     alignItems: 'center',
   },
   credentialsBox: {

@@ -125,7 +125,7 @@ Fully functional app with modern Material Design 3 interface
    - User authentication (3 test users + 1 admin)
    - Weekly stock management
    - One-time orders
-   - Weekly subscriptions (with 8% discount)
+   - Weekly subscriptions (regular pricing, no discount)
    - Multi-user support with shared stock
    - Admin panel for stock, delivery, and order management
 9. ✅ Modernized UI with React Native Paper

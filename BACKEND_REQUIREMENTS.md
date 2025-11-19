@@ -24,7 +24,7 @@ Egg9 connects egg producers with customers, enabling:
    - Recurring weekly orders
    - Duration: 4-12 weeks
    - Max quantity: 30 eggs/week
-   - 8% discount on total price
+   - Regular pricing (no discount)
 7. **Multi-User System**: 
    - Global shared stock
    - Users can only see their own orders/subscriptions
@@ -817,17 +817,137 @@ Provide OpenAPI/Swagger documentation or Postman collection
 
 ---
 
-## Weekly Automation (Future Enhancement)
+## Weekly Automation (REQUIRED - Core Feature)
 
-**Note**: This should be handled by the backend, not the frontend.
+**CRITICAL REQUIREMENT**: This must be implemented as a core backend feature using Laravel's task scheduling.
 
-Consider implementing a Laravel scheduled job that runs every Monday at 00:01 to:
-1. Archive previous week's stock
-2. Create new weekly stock record
-3. Process active subscriptions (create orders, decrement weeks_remaining)
-4. Send notifications to users
+### Implementation: Laravel Scheduled Command
 
-This is not required for initial implementation but should be considered in the architecture.
+Create a Laravel scheduled command that runs **every Monday at 00:01** to automate the weekly cycle.
+
+### Command: `php artisan egg9:process-weekly-cycle`
+
+**Schedule in `app/Console/Kernel.php`:**
+```php
+protected function schedule(Schedule $schedule)
+{
+    $schedule->command('egg9:process-weekly-cycle')
+             ->weeklyOn(1, '00:01') // Monday at 00:01
+             ->timezone('UTC');
+}
+```
+
+### Required Actions (in order):
+
+#### 1. Archive Previous Week
+- Mark the previous week's stock record as closed
+- Keep the record for historical/reporting purposes
+- Set `is_ordering_open = false` for the old week
+
+#### 2. Create New Weekly Stock
+- Create a new `weekly_stocks` record for the current week
+- Set `week_start` to current Monday (today)
+- Set `week_end` to next Monday (7 days from now)
+- Initialize with default values:
+  - `available_eggs` = 0 (admin will set this)
+  - `price_per_dozen` = 5.99 (or carry from previous week)
+  - `is_ordering_open` = true
+  - `delivery_date` = null (admin will set)
+  - `delivery_time` = null (admin will set)
+  - `all_orders_delivered` = false
+
+#### 3. Process Active Subscriptions
+For each subscription where `status = 'active'`:
+
+a. **Create Weekly Order:**
+   - Create a new order in `orders` table
+   - Set `user_id` from subscription
+   - Set `quantity` from subscription
+   - Set `price_per_dozen` from new weekly stock
+   - Calculate `total` = (quantity / 10) * price_per_dozen
+   - Set `status` = 'pending'
+   - Set `delivery_status` = 'not_delivered'
+   - Set `week_start` = new week's start date
+
+b. **Decrement Weeks Remaining:**
+   - Decrease `weeks_remaining` by 1
+   - If `weeks_remaining` reaches 0:
+     - Set subscription `status` = 'completed' or 'cancelled'
+     - This is the last order for this subscription
+
+c. **Update Next Delivery:**
+   - Set `next_delivery` = next Monday (7 days from now)
+
+d. **Stock Management:**
+   - The new orders created will automatically reduce available stock
+   - Ensure stock calculation accounts for these new orders
+
+#### 4. Error Handling & Logging
+- Log all subscription processing (success/failure)
+- If a subscription fails to process (e.g., insufficient stock):
+  - Log the error
+  - Notify admin via email/database notification
+  - DO NOT mark subscription as failed (let admin decide)
+- Send email notification to users about their auto-generated orders
+- Create system log for the weekly cycle completion
+
+#### 5. Notifications (Optional but Recommended)
+- Email users about their new weekly order from subscription
+- Notify admin about the new week starting
+- Alert admin if any subscriptions couldn't be processed
+
+### Example Processing Flow:
+
+```
+Monday 00:01 - Automation Runs:
+----------------------------------
+1. Old week: Jan 1-7 → Mark as closed
+2. New week: Jan 8-14 → Create stock record
+3. User A subscription: 20 eggs
+   → Create order for Jan 8-14, 20 eggs
+   → weeks_remaining: 8 → 7
+   → next_delivery: Jan 15
+4. User B subscription: 30 eggs
+   → Create order for Jan 8-14, 30 eggs
+   → weeks_remaining: 4 → 3
+   → next_delivery: Jan 15
+5. User C subscription: 10 eggs, was at 1 week remaining
+   → Create FINAL order for Jan 8-14, 10 eggs
+   → weeks_remaining: 1 → 0
+   → status: 'completed'
+```
+
+### Database Considerations
+
+**Subscriptions Table - Track Completion:**
+- `weeks_remaining` starts at `period` value when created
+- Decrements by 1 each week
+- When reaches 0, subscription is completed
+
+**Orders Table - Link to Subscription:**
+Consider adding a `subscription_id` field (optional) to track which orders were auto-generated from subscriptions.
+
+### Testing the Automation
+
+Provide a manual command for testing:
+```bash
+php artisan egg9:process-weekly-cycle --force
+```
+
+This allows admin to test the automation without waiting for Monday.
+
+### Deployment Note
+
+Ensure Laravel's task scheduler is running on the server:
+```bash
+* * * * * cd /path-to-project && php artisan schedule:run >> /dev/null 2>&1
+```
+
+Add this cron job to the server for Laravel's scheduler to work.
+
+---
+
+**This automation is critical for the subscription feature to work properly. Without it, subscriptions are just dormant records.**
 
 ---
 

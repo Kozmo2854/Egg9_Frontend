@@ -15,7 +15,7 @@ Build a complete Laravel backend API for the Egg9 mobile/web application. The fr
 - 1 dozen = 10 eggs (not 12!)
 - All orders in multiples of 10
 - Weekly stock system (admin sets availability each week)
-- Subscriptions: 4-12 weeks, max 30 eggs/week, 8% discount
+- Subscriptions: 4-12 weeks, max 30 eggs/week, regular pricing (no discount)
 - Multi-user with shared global stock
 
 ## What You Need to Build
@@ -102,8 +102,9 @@ Build a complete Laravel backend API for the Egg9 mobile/web application. The fr
    - Subtract all active subscriptions
    - For current user: Add back their existing order quantity (so they can edit)
 5. **Order Total**: (quantity / 10) * price_per_dozen
-6. **Subscription Total**: (quantity / 10) * price_per_dozen * period * 0.92 (8% discount)
-7. **CORS**: Allow localhost:8081, localhost:19006, exp:// origins
+6. **Subscription Total**: (quantity / 10) * price_per_dozen * period (no discount)
+7. **Weekly Automation**: REQUIRED - Laravel scheduled command to run every Monday at 00:01 to process subscriptions, create new weekly stock, and archive old week
+8. **CORS**: Allow localhost:8081, localhost:19006, exp:// origins
 
 ### Validation Rules
 
@@ -113,6 +114,38 @@ Build a complete Laravel backend API for the Egg9 mobile/web application. The fr
 - Check sufficient stock before creating/updating orders
 - Only order owner can update/cancel their order
 - Only pending orders can be updated/cancelled
+
+## Weekly Automation (CRITICAL REQUIREMENT)
+
+**This is a core feature, not optional!**
+
+Implement a Laravel scheduled command that runs **every Monday at 00:01**:
+
+```bash
+php artisan egg9:process-weekly-cycle
+```
+
+**What it must do:**
+1. **Archive Previous Week**: Mark old weekly_stock as closed (is_ordering_open = false)
+2. **Create New Week**: Create new weekly_stock record for current week (Monday-Monday)
+   - available_eggs = 0 (admin will set)
+   - price_per_dozen = 5.99 (or carry from previous)
+   - delivery_date/time = null
+   - all_orders_delivered = false
+3. **Process Active Subscriptions**: For each active subscription:
+   - Create a new order in orders table
+   - Decrement weeks_remaining by 1
+   - If weeks_remaining reaches 0, mark subscription as completed
+   - Update next_delivery to next Monday
+4. **Error Handling**: Log failures, notify admin if subscriptions can't be processed
+5. **Testing**: Provide --force flag to test manually without waiting for Monday
+
+**Deployment**: Add to server crontab:
+```
+* * * * * cd /path-to-project && php artisan schedule:run >> /dev/null 2>&1
+```
+
+**Without this automation, subscriptions won't work!** See full details in BACKEND_REQUIREMENTS.md.
 
 ## Deliverables
 
