@@ -164,6 +164,33 @@
 
 ---
 
+## ✅ Testing Requirements (NEW - MANDATORY)
+
+### Test Coverage Required:
+- [x] Unit tests for all business logic (minimum 20 tests)
+- [x] Feature tests for all 21 endpoints (minimum 50 tests)
+- [x] Test coverage >80% (>95% for critical features)
+- [x] All tests passing before handover
+- [x] Test documentation (TESTING.md)
+
+### What Must Be Tested:
+- [x] Stock calculation logic
+- [x] Order validation (multiple of 10, one per week per user)
+- [x] Subscription validation (max 30, period 4-12)
+- [x] Weekly automation command
+- [x] Price calculations (1 dozen = 10 eggs, no discount)
+- [x] Authorization (users can only access their own data)
+- [x] Admin role restrictions
+- [x] Edge cases (stock exhaustion, concurrent orders, etc.)
+
+### Testing Workflow:
+- [x] After EVERY change: run `php artisan test`
+- [x] Fix any failures immediately
+- [x] Check coverage: `php artisan test --coverage`
+- [x] DO NOT commit with failing tests
+
+---
+
 ## 📋 What Backend Developer Will Deliver
 
 1. **API Base URL** - Replace `http://localhost:8000/api` in frontend
@@ -172,7 +199,10 @@
 4. **Database Schema** - Actual migration files
 5. **Weekly Automation** - Working scheduled command
 6. **API Documentation** - Postman collection or Swagger
-7. **Deployment Instructions** - How to set up and run
+7. **Test Suite** - Unit tests (20+) and Feature tests (50+)
+8. **Test Coverage Report** - Showing >80% coverage
+9. **TESTING.md** - Testing documentation
+10. **Deployment Instructions** - How to set up and run
 
 ---
 
@@ -186,6 +216,8 @@
    - All 21 endpoints
    - Weekly automation command
    - Database with seeders
+   - Complete test suite (unit + feature tests)
+   - All tests passing with >80% coverage
 
 3. **Backend provides integration info**
    - API base URL
@@ -210,7 +242,9 @@ All documentation is complete, accurate, and ready for the backend developer!
 
 **Critical Points to Emphasize:**
 - Weekly automation is MANDATORY
+- Testing is MANDATORY (write tests, run after every change)
 - 1 dozen = 10 eggs (not 12!)
 - No discount on subscriptions
 - Register endpoint must include password_confirmation
+- Minimum 70 tests required (20 unit + 50 feature)
 

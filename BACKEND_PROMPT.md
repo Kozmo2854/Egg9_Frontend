@@ -147,17 +147,62 @@ php artisan egg9:process-weekly-cycle
 
 **Without this automation, subscriptions won't work!** See full details in BACKEND_REQUIREMENTS.md.
 
+## Testing Requirements (MANDATORY)
+
+**CRITICAL**: Write tests for everything!
+
+### After EVERY code change:
+1. Run unit tests: `php artisan test --filter Unit`
+2. Run feature tests: `php artisan test --filter Feature`
+3. Fix any failures immediately
+4. Ensure all tests pass before moving forward
+
+### What to Test:
+
+**Unit Tests (minimum 20 tests):**
+- Stock calculation logic
+- Order validation (multiple of 10, min 10)
+- Subscription validation (multiple of 10, max 30, period 4-12)
+- Weekly automation logic
+- Price calculations (1 dozen = 10 eggs)
+
+**Feature Tests (minimum 50 tests for all 21 endpoints):**
+- Authentication (login, register, logout)
+- All order endpoints (create, update, cancel, list)
+- All subscription endpoints
+- All admin endpoints
+- Authorization (users can only access their own data)
+- Edge cases (stock exhaustion, invalid quantities, etc.)
+
+**Test Coverage:** Minimum 80% overall, 95% for critical features
+
+**Deliverables:**
+- All tests passing: `php artisan test`
+- Coverage report: `php artisan test --coverage`
+- Postman collection with test scenarios
+- TESTING.md documentation
+
+**DO NOT commit code with failing tests!**
+
+See BACKEND_REQUIREMENTS.md for complete testing specification.
+
+---
+
 ## Deliverables
 
 1. Complete Laravel project with migrations, seeders, controllers, models
-2. All endpoints implemented and tested
-3. Postman collection or API documentation
-4. Instructions for:
+2. **All endpoints implemented and fully tested**
+3. **Unit tests (minimum 20) and Feature tests (minimum 50)**
+4. **Test coverage report showing >80% coverage**
+5. Postman collection or API documentation
+6. Instructions for:
    - Database setup
    - Running migrations/seeders
+   - **Running tests**
    - Starting the API server
    - API base URL for frontend integration
-5. Brief integration guide for the React Native frontend
+7. **TESTING.md** with testing guide
+8. Brief integration guide for the React Native frontend
 
 ## Integration Instructions for Frontend Team
 

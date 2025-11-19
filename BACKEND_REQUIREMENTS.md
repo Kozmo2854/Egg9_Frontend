@@ -951,13 +951,350 @@ Add this cron job to the server for Laravel's scheduler to work.
 
 ---
 
-## Testing Requirements
+## Testing Requirements (MANDATORY)
 
-Please provide:
-1. Unit tests for critical business logic
-2. Feature tests for all API endpoints
-3. Test database seeder for development
-4. Postman collection or similar for manual testing
+### Testing is a Core Requirement
+
+**CRITICAL**: All code must be tested. Tests must be written BEFORE or ALONGSIDE feature implementation, not after.
+
+### Test-Driven Development Approach
+
+**After EVERY change, you MUST:**
+1. Run all unit tests: `php artisan test --filter Unit`
+2. Run all feature tests: `php artisan test --filter Feature`
+3. Fix any failing tests immediately
+4. Ensure all tests pass before moving to the next feature
+
+---
+
+### 1. Unit Tests (Required)
+
+Write unit tests for all business logic components:
+
+#### **Stock Calculation Logic**
+Test the logic for calculating available eggs:
+```php
+// Tests/Unit/StockCalculatorTest.php
+- test_calculates_available_eggs_correctly()
+- test_subtracts_pending_orders_from_stock()
+- test_subtracts_active_subscriptions_from_stock()
+- test_adds_back_user_existing_order_for_editing()
+- test_returns_zero_when_stock_insufficient()
+```
+
+#### **Order Validation**
+Test order business rules:
+```php
+// Tests/Unit/OrderValidationTest.php
+- test_quantity_must_be_multiple_of_ten()
+- test_quantity_must_be_at_least_ten()
+- test_one_order_per_user_per_week()
+- test_cannot_exceed_available_stock()
+```
+
+#### **Subscription Validation**
+Test subscription business rules:
+```php
+// Tests/Unit/SubscriptionValidationTest.php
+- test_quantity_must_be_multiple_of_ten()
+- test_quantity_cannot_exceed_thirty()
+- test_period_must_be_between_4_and_12()
+- test_one_active_subscription_per_user()
+```
+
+#### **Weekly Automation Logic**
+Test the scheduled command logic:
+```php
+// Tests/Unit/WeeklyCycleCommandTest.php
+- test_archives_previous_week_stock()
+- test_creates_new_weekly_stock()
+- test_processes_active_subscriptions()
+- test_creates_orders_from_subscriptions()
+- test_decrements_weeks_remaining()
+- test_completes_subscriptions_at_zero_weeks()
+- test_handles_insufficient_stock_gracefully()
+```
+
+#### **Price Calculation**
+Test pricing logic:
+```php
+// Tests/Unit/PriceCalculatorTest.php
+- test_calculates_order_total_correctly()
+- test_one_dozen_equals_ten_eggs()
+- test_subscription_uses_regular_pricing()
+- test_handles_decimal_prices_correctly()
+```
+
+---
+
+### 2. Feature Tests (Required for ALL 21 Endpoints)
+
+Write comprehensive feature tests for every API endpoint:
+
+#### **Authentication Tests**
+```php
+// Tests/Feature/AuthenticationTest.php
+- test_user_can_login_with_valid_credentials()
+- test_user_cannot_login_with_invalid_credentials()
+- test_user_can_register_with_valid_data()
+- test_user_cannot_register_with_duplicate_email()
+- test_user_can_logout()
+- test_authenticated_user_can_get_their_info()
+- test_unauthenticated_user_cannot_access_protected_routes()
+```
+
+#### **Weekly Stock Tests**
+```php
+// Tests/Feature/WeeklyStockTest.php
+- test_can_get_current_weekly_stock()
+- test_can_get_available_eggs_for_user()
+- test_available_eggs_includes_user_existing_order()
+- test_available_eggs_excludes_other_users_orders()
+- test_available_eggs_accounts_for_subscriptions()
+```
+
+#### **Order Tests**
+```php
+// Tests/Feature/OrderTest.php
+- test_user_can_create_order()
+- test_user_can_update_pending_order()
+- test_user_cannot_update_approved_order()
+- test_user_can_get_current_week_order()
+- test_user_can_cancel_pending_order()
+- test_user_can_get_all_their_orders()
+- test_user_cannot_order_more_than_available_stock()
+- test_user_cannot_create_duplicate_order_for_same_week()
+- test_order_quantity_must_be_multiple_of_ten()
+- test_user_cannot_see_other_users_orders()
+```
+
+#### **Subscription Tests**
+```php
+// Tests/Feature/SubscriptionTest.php
+- test_user_can_create_subscription()
+- test_user_can_get_current_subscription()
+- test_user_can_cancel_subscription()
+- test_user_cannot_have_multiple_active_subscriptions()
+- test_subscription_quantity_must_be_multiple_of_ten()
+- test_subscription_quantity_cannot_exceed_thirty()
+- test_subscription_period_must_be_between_4_and_12()
+- test_user_cannot_see_other_users_subscriptions()
+```
+
+#### **Admin Tests**
+```php
+// Tests/Feature/AdminTest.php
+- test_admin_can_get_all_orders()
+- test_admin_can_get_all_subscriptions()
+- test_admin_can_update_weekly_stock()
+- test_admin_can_update_delivery_info()
+- test_admin_can_mark_all_orders_as_delivered()
+- test_admin_can_approve_order()
+- test_admin_can_decline_order()
+- test_customer_cannot_access_admin_endpoints()
+- test_orders_include_user_names_for_admin()
+- test_subscriptions_include_user_names_for_admin()
+```
+
+#### **Authorization Tests**
+```php
+// Tests/Feature/AuthorizationTest.php
+- test_user_can_only_update_their_own_orders()
+- test_user_can_only_cancel_their_own_orders()
+- test_user_can_only_cancel_their_own_subscriptions()
+- test_admin_role_required_for_admin_endpoints()
+```
+
+---
+
+### 3. Database Testing
+
+#### **Use Test Database**
+Configure `phpunit.xml` to use a separate test database:
+```xml
+<env name="DB_CONNECTION" value="sqlite"/>
+<env name="DB_DATABASE" value=":memory:"/>
+```
+
+#### **Test Seeders**
+Create seeders specifically for testing:
+```php
+// database/seeders/TestSeeder.php
+- Create test users (admin + 2 customers)
+- Create test weekly stock
+- Create sample orders and subscriptions
+```
+
+#### **Use Database Transactions**
+All feature tests should use `RefreshDatabase` trait:
+```php
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+class OrderTest extends TestCase
+{
+    use RefreshDatabase;
+    
+    // Your tests here
+}
+```
+
+---
+
+### 4. Test Coverage Requirements
+
+**Minimum Coverage Targets:**
+- Overall: 80% code coverage
+- Business Logic (Models, Services): 90% coverage
+- Controllers: 80% coverage
+- Critical features (Orders, Subscriptions, Weekly Automation): 95% coverage
+
+**Generate Coverage Report:**
+```bash
+php artisan test --coverage
+```
+
+---
+
+### 5. Testing Workflow (MANDATORY)
+
+**Before committing ANY code:**
+
+```bash
+# 1. Run all tests
+php artisan test
+
+# 2. Check coverage
+php artisan test --coverage
+
+# 3. Run specific test suites
+php artisan test --filter Unit      # Unit tests only
+php artisan test --filter Feature   # Feature tests only
+
+# 4. Run tests for specific feature
+php artisan test --filter Order     # All order-related tests
+
+# 5. If any test fails, FIX IT before proceeding
+```
+
+**DO NOT commit code with failing tests!**
+
+---
+
+### 6. Test Data Factories
+
+Create factories for all models:
+
+```php
+// database/factories/OrderFactory.php
+OrderFactory::new()->create([
+    'user_id' => $user->id,
+    'quantity' => 20,
+    'status' => 'pending'
+]);
+
+// database/factories/SubscriptionFactory.php
+SubscriptionFactory::new()->create([
+    'user_id' => $user->id,
+    'quantity' => 30,
+    'period' => 8
+]);
+```
+
+---
+
+### 7. Edge Cases to Test
+
+**MUST test these scenarios:**
+
+1. **Stock Exhaustion**: What happens when stock reaches 0?
+2. **Concurrent Orders**: Two users ordering last available eggs simultaneously
+3. **Week Transition**: Orders placed right before/after Monday 00:01
+4. **Subscription Completion**: Last week of subscription (weeks_remaining = 1 → 0)
+5. **Invalid Quantities**: 15 eggs (not multiple of 10), 35 eggs (subscription max is 30)
+6. **Unauthorized Access**: Customer trying to access admin endpoints
+7. **Token Expiration**: Expired Sanctum token
+8. **Missing Required Fields**: Requests without required data
+9. **Database Constraints**: Duplicate emails, foreign key violations
+10. **Weekly Automation Failures**: What if subscription processing fails mid-way?
+
+---
+
+### 8. API Testing (Postman/Insomnia)
+
+Provide a complete collection with:
+- All 21 endpoints
+- Example requests with valid data
+- Example requests with invalid data (for testing validation)
+- Environment variables for base URL and token
+- Pre-request scripts for authentication
+- Tests for response status codes and structure
+
+**Collection must include:**
+- Authentication flow (login → save token → use in other requests)
+- Happy path scenarios (successful requests)
+- Error scenarios (validation failures, unauthorized access)
+
+---
+
+### 9. Continuous Testing
+
+**Set up GitHub Actions or similar CI/CD:**
+
+```yaml
+# .github/workflows/tests.yml
+name: Run Tests
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run Tests
+        run: |
+          composer install
+          php artisan test
+          php artisan test --coverage
+```
+
+---
+
+### 10. Test Documentation
+
+Create `TESTING.md` in your repo with:
+- How to run tests
+- How to run specific test suites
+- How to create new tests
+- Testing standards and conventions
+- Coverage requirements
+
+---
+
+## Test Deliverables (MANDATORY)
+
+You MUST provide:
+
+1. ✅ **Unit Tests** for all business logic (minimum 20 tests)
+2. ✅ **Feature Tests** for all 21 API endpoints (minimum 50 tests)
+3. ✅ **Test Database Seeder** with sample data
+4. ✅ **Postman Collection** with all endpoints and scenarios
+5. ✅ **Test Coverage Report** showing >80% coverage
+6. ✅ **TESTING.md** documentation
+7. ✅ **All tests passing** before handover
+
+**Command to verify:**
+```bash
+php artisan test --coverage
+```
+
+**Expected output:**
+```
+Tests:    70 passed
+Coverage: 85%
+```
+
+---
+
+**REMEMBER: After EVERY code change, run the tests and fix any failures immediately. Testing is not optional!**
 
 ---
 
