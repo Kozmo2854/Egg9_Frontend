@@ -1,35 +1,375 @@
-import { StatusBar } from 'expo-status-bar';
-import { Platform, StyleSheet } from 'react-native';
+import { useState } from 'react';
+import { 
+  StyleSheet, 
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Dimensions,
+} from 'react-native';
+import { View } from '@/components/Themed';
+import { 
+  TextInput, 
+  Button, 
+  Text, 
+  Snackbar,
+  useTheme 
+} from 'react-native-paper';
+import { LinearGradient } from 'expo-linear-gradient';
+import { apiService } from '@/services/api';
+import { useRouter } from 'expo-router';
 
-import EditScreenInfo from '@/components/EditScreenInfo';
-import { Text, View } from '@/components/Themed';
+interface FormErrors {
+  email?: string;
+  password?: string;
+}
 
-export default function ModalScreen() {
+export default function LoginScreen() {
+  const router = useRouter();
+  const theme = useTheme();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [loading, setLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [loginSuccess, setLoginSuccess] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showCredentials, setShowCredentials] = useState(false);
+
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validate = (): boolean => {
+    const newErrors: FormErrors = {};
+
+    if (!email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!validateEmail(email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+
+    if (!password) {
+      newErrors.password = 'Password is required';
+    } else if (password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleLogin = async () => {
+    setLoginError(null);
+    setLoginSuccess(null);
+    
+    if (!validate()) {
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      const response = await apiService.login(email, password);
+      setLoginSuccess(`Welcome ${response.user.name}!`);
+      setEmail('');
+      setPassword('');
+      
+      setTimeout(() => {
+        router.replace('/(tabs)');
+      }, 500);
+    } catch (error) {
+      setLoginError('Invalid email or password. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Modal</Text>
-      <View style={styles.separator} lightColor="#eee" darkColor="rgba(255,255,255,0.1)" />
-      <EditScreenInfo path="app/modal.tsx" />
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+    >
+      <LinearGradient
+        colors={[theme.colors.primary, theme.colors.secondary, theme.colors.tertiary]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.gradient}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.content}>
+            {/* Logo/Header Section */}
+            <View style={styles.header}>
+              <View style={styles.logoContainer}>
+                <Text style={styles.eggEmoji}>🥚</Text>
+              </View>
+              <Text style={styles.title}>Egg9</Text>
+              <Text style={styles.subtitle}>Fresh eggs delivered weekly</Text>
+            </View>
 
-      {/* Use a light status bar on iOS to account for the black space above the modal */}
-      <StatusBar style={Platform.OS === 'ios' ? 'light' : 'auto'} />
-    </View>
+            {/* Login Card */}
+            <View style={styles.loginCard}>
+              <Text style={styles.cardTitle}>Welcome Back</Text>
+              
+              <TextInput
+                label="Email Address"
+                value={email}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  if (errors.email) {
+                    setErrors({ ...errors, email: undefined });
+                  }
+                }}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+                disabled={loading}
+                error={!!errors.email}
+                mode="outlined"
+                style={styles.input}
+                outlineColor={theme.colors.outlineVariant}
+                activeOutlineColor={theme.colors.primary}
+                left={<TextInput.Icon icon="email-outline" />}
+                theme={{ roundness: 12 }}
+              />
+              {errors.email && (
+                <Text style={styles.errorText}>{errors.email}</Text>
+              )}
+
+              <TextInput
+                label="Password"
+                value={password}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  if (errors.password) {
+                    setErrors({ ...errors, password: undefined });
+                  }
+                }}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                disabled={loading}
+                error={!!errors.password}
+                mode="outlined"
+                style={styles.input}
+                outlineColor={theme.colors.outlineVariant}
+                activeOutlineColor={theme.colors.primary}
+                left={<TextInput.Icon icon="lock-outline" />}
+                right={
+                  <TextInput.Icon 
+                    icon={showPassword ? "eye-off" : "eye"} 
+                    onPress={() => setShowPassword(!showPassword)}
+                  />
+                }
+                theme={{ roundness: 12 }}
+              />
+              {errors.password && (
+                <Text style={styles.errorText}>{errors.password}</Text>
+              )}
+
+              <Button
+                mode="contained"
+                onPress={handleLogin}
+                loading={loading}
+                disabled={loading}
+                style={styles.loginButton}
+                contentStyle={styles.loginButtonContent}
+                labelStyle={styles.loginButtonLabel}
+                buttonColor={theme.colors.primary}
+              >
+                {loading ? 'Logging in...' : 'Login'}
+              </Button>
+
+              {/* Test Credentials */}
+              <View style={styles.credentialsSection}>
+                <Button
+                  mode="text"
+                  onPress={() => setShowCredentials(!showCredentials)}
+                  icon={showCredentials ? "chevron-up" : "information-outline"}
+                  textColor={theme.colors.onSurfaceVariant}
+                  compact
+                >
+                  {showCredentials ? 'Hide' : 'Show'} Test Credentials
+                </Button>
+                
+                {showCredentials && (
+                  <View style={styles.credentialsBox}>
+                    <View style={styles.credentialRow}>
+                      <Text style={styles.credentialLabel}>Admin:</Text>
+                      <Text style={styles.credentialValue}>admin@egg9.com / password123</Text>
+                    </View>
+                    <View style={styles.credentialRow}>
+                      <Text style={styles.credentialLabel}>User 1:</Text>
+                      <Text style={styles.credentialValue}>user1@egg9.com / password123</Text>
+                    </View>
+                    <View style={styles.credentialRow}>
+                      <Text style={styles.credentialLabel}>User 2:</Text>
+                      <Text style={styles.credentialValue}>user2@egg9.com / password123</Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            </View>
+          </View>
+        </ScrollView>
+
+        {/* Snackbars */}
+        <Snackbar
+          visible={!!loginError}
+          onDismiss={() => setLoginError(null)}
+          duration={3000}
+          action={{
+            label: 'Dismiss',
+            onPress: () => setLoginError(null),
+          }}
+          style={{ backgroundColor: theme.colors.error }}
+        >
+          {loginError}
+        </Snackbar>
+
+        <Snackbar
+          visible={!!loginSuccess}
+          onDismiss={() => setLoginSuccess(null)}
+          duration={2000}
+          style={{ backgroundColor: theme.colors.tertiary }}
+        >
+          {loginSuccess}
+        </Snackbar>
+      </LinearGradient>
+    </KeyboardAvoidingView>
   );
 }
+
+const { width } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
+  },
+  gradient: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
+    padding: 20,
+    paddingTop: 60,
+  },
+  content: {
+    width: '100%',
+    maxWidth: 440,
+    alignSelf: 'center',
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  logoContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  eggEmoji: {
+    fontSize: 56,
   },
   title: {
-    fontSize: 20,
+    fontSize: 48,
     fontWeight: 'bold',
+    color: '#2d3748',
+    marginBottom: 8,
+    textShadowColor: 'rgba(255, 255, 255, 0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
-  separator: {
-    marginVertical: 30,
-    height: 1,
-    width: '80%',
+  subtitle: {
+    fontSize: 18,
+    color: '#2d3748',
+    opacity: 0.85,
+    textShadowColor: 'rgba(255, 255, 255, 0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 1,
+  },
+  loginCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  cardTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#2d3748',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  input: {
+    marginBottom: 8,
+    backgroundColor: '#ffffff',
+  },
+  errorText: {
+    color: '#ff5252',
+    fontSize: 13,
+    marginLeft: 12,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  loginButton: {
+    marginTop: 16,
+    borderRadius: 12,
+    shadowColor: '#ff6b35',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  loginButtonContent: {
+    paddingVertical: 8,
+  },
+  loginButtonLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  credentialsSection: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  credentialsBox: {
+    backgroundColor: '#fef5f1',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 8,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#ffe5dc',
+  },
+  credentialRow: {
+    marginBottom: 8,
+  },
+  credentialLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#8b2500',
+    marginBottom: 2,
+  },
+  credentialValue: {
+    fontSize: 13,
+    color: '#524541',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
 });

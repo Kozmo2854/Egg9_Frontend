@@ -1,11 +1,24 @@
 # Claude AI Assistant - Project Guidelines
 
+## Role & Approach
+
+**I am your tutor** - this is a learning project. I take the lead on:
+- Deciding what to teach and when
+- Structuring learning progression (simple → complex)
+- Choosing which features to implement next
+- Introducing concepts at the right time
+
+The user learns by doing, with technical explanations of how things work.
+
+---
+
 ## Workflow Instructions
 
 ### 1. Feature Tutorial System
-- Whenever a new React Native or React feature is used in the code, create a dedicated tutorial file in the `tutorials/` folder
-- Each tutorial should be short, focused, and beginner-friendly
-- Tutorials should explain the "what", "why", and "how" of each feature
+- When introducing new React Native/React features, create **technical, implementation-focused explanations**
+- Include actual usage examples and how the feature works under the hood
+- For each new framework feature, create a **demo screen/component** the user can interact with and experiment
+- Focus on understanding internals and implementation details, not just basic usage
 
 ### 2. Command Summary
 - After each command execution, provide a comprehensive list of all changes made
@@ -29,6 +42,9 @@
 - Commit the previous command's changes once the user confirms them in the next command
 - Write clear, descriptive commit messages
 - Keep commits atomic and focused
+- **Commit message style**: Short summary format
+  - Example: "Add login functionality and API service layer with placeholder values"
+  - Avoid verbose multi-line descriptions unless necessary
 
 ### 6. Clarification First
 - Always ask questions if anything is unclear before making changes
@@ -76,8 +92,10 @@
 - **Expo** - Development framework and tooling for React Native
 - **Expo Router** - File-based navigation system
 - **React Native Web** - Web platform support
-- **TypeScript** (optional, can be added later)
-- **Backend**: Laravel API (separate repository)
+- **React Native Paper** - Material Design component library
+- **TypeScript** - Static typing for improved code quality
+- **AsyncStorage** - Local data persistence (temporary, before backend)
+- **Backend**: Laravel API (separate repository, not yet implemented)
 
 ### Key Features
 - Multi-platform support (iOS, Android, Web)
@@ -92,23 +110,48 @@
 ## Development Notes
 
 ### Current Phase
-✅ Project initialized and running!
-Learning React Native basics and making first changes
+🎨 UI Modernized with React Native Paper!
+Fully functional app with modern Material Design 3 interface
 
 ### Completed Steps
 1. ✅ Verified Node.js v20.19.4 and npm v10.8.2
 2. ✅ Created foundational tutorials (JavaScript ecosystem, React Native, Expo)
 3. ✅ Initialized Expo project with Router and tabs template
 4. ✅ Created project structure tutorials (TypeScript, running app)
-5. ✅ Started Expo dev server (running on http://localhost:8081)
+5. ✅ Started Expo dev server
+6. ✅ Implemented authentication system with login screen
+7. ✅ Created API service layer with mock data (ready for backend)
+8. ✅ Built core features:
+   - User authentication (3 test users + 1 admin)
+   - Weekly stock management
+   - One-time orders
+   - Weekly subscriptions (with 8% discount)
+   - Multi-user support with shared stock
+   - Admin panel for stock, delivery, and order management
+9. ✅ Modernized UI with React Native Paper
+   - Custom Material Design 3 theme
+   - Modern, professional components across all screens
+   - Consistent styling and typography
+   - Enhanced accessibility
+
+### Business Logic Implemented
+- **Weekly Stock System**: Owner sets available eggs each week
+- **One-Time Orders**: Customers order from current week's stock
+- **Subscriptions**: Recurring weekly orders with configurable duration
+  - Quantity: Max 30 eggs/week
+  - Duration: 4-12 weeks (minimum 4 weeks, maximum 3 months)
+  - Regular pricing (no discount)
+- **Increments**: All orders in multiples of 10 eggs ("dozen" = 10 eggs)
+- **Multi-User**: Shared global stock, user-specific orders/subscriptions
+- **Admin Features**: Stock management, delivery scheduling, order tracking
+- **Delivery Status**: Track order delivery with admin controls
 
 ### Next Steps
-1. View the app in browser and understand the code structure
-2. Make first code changes and see Fast Refresh in action
-3. Learn about React Native components and styling
-4. Create initial app screens for Egg9
-5. Implement authentication UI
-6. Connect to Laravel backend API
+1. Continue fine-tuning UI/UX based on user feedback
+2. Prepare for Laravel backend integration
+3. Document backend API requirements
+4. Implement real authentication when backend is ready
+5. Replace AsyncStorage with real API calls
 
 ### Development Server
 - Status: Running in background
@@ -118,5 +161,23 @@ Learning React Native basics and making first changes
 
 ---
 
-*Last Updated: November 17, 2025*
+### UI/UX Design
+**React Native Paper (Material Design 3):**
+- Custom theme with brand colors (Orange primary, Cyan secondary, Green success)
+- Consistent typography using Material Design type scale
+- Elevated cards and surfaces for content hierarchy
+- Modern input fields with floating labels and icons
+- Professional data tables for admin panel
+- Snackbars for user feedback
+- Chips and badges for status indicators
+- Responsive design that adapts to iOS, Android, and Web
+
+**Test Credentials:**
+- Admin: admin@egg9.com / password123
+- User 1: user1@egg9.com / password123
+- User 2: user2@egg9.com / password123
+
+---
+
+*Last Updated: November 19, 2025*
 
