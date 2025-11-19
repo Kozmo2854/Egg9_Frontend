@@ -1,0 +1,153 @@
+# Backend Development Prompt for AI Agent
+
+## Your Task
+
+Build a complete Laravel backend API for the Egg9 mobile/web application. The frontend is already built in React Native + Expo and is waiting for your API.
+
+## Project Context
+
+**Egg9** is an egg selling platform connecting producers with customers. It has:
+- Customer features: Browse stock, place one-time orders, manage weekly subscriptions
+- Admin features: Manage weekly stock, delivery schedules, view all orders
+
+**Key Business Rules:**
+- Single product (eggs only)
+- 1 dozen = 10 eggs (not 12!)
+- All orders in multiples of 10
+- Weekly stock system (admin sets availability each week)
+- Subscriptions: 4-12 weeks, max 30 eggs/week, 8% discount
+- Multi-user with shared global stock
+
+## What You Need to Build
+
+### Technology Stack
+- Laravel 10.x or 11.x
+- MySQL or PostgreSQL
+- Laravel Sanctum (token-based auth)
+- RESTful JSON API with CORS support
+
+### Database Tables
+
+1. **users**: id, name, email, password, role (customer/admin), timestamps
+2. **weekly_stocks**: id, week_start, week_end, available_eggs, price_per_dozen, is_ordering_open, delivery_date, delivery_time, all_orders_delivered, timestamps
+3. **orders**: id, user_id, quantity, price_per_dozen, total, status (pending/approved/declined/completed), delivery_status (not_delivered/delivered), week_start, timestamps
+4. **subscriptions**: id, user_id, quantity, frequency (weekly), period (4-12), weeks_remaining, status (active/paused/cancelled), next_delivery, timestamps
+
+### Seed Data (for testing)
+```
+1. admin@egg9.com / password123 (Admin User, role: admin)
+2. user1@egg9.com / password123 (John Smith, role: customer)  
+3. user2@egg9.com / password123 (Jane Doe, role: customer)
+```
+
+### API Endpoints Required
+
+**Authentication (Public):**
+- POST /api/login - Authenticate user, return { user, token }
+- POST /api/register - Register new customer
+- POST /api/logout - Revoke token (protected)
+- GET /api/user - Get current user (protected)
+
+**Weekly Stock (Protected):**
+- GET /api/weekly-stock - Get current week's stock info
+- GET /api/available-eggs - Calculate available eggs for current user
+
+**Orders (Protected, Customer):**
+- POST /api/orders - Create order for current week
+- PUT /api/orders/{id} - Update pending order
+- GET /api/orders/current-week - Get user's order for this week
+- DELETE /api/orders/{id} - Cancel pending order
+- GET /api/orders - Get all user's orders
+
+**Subscriptions (Protected, Customer):**
+- POST /api/subscriptions - Create subscription (cancel old one if exists)
+- GET /api/subscriptions/current - Get active subscription
+- DELETE /api/subscriptions/{id} - Cancel subscription
+
+**Admin Endpoints (Protected, Admin Role):**
+- GET /api/admin/orders - All orders with user names
+- GET /api/admin/subscriptions - All subscriptions with user names
+- PUT /api/admin/weekly-stock - Update available eggs
+- PUT /api/admin/delivery-info - Update delivery date/time
+- POST /api/admin/orders/mark-delivered - Mark all orders as delivered
+- PUT /api/admin/orders/{id}/approve - Approve order
+- PUT /api/admin/orders/{id}/decline - Decline order
+
+### Response Format
+
+**Success:**
+```json
+{
+  "user": { "id": 1, "name": "John", "email": "user@test.com", "role": "customer", "createdAt": "2024-01-01T00:00:00.000Z" },
+  "token": "sanctum_token_here"
+}
+```
+
+**Error:**
+```json
+{
+  "message": "Error description",
+  "errors": { "field": ["Error details"] }
+}
+```
+
+### Key Implementation Notes
+
+1. **Date Format**: ISO 8601 UTC (e.g., 2024-01-01T00:00:00.000Z)
+2. **One Order Per Week**: User can only have one pending order per week (update if exists)
+3. **One Active Subscription**: User can only have one active subscription (cancel old when creating new)
+4. **Stock Calculation**: 
+   - Available = WeeklyStock.available_eggs
+   - Subtract all users' pending orders for current week
+   - Subtract all active subscriptions
+   - For current user: Add back their existing order quantity (so they can edit)
+5. **Order Total**: (quantity / 10) * price_per_dozen
+6. **Subscription Total**: (quantity / 10) * price_per_dozen * period * 0.92 (8% discount)
+7. **CORS**: Allow localhost:8081, localhost:19006, exp:// origins
+
+### Validation Rules
+
+- quantity: multiple of 10, min 10
+- subscription quantity: multiple of 10, min 10, max 30
+- subscription period: min 4, max 12 weeks
+- Check sufficient stock before creating/updating orders
+- Only order owner can update/cancel their order
+- Only pending orders can be updated/cancelled
+
+## Deliverables
+
+1. Complete Laravel project with migrations, seeders, controllers, models
+2. All endpoints implemented and tested
+3. Postman collection or API documentation
+4. Instructions for:
+   - Database setup
+   - Running migrations/seeders
+   - Starting the API server
+   - API base URL for frontend integration
+5. Brief integration guide for the React Native frontend
+
+## Integration Instructions for Frontend Team
+
+After completion, provide:
+1. **API Base URL** (e.g., https://api.egg9.com/api)
+2. **Token format** from Sanctum
+3. Any special headers needed
+4. Test credentials confirmation
+
+The frontend will replace mock implementations in `services/api.ts` with real fetch() calls to your API.
+
+## Full Documentation
+
+For complete detailed specifications including:
+- Full data models with all fields
+- Complete request/response examples for every endpoint
+- Business logic details
+- Error handling requirements
+- Testing requirements
+
+See the attached `BACKEND_REQUIREMENTS.md` file (70+ pages of complete specifications).
+
+---
+
+**Questions?** Ask for clarification on any business logic, endpoint behavior, or data models before starting. The frontend is fully built and matches these specifications exactly.
+
