@@ -310,10 +310,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
+    backgroundColor: 'transparent',
   },
   header: {
     alignItems: 'center',
     marginBottom: 32,
+    backgroundColor: 'transparent',
   },
   logoContainer: {
     width: 100,
