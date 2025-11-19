@@ -300,6 +300,27 @@ export default function OrderScreen() {
             </Card>
 
             {/* Action Buttons */}
+            {/* Order Status Badge */}
+            {currentWeekOrder && (
+              <RNView style={styles.statusContainer}>
+                {currentWeekOrder.status === 'pending' && (
+                  <Chip icon="clock-outline" mode="flat" style={styles.statusPending}>
+                    ⏳ Pending Approval
+                  </Chip>
+                )}
+                {currentWeekOrder.status === 'approved' && (
+                  <Chip icon="check-circle" mode="flat" style={styles.statusApproved}>
+                    ✓ Approved
+                  </Chip>
+                )}
+                {currentWeekOrder.status === 'declined' && (
+                  <Chip icon="close-circle" mode="flat" style={styles.statusDeclined}>
+                    ✕ Declined
+                  </Chip>
+                )}
+              </RNView>
+            )}
+
             <Button
               mode="contained"
               onPress={handleBuyNow}
@@ -570,6 +591,26 @@ const styles = StyleSheet.create({
   },
   cancelButtonContent: {
     paddingVertical: 12,
+  },
+  statusContainer: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  statusPending: {
+    backgroundColor: '#fff3cd',
+    borderWidth: 1,
+    borderColor: '#ffc107',
+  },
+  statusApproved: {
+    backgroundColor: '#d4f4f1',
+    borderWidth: 1,
+    borderColor: '#4ecdc4',
+  },
+  statusDeclined: {
+    backgroundColor: '#ffd9d9',
+    borderWidth: 1,
+    borderColor: '#ff5252',
   },
   infoCard: {
     marginHorizontal: 16,

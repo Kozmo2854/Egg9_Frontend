@@ -131,6 +131,44 @@ export default function AdminScreen() {
     }
   };
 
+  const handleApproveOrder = async (orderId: number) => {
+    setProcessing(true);
+    setSuccessMessage(null);
+    setErrorMessage(null);
+
+    try {
+      await apiService.approveOrder(orderId);
+      setSuccessMessage('Order approved successfully!');
+      
+      // Reload orders
+      const orders = await apiService.getAllOrdersAdmin();
+      setAllOrders(orders);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to approve order');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleDeclineOrder = async (orderId: number) => {
+    setProcessing(true);
+    setSuccessMessage(null);
+    setErrorMessage(null);
+
+    try {
+      await apiService.declineOrder(orderId);
+      setSuccessMessage('Order declined successfully!');
+      
+      // Reload orders
+      const orders = await apiService.getAllOrdersAdmin();
+      setAllOrders(orders);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to decline order');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const handleClearData = async () => {
     await apiService.clearAllData();
     setSuccessMessage('All data cleared! Please refresh.');
@@ -510,19 +548,45 @@ export default function AdminScreen() {
               
               {getPendingOrders().map((order, index) => (
                 <Surface key={order.id} style={[styles.listItem, index === 0 && styles.firstItem]} elevation={1}>
-                  <RNView>
-                    <Text variant="titleMedium">{order.userName}</Text>
-                    <Text variant="bodySmall" style={styles.dateText}>
-                      {formatDate(order.createdAt)}
-                    </Text>
-                  </RNView>
-                  <RNView style={styles.orderDetails}>
-                    <Text variant="titleMedium" style={styles.itemValue}>
-                      {order.quantity} eggs
-                    </Text>
-                    <Text variant="bodyMedium" style={styles.priceText}>
-                      ${order.total.toFixed(2)}
-                    </Text>
+                  <RNView style={styles.orderContent}>
+                    <RNView>
+                      <Text variant="titleMedium">{order.userName}</Text>
+                      <Text variant="bodySmall" style={styles.dateText}>
+                        {formatDate(order.createdAt)}
+                      </Text>
+                      <RNView style={styles.orderQuantityRow}>
+                        <Text variant="bodyMedium" style={styles.itemValue}>
+                          {order.quantity} eggs
+                        </Text>
+                        <Text variant="bodyMedium" style={styles.priceText}>
+                          ${order.total.toFixed(2)}
+                        </Text>
+                      </RNView>
+                    </RNView>
+                    {order.status === 'pending' && (
+                      <RNView style={styles.orderActions}>
+                        <Button
+                          mode="contained"
+                          onPress={() => handleApproveOrder(order.id)}
+                          disabled={processing}
+                          style={[styles.actionButton, styles.approveButton]}
+                          labelStyle={styles.actionButtonLabel}
+                          buttonColor={theme.colors.tertiary}
+                        >
+                          ✓ Approve
+                        </Button>
+                        <Button
+                          mode="outlined"
+                          onPress={() => handleDeclineOrder(order.id)}
+                          disabled={processing}
+                          style={[styles.actionButton, styles.declineButton]}
+                          labelStyle={styles.actionButtonLabel}
+                          textColor={theme.colors.error}
+                        >
+                          ✕ Decline
+                        </Button>
+                      </RNView>
+                    )}
                   </RNView>
                 </Surface>
               ))}
@@ -790,5 +854,37 @@ const styles = StyleSheet.create({
   totalText: {
     fontWeight: 'bold',
     color: '#2d3748',
+  },
+  orderContent: {
+    flex: 1,
+  },
+  orderQuantityRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  orderActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+    justifyContent: 'flex-end',
+  },
+  actionButton: {
+    borderRadius: 8,
+    minWidth: 100,
+  },
+  approveButton: {
+    shadowColor: '#95e1d3',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  declineButton: {
+    borderColor: '#ff5252',
+  },
+  actionButtonLabel: {
+    fontSize: 13,
+    fontWeight: '600',
   },
 });
