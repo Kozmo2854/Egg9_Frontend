@@ -104,8 +104,16 @@ export default function HomeScreen() {
         {/* Stats Cards */}
         <RNView style={styles.statsRow}>
           <Surface style={styles.statCard} elevation={4}>
+            <Text style={styles.statNumber}>{weeklyStock.availableEggs}</Text>
+            <Text style={styles.statLabel}>Total Stock</Text>
+          </Surface>
+          
+          <Surface style={styles.statCard} elevation={4}>
             <Text style={styles.statNumber}>{availableEggs}</Text>
             <Text style={styles.statLabel}>Available</Text>
+            <Text style={styles.statHint}>
+              ({weeklyStock.availableEggs - availableEggs} ordered)
+            </Text>
           </Surface>
           
           <Surface style={styles.statCard} elevation={4}>
@@ -293,26 +301,33 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: 'row',
-    gap: 16,
+    flexWrap: 'wrap',
+    gap: 12,
     width: '100%',
-    maxWidth: 400,
+    justifyContent: 'center',
   },
   statCard: {
-    flex: 1,
+    minWidth: 110,
     backgroundColor: '#ffffff',
     borderRadius: 16,
-    padding: 20,
+    padding: 16,
     alignItems: 'center',
   },
   statNumber: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#2d3748',
     marginBottom: 4,
   },
   statLabel: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#666',
+    fontWeight: '500',
+  },
+  statHint: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 2,
   },
   content: {
     padding: 16,
