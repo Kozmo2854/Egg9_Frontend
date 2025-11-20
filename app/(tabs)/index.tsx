@@ -101,26 +101,11 @@ export default function HomeScreen() {
           {formatDate(weeklyStock.weekStart)} - {formatDate(weeklyStock.weekEnd)}
         </Text>
         
-        {/* Stats Cards */}
-        <RNView style={styles.statsRow}>
-          <Surface style={styles.statCard} elevation={4}>
-            <Text style={styles.statNumber}>{weeklyStock.availableEggs}</Text>
-            <Text style={styles.statLabel}>Total Stock</Text>
-          </Surface>
-          
-          <Surface style={styles.statCard} elevation={4}>
-            <Text style={styles.statNumber}>{availableEggs}</Text>
-            <Text style={styles.statLabel}>Available</Text>
-            <Text style={styles.statHint}>
-              ({weeklyStock.availableEggs - availableEggs} ordered)
-            </Text>
-          </Surface>
-          
-          <Surface style={styles.statCard} elevation={4}>
-            <Text style={styles.statNumber}>${weeklyStock.pricePerDozen}</Text>
-            <Text style={styles.statLabel}>Per Dozen</Text>
-          </Surface>
-        </RNView>
+        {/* Stats Card */}
+        <Surface style={styles.statCard} elevation={4}>
+          <Text style={styles.statNumber}>{availableEggs}</Text>
+          <Text style={styles.statLabel}>Available Eggs</Text>
+        </Surface>
       </LinearGradient>
 
       <RNView style={styles.content}>
@@ -299,35 +284,28 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 1,
   },
-  statsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    width: '100%',
-    justifyContent: 'center',
-  },
   statCard: {
-    minWidth: 110,
     backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 20,
+    padding: 24,
     alignItems: 'center',
+    minWidth: 160,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
   },
   statNumber: {
-    fontSize: 28,
+    fontSize: 48,
     fontWeight: 'bold',
     color: '#2d3748',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   statLabel: {
-    fontSize: 13,
+    fontSize: 16,
     color: '#666',
-    fontWeight: '500',
-  },
-  statHint: {
-    fontSize: 11,
-    color: '#999',
-    marginTop: 2,
+    fontWeight: '600',
   },
   content: {
     padding: 16,
