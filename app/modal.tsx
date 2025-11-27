@@ -85,6 +85,30 @@ export default function LoginScreen() {
     }
   };
 
+  const quickLogin = async (userEmail: string, userPassword: string) => {
+    setEmail(userEmail);
+    setPassword(userPassword);
+    setErrors({});
+    setLoginError(null);
+    setLoginSuccess(null);
+    setLoading(true);
+    
+    try {
+      const response = await apiService.login(userEmail, userPassword);
+      setLoginSuccess(`Welcome ${response.user.name}!`);
+      setEmail('');
+      setPassword('');
+      
+      setTimeout(() => {
+        router.replace('/(tabs)');
+      }, 500);
+    } catch (error) {
+      setLoginError('Invalid email or password. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <KeyboardAvoidingView 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -197,6 +221,53 @@ export default function LoginScreen() {
                 </Link>
               </View>
 
+              {/* Quick Login Buttons */}
+              <View style={styles.quickLoginSection}>
+                <Text style={styles.quickLoginLabel}>Quick Login (Dev)</Text>
+                <View style={styles.quickLoginButtons}>
+                  <Button
+                    mode="contained"
+                    onPress={() => quickLogin('user1@egg9.com', 'password123')}
+                    disabled={loading}
+                    style={styles.quickLoginButton}
+                    buttonColor="#4ecdc4"
+                    compact
+                  >
+                    User 1
+                  </Button>
+                  <Button
+                    mode="contained"
+                    onPress={() => quickLogin('user2@egg9.com', 'password123')}
+                    disabled={loading}
+                    style={styles.quickLoginButton}
+                    buttonColor="#4ecdc4"
+                    compact
+                  >
+                    User 2
+                  </Button>
+                  <Button
+                    mode="contained"
+                    onPress={() => quickLogin('user3@egg9.com', 'password123')}
+                    disabled={loading}
+                    style={styles.quickLoginButton}
+                    buttonColor="#4ecdc4"
+                    compact
+                  >
+                    User 3
+                  </Button>
+                  <Button
+                    mode="contained"
+                    onPress={() => quickLogin('admin@egg9.com', 'password123')}
+                    disabled={loading}
+                    style={styles.quickLoginButton}
+                    buttonColor="#ff6b35"
+                    compact
+                  >
+                    Admin
+                  </Button>
+                </View>
+              </View>
+
               {/* Test Credentials */}
               <View style={styles.credentialsSection}>
                 <Button
@@ -222,6 +293,10 @@ export default function LoginScreen() {
                     <View style={styles.credentialRow}>
                       <Text style={styles.credentialLabel}>User 2:</Text>
                       <Text style={styles.credentialValue}>user2@egg9.com / password123</Text>
+                    </View>
+                    <View style={styles.credentialRow}>
+                      <Text style={styles.credentialLabel}>User 3:</Text>
+                      <Text style={styles.credentialValue}>user3@egg9.com / password123</Text>
                     </View>
                   </View>
                 )}
@@ -370,6 +445,30 @@ const styles = StyleSheet.create({
   signupText: {
     fontSize: 14,
     color: '#666',
+  },
+  quickLoginSection: {
+    marginTop: 24,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  quickLoginLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  quickLoginButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  quickLoginButton: {
+    flex: 1,
+    borderRadius: 8,
   },
   credentialsSection: {
     marginTop: 16,

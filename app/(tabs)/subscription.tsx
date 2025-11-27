@@ -12,6 +12,9 @@ import {
   useTheme,
   Surface,
   SegmentedButtons,
+  Dialog,
+  Portal,
+  Paragraph,
 } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { apiService } from '@/services/api';
@@ -29,7 +32,12 @@ export default function SubscriptionScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [editingSubscription, setEditingSubscription] = useState(false);
   const [subscriptionQuantity, setSubscriptionQuantity] = useState(10);
-  const [subscriptionPeriod, setSubscriptionPeriod] = useState(4); // Default 4 weeks
+  const [subscriptionPeriod, setSubscriptionPeriod] = useState(2); // Default 2 weeks
+  const [nextWeekConfirmation, setNextWeekConfirmation] = useState<{
+    show: boolean;
+    nextWeekStart: string;
+    nextWeekEnd: string;
+  } | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -59,41 +67,79 @@ export default function SubscriptionScreen() {
     }
   };
 
-  const handleSubscribe = async () => {
+  const handleSubscribe = async (startNextWeek: boolean = false) => {
     setProcessing(true);
     setSuccessMessage(null);
     setErrorMessage(null);
 
     try {
-      const sub = await apiService.createSubscription(subscriptionQuantity, subscriptionPeriod);
+      const sub = await apiService.createSubscription(
+        subscriptionQuantity, 
+        subscriptionPeriod, 
+        startNextWeek
+      );
       setSubscription(sub);
-      setSuccessMessage(`Subscription created! ${subscriptionQuantity} eggs per week for ${subscriptionPeriod} weeks.`);
+      setSuccessMessage(
+        startNextWeek 
+          ? `Subscription created! Starting next week: ${subscriptionQuantity} eggs per week for ${subscriptionPeriod} weeks.`
+          : `Subscription created! ${subscriptionQuantity} eggs per week for ${subscriptionPeriod} weeks.`
+      );
       setEditingSubscription(false);
+      setNextWeekConfirmation(null);
       
       const updatedStock = await apiService.getWeeklyStock();
       setWeeklyStock(updatedStock);
     } catch (err: any) {
-      setErrorMessage(err.message || 'Failed to create subscription');
+      // Handle insufficient stock error with next week confirmation dialog
+      if (err.statusCode === 409 && err.data?.message === 'insufficient_stock_this_week') {
+        setNextWeekConfirmation({
+          show: true,
+          nextWeekStart: err.data.nextWeekStart,
+          nextWeekEnd: err.data.nextWeekEnd,
+        });
+      } else {
+        const errorMsg = err?.message || err?.toString() || 'Failed to create subscription';
+        setErrorMessage(typeof errorMsg === 'string' ? errorMsg : 'Failed to create subscription');
+      }
     } finally {
       setProcessing(false);
     }
   };
 
-  const handleUpdateSubscription = async () => {
+  const handleUpdateSubscription = async (startNextWeek: boolean = false) => {
     setProcessing(true);
     setSuccessMessage(null);
     setErrorMessage(null);
 
     try {
-      const sub = await apiService.createSubscription(subscriptionQuantity, subscriptionPeriod);
+      const sub = await apiService.createSubscription(
+        subscriptionQuantity, 
+        subscriptionPeriod, 
+        startNextWeek
+      );
       setSubscription(sub);
-      setSuccessMessage(`Subscription updated! ${subscriptionQuantity} eggs per week for ${subscriptionPeriod} weeks.`);
+      setSuccessMessage(
+        startNextWeek 
+          ? `Subscription updated! Starting next week: ${subscriptionQuantity} eggs per week for ${subscriptionPeriod} weeks.`
+          : `Subscription updated! ${subscriptionQuantity} eggs per week for ${subscriptionPeriod} weeks.`
+      );
       setEditingSubscription(false);
+      setNextWeekConfirmation(null);
       
       const updatedStock = await apiService.getWeeklyStock();
       setWeeklyStock(updatedStock);
     } catch (err: any) {
-      setErrorMessage(err.message || 'Failed to update subscription');
+      // Handle insufficient stock error with next week confirmation dialog
+      if (err.statusCode === 409 && err.data?.message === 'insufficient_stock_this_week') {
+        setNextWeekConfirmation({
+          show: true,
+          nextWeekStart: err.data.nextWeekStart,
+          nextWeekEnd: err.data.nextWeekEnd,
+        });
+      } else {
+        const errorMsg = err?.message || err?.toString() || 'Failed to update subscription';
+        setErrorMessage(typeof errorMsg === 'string' ? errorMsg : 'Failed to update subscription');
+      }
     } finally {
       setProcessing(false);
     }
@@ -210,13 +256,13 @@ export default function SubscriptionScreen() {
                   <RNView style={styles.detailRow}>
                     <Text variant="bodyLarge" style={styles.detailLabel}>Weekly Price:</Text>
                     <Text variant="headlineSmall" style={styles.detailValue}>
-                      ${calculateWeeklyPrice().toFixed(2)}
+                      {calculateWeeklyPrice().toFixed(0)} RSD
                     </Text>
                   </RNView>
                   <RNView style={[styles.detailRow, styles.totalRow]}>
                     <Text variant="titleMedium" style={styles.totalLabel}>Total:</Text>
                     <Text variant="headlineMedium" style={styles.totalValue}>
-                      ${calculateTotalPrice().toFixed(2)}
+                      {calculateTotalPrice().toFixed(0)} RSD
                     </Text>
                   </RNView>
                 </Surface>
@@ -292,19 +338,32 @@ export default function SubscriptionScreen() {
 
                 {/* Period Selector */}
                 <Text variant="titleMedium" style={styles.sectionLabel}>Subscription Duration</Text>
-                <SegmentedButtons
-                  value={subscriptionPeriod.toString()}
-                  onValueChange={(value) => setSubscriptionPeriod(parseInt(value))}
-                  buttons={[
-                    { value: '4', label: '4 weeks' },
-                    { value: '8', label: '8 weeks' },
-                    { value: '12', label: '12 weeks' },
-                  ]}
-                  style={styles.segmentedButtons}
-                />
+                <Surface style={styles.periodContainer} elevation={1}>
+                  <RNView style={styles.periodHeader}>
+                    <Text variant="bodyMedium" style={styles.periodHeaderText}>Selected:</Text>
+                    <Chip mode="flat" style={styles.periodChip}>
+                      {subscriptionPeriod} {subscriptionPeriod === 1 ? 'week' : 'weeks'}
+                    </Chip>
+                  </RNView>
+                  <RNView style={styles.periodGrid}>
+                    {[2, 3, 4].map((weeks) => (
+                      <Button
+                        key={weeks}
+                        mode={subscriptionPeriod === weeks ? 'contained' : 'outlined'}
+                        onPress={() => setSubscriptionPeriod(weeks)}
+                        style={styles.periodButton}
+                        buttonColor={subscriptionPeriod === weeks ? theme.colors.primary : 'transparent'}
+                        textColor={subscriptionPeriod === weeks ? '#fff' : theme.colors.primary}
+                        compact
+                      >
+                        {weeks} {weeks === 1 ? 'week' : 'weeks'}
+                      </Button>
+                    ))}
+                  </RNView>
+                </Surface>
                 
                 <Text variant="bodySmall" style={styles.periodNote}>
-                  Choose between 4 and 12 weeks (3 months maximum)
+                  Subscribe for 2-4 weeks (for single week, use one-time order)
                 </Text>
               </Card.Content>
             </Card>
@@ -323,7 +382,7 @@ export default function SubscriptionScreen() {
                   <RNView style={styles.priceSummary}>
                     <RNView style={styles.summaryRow}>
                       <Text style={styles.summaryLabel}>Weekly Price:</Text>
-                      <Text style={styles.summaryValue}>${calculateWeeklyPrice().toFixed(2)}</Text>
+                      <Text style={styles.summaryValue}>{calculateWeeklyPrice().toFixed(0)} RSD</Text>
                     </RNView>
                     <RNView style={styles.summaryRow}>
                       <Text style={styles.summaryLabel}>Duration:</Text>
@@ -331,8 +390,8 @@ export default function SubscriptionScreen() {
                     </RNView>
                   </RNView>
                   
-                  <Text style={styles.totalLabel}>Total Price</Text>
-                  <Text style={styles.priceAmount}>${calculateTotalPrice().toFixed(2)}</Text>
+                  <Text style={styles.priceTotalLabel}>Total Price</Text>
+                  <Text style={styles.priceAmount}>{calculateTotalPrice().toFixed(0)} RSD</Text>
                   <Text style={styles.priceDetails}>
                     {subscriptionQuantity} eggs × {subscriptionPeriod} weeks
                   </Text>
@@ -345,7 +404,7 @@ export default function SubscriptionScreen() {
               <>
                 <Button
                   mode="contained"
-                  onPress={handleUpdateSubscription}
+                  onPress={() => handleUpdateSubscription()}
                   loading={processing}
                   disabled={processing}
                   style={styles.subscribeButton}
@@ -373,7 +432,7 @@ export default function SubscriptionScreen() {
             ) : (
               <Button
                 mode="contained"
-                onPress={handleSubscribe}
+                onPress={() => handleSubscribe()}
                 loading={processing}
                 disabled={processing}
                 style={styles.subscribeButton}
@@ -395,7 +454,7 @@ export default function SubscriptionScreen() {
             
             {[
               { icon: '🎯', text: 'Guaranteed weekly stock - never miss out!' },
-              { icon: '📦', text: 'Flexible duration: 4 to 12 weeks' },
+              { icon: '📦', text: 'Flexible duration: 2 to 4 weeks' },
               { icon: '🚚', text: 'Automatic delivery scheduling' },
               { icon: '🔄', text: 'Cancel or modify anytime' },
             ].map((benefit, index) => (
@@ -431,6 +490,78 @@ export default function SubscriptionScreen() {
       >
         {errorMessage}
       </Snackbar>
+
+      {/* Confirmation Dialog for Next Week Start */}
+      <Portal>
+        <Dialog
+          visible={!!nextWeekConfirmation?.show}
+          onDismiss={() => setNextWeekConfirmation(null)}
+        >
+          <Dialog.Icon icon="calendar-alert" size={60} />
+          <Dialog.Title style={{ textAlign: 'center', fontSize: 20 }}>
+            No Stock Available This Week
+          </Dialog.Title>
+          <Dialog.Content>
+            <Paragraph style={{ textAlign: 'center', marginBottom: 16, fontSize: 16 }}>
+              Unfortunately, there are no eggs left for this week.
+            </Paragraph>
+            <Paragraph style={{ textAlign: 'center', marginBottom: 12, fontSize: 16, fontWeight: 'bold' }}>
+              Would you like to start your subscription from next week instead?
+            </Paragraph>
+            {nextWeekConfirmation && (
+              <Surface style={{ 
+                padding: 12, 
+                borderRadius: 8, 
+                backgroundColor: theme.colors.primaryContainer,
+                marginTop: 8 
+              }}>
+                <Text style={{ 
+                  textAlign: 'center', 
+                  fontWeight: 'bold', 
+                  color: theme.colors.primary,
+                  fontSize: 16 
+                }}>
+                  📅 Next Week
+                </Text>
+                <Text style={{ 
+                  textAlign: 'center', 
+                  fontWeight: '600',
+                  color: theme.colors.onPrimaryContainer,
+                  marginTop: 4,
+                  fontSize: 15
+                }}>
+                  {new Date(nextWeekConfirmation.nextWeekStart).toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric',
+                    year: 'numeric'
+                  })} - {new Date(nextWeekConfirmation.nextWeekEnd).toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric',
+                    year: 'numeric'
+                  })}
+                </Text>
+              </Surface>
+            )}
+          </Dialog.Content>
+          <Dialog.Actions style={{ justifyContent: 'space-between', paddingHorizontal: 40 }}>
+            <Button 
+              onPress={() => setNextWeekConfirmation(null)}
+              mode="outlined"
+              style={{ minWidth: 100, marginLeft: 16 }}
+            >
+              No
+            </Button>
+            <Button 
+              onPress={() => subscription ? handleUpdateSubscription(true) : handleSubscribe(true)} 
+              mode="contained"
+              style={{ minWidth: 100, marginRight: 16 }}
+              icon="check"
+            >
+              Yes
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
     </View>
   );
 }
@@ -588,8 +719,33 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 24,
   },
-  segmentedButtons: {
+  periodContainer: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    padding: 16,
     marginBottom: 8,
+  },
+  periodHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  periodHeaderText: {
+    fontWeight: '600',
+    color: '#2d3748',
+  },
+  periodChip: {
+    backgroundColor: '#4ecdc4',
+    minWidth: 80,
+  },
+  periodGrid: {
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'center',
+  },
+  periodButton: {
+    flex: 1,
   },
   periodNote: {
     textAlign: 'center',
@@ -639,7 +795,7 @@ const styles = StyleSheet.create({
     color: '#2d3748',
     fontWeight: 'bold',
   },
-  totalLabel: {
+  priceTotalLabel: {
     fontSize: 16,
     color: '#2d3748',
     opacity: 0.85,

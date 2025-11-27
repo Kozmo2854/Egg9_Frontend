@@ -111,19 +111,49 @@ export default function TabLayout() {
   }, []);
 
   if (isAdmin) {
-    // Admin only sees Admin panel
+    // Admin sees Admin Panel and User Management
     return (
       <Tabs
         screenOptions={{
           tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
           headerShown: useClientOnlyValue(false, true),
           headerRight: () => <AuthButton />,
+          headerTransparent: true,
+          headerTitle: '',
+          headerStyle: {
+            backgroundColor: 'transparent',
+          },
         }}>
         <Tabs.Screen
           name="admin"
           options={{
             title: 'Admin Panel',
+            headerTitle: '',
             tabBarIcon: ({ color }) => <TabBarIcon name="dashboard" color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="users"
+          options={{
+            title: 'Users',
+            headerTitle: '',
+            tabBarIcon: ({ color }) => <TabBarIcon name="users" color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="payment-settings"
+          options={{
+            title: 'Payment',
+            headerTitle: '',
+            tabBarIcon: ({ color }) => <TabBarIcon name="credit-card" color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="user-details"
+          options={{
+            href: null, // Hide from tabs
+            title: 'User Details',
+            headerTitle: '',
           }}
         />
         <Tabs.Screen
@@ -155,11 +185,17 @@ export default function TabLayout() {
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: useClientOnlyValue(false, true),
         headerRight: () => <AuthButton />,
+        headerTransparent: true,
+        headerTitle: '',
+        headerStyle: {
+          backgroundColor: 'transparent',
+        },
       }}>
       <Tabs.Screen
         name="index"
         options={{
           title: 'Home',
+          headerTitle: '',
           tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
         }}
       />
@@ -167,6 +203,7 @@ export default function TabLayout() {
         name="two"
         options={{
           title: 'Order',
+          headerTitle: '',
           tabBarIcon: ({ color }) => <TabBarIcon name="shopping-basket" color={color} />,
         }}
       />
@@ -174,11 +211,30 @@ export default function TabLayout() {
         name="subscription"
         options={{
           title: 'Subscription',
+          headerTitle: '',
           tabBarIcon: ({ color }) => <TabBarIcon name="calendar" color={color} />,
         }}
       />
       <Tabs.Screen
         name="admin"
+        options={{
+          href: null, // Hide from tabs
+        }}
+      />
+      <Tabs.Screen
+        name="users"
+        options={{
+          href: null, // Hide from tabs
+        }}
+      />
+      <Tabs.Screen
+        name="payment-settings"
+        options={{
+          href: null, // Hide from tabs
+        }}
+      />
+      <Tabs.Screen
+        name="user-details"
         options={{
           href: null, // Hide from tabs
         }}

@@ -48,11 +48,13 @@ export default function OrderScreen() {
       ]);
       setWeeklyStock(stockData);
       setSubscription(subData);
-      setCurrentWeekOrder(currentOrder);
+      // Only show one-time orders (not subscription orders) on Order tab
+      const oneTimeOrder = currentOrder && !currentOrder.subscriptionId ? currentOrder : null;
+      setCurrentWeekOrder(oneTimeOrder);
       setAvailableEggs(available);
       
-      if (currentOrder) {
-        setQuantity(currentOrder.quantity);
+      if (oneTimeOrder) {
+        setQuantity(oneTimeOrder.quantity);
       } else {
         setQuantity(10);
       }
@@ -87,11 +89,13 @@ export default function OrderScreen() {
       ]);
       setWeeklyStock(updatedStock);
       setSubscription(subData);
-      setCurrentWeekOrder(currentOrder);
+      // Only show one-time orders (not subscription orders) on Order tab
+      const oneTimeOrder = currentOrder && !currentOrder.subscriptionId ? currentOrder : null;
+      setCurrentWeekOrder(oneTimeOrder);
       setAvailableEggs(available);
       
-      if (currentOrder) {
-        setQuantity(currentOrder.quantity);
+      if (oneTimeOrder) {
+        setQuantity(oneTimeOrder.quantity);
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'Failed to place order');
@@ -119,7 +123,9 @@ export default function OrderScreen() {
       ]);
       setWeeklyStock(updatedStock);
       setSubscription(subData);
-      setCurrentWeekOrder(currentOrder);
+      // Only show one-time orders (not subscription orders) on Order tab
+      const oneTimeOrder = currentOrder && !currentOrder.subscriptionId ? currentOrder : null;
+      setCurrentWeekOrder(oneTimeOrder);
       setAvailableEggs(available);
       
       setQuantity(10);
@@ -187,7 +193,10 @@ export default function OrderScreen() {
   }
 
   const maxAvailable = getMaxAvailable();
-  const canOrder = maxAvailable >= 10;
+  const canOrder = maxAvailable >= 10 && weeklyStock.isOrderingOpen;
+  const orderingClosed = !weeklyStock.isOrderingOpen;
+  const stockNotSetup = !weeklyStock.isOrderingOpen && !weeklyStock.allOrdersDelivered;
+  const ordersDelivered = weeklyStock.allOrdersDelivered;
 
   return (
     <View style={styles.container}>
@@ -213,7 +222,7 @@ export default function OrderScreen() {
             </RNView>
             <RNView style={styles.stockDivider} />
             <RNView style={styles.stockItem}>
-              <Text style={styles.stockNumber}>${weeklyStock.pricePerDozen}</Text>
+              <Text style={styles.stockNumber}>{weeklyStock.pricePerDozen.toFixed(0)} RSD</Text>
               <Text style={styles.stockLabel}>Per Dozen</Text>
             </RNView>
           </RNView>
@@ -226,12 +235,20 @@ export default function OrderScreen() {
               style={styles.warningGradient}
             >
               <RNView style={styles.warningContent}>
-                <Text style={styles.warningIcon}>⚠️</Text>
+                <Text style={styles.warningIcon}>
+                  {stockNotSetup ? '📦' : (ordersDelivered ? '✅' : '⚠️')}
+                </Text>
                 <Text variant="titleMedium" style={styles.warningText}>
-                  Not enough stock available
+                  {stockNotSetup 
+                    ? 'Stock Not Set Up Yet' 
+                    : (ordersDelivered ? 'Orders Delivered' : 'Not Enough Stock Available')}
                 </Text>
                 <Text variant="bodyMedium" style={styles.warningSubtext}>
-                  Try a subscription for guaranteed weekly delivery!
+                  {stockNotSetup 
+                    ? 'Admin is preparing this week\'s inventory. Check back soon!' 
+                    : (ordersDelivered 
+                      ? 'All orders have been delivered. New week starts Monday!' 
+                      : 'Try a subscription for guaranteed weekly delivery!')}
                 </Text>
               </RNView>
             </LinearGradient>
@@ -247,9 +264,9 @@ export default function OrderScreen() {
                   <IconButton
                     icon="minus-circle"
                     size={48}
-                    iconColor={quantity <= 10 ? theme.colors.outlineVariant : theme.colors.primary}
+                    iconColor={quantity <= 10 || currentWeekOrder?.isPaid ? theme.colors.outlineVariant : theme.colors.primary}
                     onPress={decrementQuantity}
-                    disabled={quantity <= 10 || processing}
+                    disabled={quantity <= 10 || processing || currentWeekOrder?.isPaid}
                     style={styles.quantityButton}
                   />
                   
@@ -268,9 +285,9 @@ export default function OrderScreen() {
                   <IconButton
                     icon="plus-circle"
                     size={48}
-                    iconColor={quantity >= maxAvailable ? theme.colors.outlineVariant : theme.colors.primary}
+                    iconColor={quantity >= maxAvailable || currentWeekOrder?.isPaid ? theme.colors.outlineVariant : theme.colors.primary}
                     onPress={incrementQuantity}
-                    disabled={quantity >= maxAvailable || processing}
+                    disabled={quantity >= maxAvailable || processing || currentWeekOrder?.isPaid}
                     style={styles.quantityButton}
                   />
                 </RNView>
@@ -291,9 +308,9 @@ export default function OrderScreen() {
               >
                 <RNView style={styles.priceContent}>
                   <Text style={styles.priceLabel}>Total Price</Text>
-                  <Text style={styles.priceAmount}>${calculatePrice().toFixed(2)}</Text>
+                  <Text style={styles.priceAmount}>{calculatePrice().toFixed(0)} RSD</Text>
                   <Text style={styles.priceDetails}>
-                    {quantity / 10} dozen × ${weeklyStock.pricePerDozen}
+                    {quantity / 10} dozen × {weeklyStock.pricePerDozen.toFixed(0)} RSD
                   </Text>
                 </RNView>
               </LinearGradient>
@@ -303,19 +320,19 @@ export default function OrderScreen() {
             {/* Order Status Badge */}
             {currentWeekOrder && (
               <RNView style={styles.statusContainer}>
-                {currentWeekOrder.status === 'pending' && (
+                {currentWeekOrder.status === 'pending' && !currentWeekOrder.isPaid && (
                   <Chip icon="clock-outline" mode="flat" style={styles.statusPending}>
-                    ⏳ Pending Approval
+                    ⏳ Pending Payment
                   </Chip>
                 )}
-                {currentWeekOrder.status === 'approved' && (
-                  <Chip icon="check-circle" mode="flat" style={styles.statusApproved}>
-                    ✓ Approved
+                {currentWeekOrder.status === 'pending' && currentWeekOrder.isPaid && (
+                  <Chip icon="check-circle" mode="flat" style={styles.statusPaid}>
+                    ✓ Payment Confirmed
                   </Chip>
                 )}
-                {currentWeekOrder.status === 'declined' && (
-                  <Chip icon="close-circle" mode="flat" style={styles.statusDeclined}>
-                    ✕ Declined
+                {currentWeekOrder.status === 'completed' && (
+                  <Chip icon="package-check" mode="flat" style={styles.statusCompleted}>
+                    📦 Delivered
                   </Chip>
                 )}
               </RNView>
@@ -325,17 +342,17 @@ export default function OrderScreen() {
               mode="contained"
               onPress={handleBuyNow}
               loading={processing}
-              disabled={processing || quantity > maxAvailable}
+              disabled={processing || quantity > maxAvailable || currentWeekOrder?.isPaid}
               style={styles.orderButton}
               contentStyle={styles.orderButtonContent}
               labelStyle={styles.orderButtonLabel}
               buttonColor={theme.colors.primary}
               icon={currentWeekOrder ? "check" : "cart-check"}
             >
-              {processing ? 'Processing...' : currentWeekOrder ? 'Update Order' : 'Place Order'}
+              {processing ? 'Processing...' : currentWeekOrder?.isPaid ? 'Payment Confirmed - Cannot Update' : currentWeekOrder ? 'Update Order' : 'Place Order'}
             </Button>
 
-            {currentWeekOrder && (
+            {currentWeekOrder && !currentWeekOrder.isPaid && (
               <Button
                 mode="outlined"
                 onPress={handleCancelOrder}
@@ -602,15 +619,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ffc107',
   },
-  statusApproved: {
+  statusPaid: {
     backgroundColor: '#d4f4f1',
     borderWidth: 1,
     borderColor: '#4ecdc4',
   },
-  statusDeclined: {
-    backgroundColor: '#ffd9d9',
+  statusCompleted: {
+    backgroundColor: '#e6ffe6',
     borderWidth: 1,
-    borderColor: '#ff5252',
+    borderColor: '#66bb6a',
   },
   infoCard: {
     marginHorizontal: 16,

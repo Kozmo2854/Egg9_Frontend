@@ -21,6 +21,7 @@ import { Link } from 'expo-router';
 
 interface FormErrors {
   name?: string;
+  phoneNumber?: string;
   email?: string;
   password?: string;
   passwordConfirm?: string;
@@ -30,6 +31,7 @@ export default function RegisterScreen() {
   const router = useRouter();
   const theme = useTheme();
   const [name, setName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
@@ -52,6 +54,12 @@ export default function RegisterScreen() {
       newErrors.name = 'Name is required';
     } else if (name.trim().length < 2) {
       newErrors.name = 'Name must be at least 2 characters';
+    }
+
+    if (!phoneNumber.trim()) {
+      newErrors.phoneNumber = 'Phone number is required';
+    } else if (phoneNumber.trim().length < 8) {
+      newErrors.phoneNumber = 'Please enter a valid phone number';
     }
 
     if (!email.trim()) {
@@ -87,9 +95,10 @@ export default function RegisterScreen() {
     setLoading(true);
     
     try {
-      const response = await apiService.register(name, email, password);
+      const response = await apiService.register(name, email, phoneNumber, password);
       setRegisterSuccess(`Welcome ${response.user.name}!`);
       setName('');
+      setPhoneNumber('');
       setEmail('');
       setPassword('');
       setPasswordConfirm('');
@@ -156,6 +165,30 @@ export default function RegisterScreen() {
               />
               {errors.name && (
                 <Text style={styles.errorText}>{errors.name}</Text>
+              )}
+
+              <TextInput
+                label="Phone Number"
+                value={phoneNumber}
+                onChangeText={(text) => {
+                  setPhoneNumber(text);
+                  if (errors.phoneNumber) {
+                    setErrors({ ...errors, phoneNumber: undefined });
+                  }
+                }}
+                keyboardType="phone-pad"
+                autoComplete="tel"
+                disabled={loading}
+                error={!!errors.phoneNumber}
+                mode="outlined"
+                style={styles.input}
+                outlineColor={theme.colors.outlineVariant}
+                activeOutlineColor={theme.colors.primary}
+                left={<TextInput.Icon icon="phone" />}
+                theme={{ roundness: 12 }}
+              />
+              {errors.phoneNumber && (
+                <Text style={styles.errorText}>{errors.phoneNumber}</Text>
               )}
 
               <TextInput

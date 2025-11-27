@@ -1,7 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { 
   User, 
-  WeeklyStock,
+  UserDetails,
+  Week,
+  AppSettings,
   Order, 
   Subscription, 
   AuthResponse
@@ -15,7 +17,7 @@ import {
  * 
  * Usage:
  *   import { apiService } from '@/services/api';
- *   const stock = await apiService.getWeeklyStock();
+ *   const week = await apiService.getWeeklyStock();
  */
 
 class ApiService {
@@ -38,7 +40,10 @@ class ApiService {
     const data = await response.json();
     
     if (!response.ok) {
-      throw new Error(data.message || 'Request failed');
+      const error: any = new Error(data.message || 'Request failed');
+      error.statusCode = response.status;
+      error.data = data;
+      throw error;
     }
     
     return data;
@@ -94,11 +99,16 @@ class ApiService {
     }
   }
 
-  async register(name: string, email: string, password: string): Promise<AuthResponse> {
+  async register(name: string, email: string, phoneNumber: string, password: string): Promise<AuthResponse> {
     const response = await fetch(`${this.baseUrl}/register`, {
       method: 'POST',
       headers: await this.getAuthHeaders(),
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ 
+        name, 
+        email, 
+        phone_number: phoneNumber, 
+        password 
+      }),
     });
 
     const data = await this.handleResponse<AuthResponse>(response);
@@ -129,24 +139,21 @@ class ApiService {
   // WEEKLY STOCK
   // ============================================
 
-  async getWeeklyStock(): Promise<WeeklyStock> {
-    const response = await fetch(`${this.baseUrl}/weekly-stock`, {
+  async getWeeklyStock(): Promise<Week> {
+    const response = await fetch(`${this.baseUrl}/week/current`, {
       headers: await this.getAuthHeaders(),
     });
 
-    const data = await this.handleResponse<{ weeklyStock: WeeklyStock }>(response);
-    return data.weeklyStock;
+    const data = await this.handleResponse<{ week: Week }>(response);
+    return data.week;
   }
 
-  async updateWeeklyStock(availableEggs: number): Promise<WeeklyStock> {
-    const response = await fetch(`${this.baseUrl}/weekly-stock`, {
-      method: 'PUT',
+  async getAppSettings(): Promise<AppSettings> {
+    const response = await fetch(`${this.baseUrl}/settings`, {
       headers: await this.getAuthHeaders(),
-      body: JSON.stringify({ availableEggs }),
     });
 
-    const data = await this.handleResponse<{ weeklyStock: WeeklyStock }>(response);
-    return data.weeklyStock;
+    return await this.handleResponse<AppSettings>(response);
   }
 
   // ============================================
@@ -188,6 +195,19 @@ class ApiService {
     return data.order;
   }
 
+  async getCurrentWeekSubscriptionOrder(): Promise<Order | null> {
+    const response = await fetch(`${this.baseUrl}/orders/current-week-subscription`, {
+      headers: await this.getAuthHeaders(),
+    });
+
+    if (response.status === 404) {
+      return null;
+    }
+
+    const data = await this.handleResponse<{ order: Order | null }>(response);
+    return data.order;
+  }
+
   async cancelOrder(orderId: number): Promise<void> {
     const response = await fetch(`${this.baseUrl}/orders/${orderId}`, {
       method: 'DELETE',
@@ -195,6 +215,26 @@ class ApiService {
     });
 
     await this.handleResponse(response);
+  }
+
+  async markOrderPaymentSubmitted(orderId: number): Promise<Order> {
+    const response = await fetch(`${this.baseUrl}/orders/${orderId}/mark-payment-submitted`, {
+      method: 'POST',
+      headers: await this.getAuthHeaders(),
+    });
+
+    const data = await this.handleResponse<{ order: Order }>(response);
+    return data.order;
+  }
+
+  async confirmOrderPickup(orderId: number): Promise<Order> {
+    const response = await fetch(`${this.baseUrl}/orders/${orderId}/confirm-pickup`, {
+      method: 'POST',
+      headers: await this.getAuthHeaders(),
+    });
+
+    const data = await this.handleResponse<{ order: Order }>(response);
+    return data.order;
   }
 
   async getOrders(): Promise<Order[]> {
@@ -219,11 +259,11 @@ class ApiService {
   // SUBSCRIPTIONS
   // ============================================
 
-  async createSubscription(quantity: number, period: number): Promise<Subscription> {
+  async createSubscription(quantity: number, period: number, startNextWeek: boolean = false): Promise<Subscription> {
     const response = await fetch(`${this.baseUrl}/subscriptions`, {
       method: 'POST',
       headers: await this.getAuthHeaders(),
-      body: JSON.stringify({ quantity, period }),
+      body: JSON.stringify({ quantity, period, start_next_week: startNextWeek }),
     });
 
     const data = await this.handleResponse<{ subscription: Subscription }>(response);
@@ -279,66 +319,118 @@ class ApiService {
     return data.subscriptions;
   }
 
+  async getAllUsersAdmin(): Promise<User[]> {
+    const response = await fetch(`${this.baseUrl}/admin/users`, {
+      headers: await this.getAuthHeaders(),
+    });
+
+    const data = await this.handleResponse<{ users: User[] }>(response);
+    return data.users;
+  }
+
+  async getUserDetailsAdmin(userId: number): Promise<UserDetails> {
+    const response = await fetch(`${this.baseUrl}/admin/users/${userId}`, {
+      headers: await this.getAuthHeaders(),
+    });
+
+    return await this.handleResponse<UserDetails>(response);
+  }
+
   // ============================================
   // ADMIN - STOCK & DELIVERY
   // ============================================
 
-  async updateWeeklyStockAdmin(newAmount: number): Promise<WeeklyStock> {
-    const response = await fetch(`${this.baseUrl}/admin/weekly-stock`, {
+  async updateCurrentWeek(params: {
+    availableEggs?: number;
+    pricePerDozen?: number;
+    deliveryDate?: string | null;
+    deliveryTime?: string | null;
+  }): Promise<Week> {
+    const response = await fetch(`${this.baseUrl}/admin/week/current`, {
       method: 'PUT',
       headers: await this.getAuthHeaders(),
-      body: JSON.stringify({ availableEggs: newAmount }),
-    });
-
-    const data = await this.handleResponse<{ weeklyStock: WeeklyStock }>(response);
-    return data.weeklyStock;
-  }
-
-  async updateDeliveryInfo(deliveryDate?: string, deliveryTime?: string): Promise<WeeklyStock> {
-    const response = await fetch(`${this.baseUrl}/admin/delivery-info`, {
-      method: 'PUT',
-      headers: await this.getAuthHeaders(),
-      body: JSON.stringify({ 
-        deliveryDate: deliveryDate || null, 
-        deliveryTime: deliveryTime || null 
+      body: JSON.stringify({
+        available_eggs: params.availableEggs,
+        price_per_dozen: params.pricePerDozen,
+        delivery_date: params.deliveryDate,
+        delivery_time: params.deliveryTime,
       }),
     });
 
-    const data = await this.handleResponse<{ weeklyStock: WeeklyStock }>(response);
-    return data.weeklyStock;
+    const data = await this.handleResponse<{ week: Week }>(response);
+    return data.week;
   }
 
-  async markAllOrdersDelivered(): Promise<void> {
+  async updateDefaultPrice(price: number, applyToCurrentWeek: boolean = true): Promise<AppSettings> {
+    const response = await fetch(`${this.baseUrl}/admin/settings/price`, {
+      method: 'PUT',
+      headers: await this.getAuthHeaders(),
+      body: JSON.stringify({ 
+        price,
+        apply_to_current_week: applyToCurrentWeek,
+      }),
+    });
+
+    const data = await this.handleResponse<{ settings: AppSettings }>(response);
+    return data.settings;
+  }
+
+  async confirmOrderPayment(orderId: number): Promise<Order> {
+    const response = await fetch(`${this.baseUrl}/admin/orders/${orderId}/confirm-payment`, {
+      method: 'PUT',
+      headers: await this.getAuthHeaders(),
+    });
+
+    const data = await this.handleResponse<{ order: Order }>(response);
+    return data.order;
+  }
+
+  async markAllOrdersDelivered(): Promise<{ updatedCount: number }> {
     const response = await fetch(`${this.baseUrl}/admin/orders/mark-delivered`, {
       method: 'POST',
       headers: await this.getAuthHeaders(),
     });
 
+    const data = await this.handleResponse<{ message: string; updatedCount: number }>(response);
+    return { updatedCount: data.updatedCount };
+  }
+
+  // ============================================
+  // ADMIN - PAYMENT SETTINGS
+  // ============================================
+
+  async getPaymentSettings(): Promise<{
+    bankAccountNumber: string;
+    recipientName: string;
+    paymentPurpose: string;
+    paymentCode: string;
+  }> {
+    const response = await fetch(`${this.baseUrl}/admin/settings/payment`, {
+      headers: await this.getAuthHeaders(),
+    });
+
+    const data = await this.handleResponse<{ paymentSettings: any }>(response);
+    return data.paymentSettings;
+  }
+
+  async updatePaymentSettings(settings: {
+    bankAccountNumber: string;
+    recipientName: string;
+    paymentPurpose: string;
+    paymentCode: string;
+  }): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/admin/settings/payment`, {
+      method: 'PUT',
+      headers: await this.getAuthHeaders(),
+      body: JSON.stringify({
+        bank_account_number: settings.bankAccountNumber,
+        recipient_name: settings.recipientName,
+        payment_purpose: settings.paymentPurpose,
+        payment_code: settings.paymentCode,
+      }),
+    });
+
     await this.handleResponse(response);
-  }
-
-  // ============================================
-  // ADMIN - ORDER MANAGEMENT
-  // ============================================
-
-  async approveOrder(orderId: number): Promise<Order> {
-    const response = await fetch(`${this.baseUrl}/admin/orders/${orderId}/approve`, {
-      method: 'PUT',
-      headers: await this.getAuthHeaders(),
-    });
-
-    const data = await this.handleResponse<{ order: Order }>(response);
-    return data.order;
-  }
-
-  async declineOrder(orderId: number): Promise<Order> {
-    const response = await fetch(`${this.baseUrl}/admin/orders/${orderId}/decline`, {
-      method: 'PUT',
-      headers: await this.getAuthHeaders(),
-    });
-
-    const data = await this.handleResponse<{ order: Order }>(response);
-    return data.order;
   }
 
   // ============================================

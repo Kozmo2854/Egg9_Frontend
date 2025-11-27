@@ -8,21 +8,35 @@ import {
   Chip, 
   useTheme,
   Surface,
-  IconButton 
+  Button,
+  Dialog,
+  Portal 
 } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { apiService } from '@/services/api';
 import { WeeklyStock } from '@/types/models';
 import { useFocusEffect } from '@react-navigation/native';
+import QRCode from 'react-native-qrcode-svg';
+import * as OrderHelpers from '@/utils/orderHelpers';
 
 export default function HomeScreen() {
   const theme = useTheme();
   const [weeklyStock, setWeeklyStock] = useState<WeeklyStock | null>(null);
   const [subscription, setSubscription] = useState<any>(null);
   const [currentWeekOrder, setCurrentWeekOrder] = useState<any>(null);
+  const [currentWeekSubscriptionOrder, setCurrentWeekSubscriptionOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [availableEggs, setAvailableEggs] = useState(0);
+  const [paymentDialogVisible, setPaymentDialogVisible] = useState(false);
+  const [markingPayment, setMarkingPayment] = useState(false);
+  const [confirmingPickup, setConfirmingPickup] = useState(false);
+  const [paymentSettings, setPaymentSettings] = useState<{
+    bankAccountNumber: string;
+    recipientName: string;
+    paymentPurpose: string;
+    paymentCode: string;
+  } | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -34,16 +48,20 @@ export default function HomeScreen() {
     try {
       setLoading(true);
       setError(null);
-      const [stockData, subData, currentOrder, available] = await Promise.all([
+      const [stockData, subData, currentOrder, currentSubOrder, available, settings] = await Promise.all([
         apiService.getWeeklyStock(),
         apiService.getSubscription(),
         apiService.getCurrentWeekOrder(),
+        apiService.getCurrentWeekSubscriptionOrder(),
         apiService.getAvailableEggsForUser(),
+        apiService.getAppSettings(),
       ]);
       setWeeklyStock(stockData);
       setSubscription(subData);
       setCurrentWeekOrder(currentOrder);
+      setCurrentWeekSubscriptionOrder(currentSubOrder);
       setAvailableEggs(available);
+      setPaymentSettings(settings.paymentSettings);
     } catch (err) {
       setError('Failed to load data');
     } finally {
@@ -65,6 +83,69 @@ export default function HomeScreen() {
       month: 'long', 
       day: 'numeric',
     });
+  };
+
+  const getTotalAmount = () => {
+    return (currentWeekOrder?.total || 0) + (currentWeekSubscriptionOrder?.total || 0);
+  };
+
+  const showPaymentDialog = () => {
+    setPaymentDialogVisible(true);
+  };
+
+  const hidePaymentDialog = () => {
+    setPaymentDialogVisible(false);
+  };
+
+  const handleMarkPaymentSubmitted = async () => {
+    try {
+      setMarkingPayment(true);
+      
+      const orderIds = OrderHelpers.getOrdersNeedingPaymentSubmission(currentWeekOrder, currentWeekSubscriptionOrder);
+
+      if (orderIds.length === 0) {
+        alert('All unpaid orders have already been marked as paid');
+        setPaymentDialogVisible(false);
+        return;
+      }
+
+      await Promise.all(orderIds.map(id => apiService.markOrderPaymentSubmitted(id)));
+      await loadData();
+      setPaymentDialogVisible(false);
+    } catch (err: any) {
+      alert(err.message || 'Failed to mark payment as submitted');
+    } finally {
+      setMarkingPayment(false);
+    }
+  };
+
+  const handleConfirmPickup = async () => {
+    try {
+      setConfirmingPickup(true);
+      
+      const orderIds = OrderHelpers.getOrdersNeedingPickupConfirmation(currentWeekOrder, currentWeekSubscriptionOrder);
+      await Promise.all(orderIds.map(id => apiService.confirmOrderPickup(id)));
+      await loadData();
+    } catch (err: any) {
+      alert(err.message || 'Failed to confirm pickup');
+    } finally {
+      setConfirmingPickup(false);
+    }
+  };
+
+  /** Generates NBS IPS format QR code for Serbian payment system */
+  const generateNBSIPSQRCode = () => {
+    if (!paymentSettings) return '';
+    
+    const isWaiting = OrderHelpers.areOrdersWaitingForConfirmation(currentWeekOrder, currentWeekSubscriptionOrder);
+    const amount = isWaiting 
+      ? OrderHelpers.getUnpaidSubmittedAmount(currentWeekOrder, currentWeekSubscriptionOrder)
+      : OrderHelpers.getUnpaidNotSubmittedAmount(currentWeekOrder, currentWeekSubscriptionOrder);
+    
+    const amountFormatted = `RSD${amount.toFixed(2).replace('.', ',')}`;
+    const bankAccountFormatted = paymentSettings.bankAccountNumber.replace(/-/g, '');
+    
+    return `K:PR|V:01|C:1|R:${bankAccountFormatted}|N:${paymentSettings.recipientName}|I:${amountFormatted}|SF:${paymentSettings.paymentCode}|S:${paymentSettings.paymentPurpose}`;
   };
 
   if (loading) {
@@ -103,27 +184,63 @@ export default function HomeScreen() {
         
         {/* Stats Card */}
         <Surface style={styles.statCard} elevation={4}>
+          {weeklyStock.isOrderingOpen ? (
+            <>
           <Text style={styles.statNumber}>{availableEggs}</Text>
           <Text style={styles.statLabel}>Available Eggs</Text>
+            </>
+          ) : weeklyStock.allOrdersDelivered ? (
+            <>
+              <Text style={styles.statIcon}>✅</Text>
+              <Text style={styles.statLabel}>Orders Delivered!</Text>
+              <Text style={styles.statSubtext}>See you next week!</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.statIcon}>📦</Text>
+              <Text style={styles.statLabel}>Stock not set up yet</Text>
+              <Text style={styles.statSubtext}>Admin will update soon</Text>
+            </>
+          )}
         </Surface>
       </LinearGradient>
 
       <RNView style={styles.content}>
         {/* Delivery Status */}
         <Card style={styles.deliveryCard} mode="elevated">
-          {weeklyStock.allOrdersDelivered ? (
+          {['delivered', 'completed'].includes(currentWeekOrder?.status || '') || ['delivered', 'completed'].includes(currentWeekSubscriptionOrder?.status || '') || weeklyStock.allOrdersDelivered ? (
             <LinearGradient
-              colors={[theme.colors.tertiary, theme.colors.tertiaryContainer]}
+              colors={OrderHelpers.areAllOrdersComplete(currentWeekOrder, currentWeekSubscriptionOrder) 
+                ? ['#d4edda', '#f1f9f3'] 
+                : [theme.colors.tertiary, theme.colors.tertiaryContainer]}
               style={styles.deliveryGradient}
             >
               <RNView style={styles.deliveryContent}>
                 <RNView style={styles.deliveryIconCircle}>
                   <Text style={styles.deliveryIconCheck}>✓</Text>
                 </RNView>
-                <Text style={styles.deliveryTitle}>Orders Delivered!</Text>
-                <Text style={styles.deliverySubtitle}>
-                  This week's orders have been delivered
+                <Text style={styles.deliveryTitle}>
+                  {OrderHelpers.areAllOrdersComplete(currentWeekOrder, currentWeekSubscriptionOrder) ? 'Order Complete!' : 'Order Delivered!'}
                 </Text>
+                <Text style={styles.deliverySubtitle}>
+                  {OrderHelpers.areAllOrdersComplete(currentWeekOrder, currentWeekSubscriptionOrder) 
+                    ? 'Thank you! Your order is complete. See you next week!' 
+                    : `${((currentWeekOrder?.quantity || 0) + (currentWeekSubscriptionOrder?.quantity || 0))} eggs have been delivered`}
+                </Text>
+                {!OrderHelpers.areAllOrdersComplete(currentWeekOrder, currentWeekSubscriptionOrder) && (
+                  <Button
+                    mode="contained"
+                    onPress={handleConfirmPickup}
+                    loading={confirmingPickup}
+                    disabled={confirmingPickup || OrderHelpers.areAllOrdersPickedUp(currentWeekOrder, currentWeekSubscriptionOrder)}
+                    icon="check-circle"
+                    style={styles.confirmPickupButton}
+                    buttonColor="#ffffff"
+                    textColor={theme.colors.tertiary}
+                  >
+                    {OrderHelpers.areAllOrdersPickedUp(currentWeekOrder, currentWeekSubscriptionOrder) ? 'Pickup Confirmed' : 'Confirm Pickup'}
+                  </Button>
+                )}
               </RNView>
             </LinearGradient>
           ) : weeklyStock.deliveryDate && weeklyStock.deliveryTime ? (
@@ -160,6 +277,91 @@ export default function HomeScreen() {
           )}
         </Card>
 
+        {/* Payment Section */}
+        {(currentWeekOrder || currentWeekSubscriptionOrder) && (
+          <Surface style={styles.orderCard} elevation={2}>
+            <LinearGradient
+              colors={OrderHelpers.areAllOrdersPaid(currentWeekOrder, currentWeekSubscriptionOrder) 
+                ? ['#d4edda', '#f1f9f3'] 
+                : OrderHelpers.areOrdersWaitingForConfirmation(currentWeekOrder, currentWeekSubscriptionOrder)
+                ? ['#e3f2fd', '#f5f9ff']
+                : ['#fff3cd', '#fff9e6']}
+              style={styles.orderGradient}
+            >
+              <RNView style={styles.orderContent}>
+                <RNView style={styles.orderHeader}>
+                  <RNView style={styles.orderIconContainer}>
+                    <Text style={styles.orderIcon}>
+                      {OrderHelpers.areAllOrdersPaid(currentWeekOrder, currentWeekSubscriptionOrder) ? '✅' : OrderHelpers.areOrdersWaitingForConfirmation(currentWeekOrder, currentWeekSubscriptionOrder) ? '⏳' : '💳'}
+                    </Text>
+                  </RNView>
+                  <Text variant="titleLarge" style={styles.orderTitle}>
+                    Payment Status
+                  </Text>
+                </RNView>
+                
+                <RNView style={styles.orderDetails}>
+                  {OrderHelpers.areAllOrdersPaid(currentWeekOrder, currentWeekSubscriptionOrder) ? (
+                    <>
+                      <Chip icon="check-circle" mode="flat" style={styles.paidChip}>
+                        Paid
+                      </Chip>
+                      <Text variant="headlineSmall" style={styles.orderQuantity}>
+                        {((currentWeekOrder?.quantity || 0) + (currentWeekSubscriptionOrder?.quantity || 0))} eggs
+                      </Text>
+                      <Text variant="headlineMedium" style={styles.paymentAmountPaid}>
+                        {getTotalAmount().toFixed(0)} RSD
+                      </Text>
+                      <Text variant="bodyLarge" style={styles.paymentConfirmation}>
+                        Your order was paid
+                      </Text>
+                    </>
+                  ) : OrderHelpers.areOrdersWaitingForConfirmation(currentWeekOrder, currentWeekSubscriptionOrder) ? (
+                    <>
+                      <Chip icon="clock-outline" mode="flat" style={styles.waitingChip}>
+                        Waiting for Admin confirmation
+                      </Chip>
+                      <Text variant="headlineSmall" style={styles.orderQuantity}>
+                        {OrderHelpers.getUnpaidSubmittedQuantity(currentWeekOrder, currentWeekSubscriptionOrder)} eggs
+                      </Text>
+                      <Text variant="headlineMedium" style={styles.paymentAmount}>
+                        {OrderHelpers.getUnpaidSubmittedAmount(currentWeekOrder, currentWeekSubscriptionOrder).toFixed(0)} RSD
+                      </Text>
+                      <Text variant="bodyMedium" style={styles.paymentLabel}>
+                        Payment submitted - awaiting confirmation
+                      </Text>
+                    </>
+                  ) : (
+                    <>
+                      <Chip icon="alert-circle" mode="flat" style={styles.unpaidChip}>
+                        Unpaid
+                      </Chip>
+                      <Text variant="headlineSmall" style={styles.orderQuantity}>
+                        {OrderHelpers.getUnpaidNotSubmittedQuantity(currentWeekOrder, currentWeekSubscriptionOrder)} eggs
+                      </Text>
+                      <Text variant="headlineMedium" style={styles.paymentAmount}>
+                        {OrderHelpers.getUnpaidNotSubmittedAmount(currentWeekOrder, currentWeekSubscriptionOrder).toFixed(0)} RSD
+                      </Text>
+                      <Text variant="bodyMedium" style={styles.paymentLabel}>
+                        Total to be paid
+                      </Text>
+                      <Button
+                        mode="contained"
+                        onPress={showPaymentDialog}
+                        icon="qrcode"
+                        style={styles.paymentButton}
+                        buttonColor={theme.colors.primary}
+                      >
+                        View Payment Details
+                      </Button>
+                    </>
+                  )}
+                </RNView>
+              </RNView>
+            </LinearGradient>
+          </Surface>
+        )}
+
         {/* Your Orders */}
         <Text variant="headlineSmall" style={styles.sectionTitle}>
           Your Orders
@@ -192,6 +394,9 @@ export default function HomeScreen() {
                   <Text variant="bodyMedium" style={styles.orderFrequency}>
                     delivered weekly
                   </Text>
+                  <Text variant="bodyLarge" style={styles.orderRemainingWeeks}>
+                    {subscription.weeksRemaining} {subscription.weeksRemaining === 1 ? 'week' : 'weeks'} remaining
+                  </Text>
                 </RNView>
               ) : (
                 <Text variant="bodyMedium" style={styles.orderInactive}>
@@ -214,7 +419,7 @@ export default function HomeScreen() {
                   <Text style={styles.orderIcon}>🛒</Text>
                 </RNView>
                 <Text variant="titleLarge" style={styles.orderTitle}>
-                  This Week
+                  One time orders for this week
                 </Text>
               </RNView>
               
@@ -227,7 +432,7 @@ export default function HomeScreen() {
                     {currentWeekOrder.quantity} eggs
                   </Text>
                   <Text variant="bodyMedium" style={styles.orderPrice}>
-                    ${currentWeekOrder.total.toFixed(2)}
+                    {currentWeekOrder.total.toFixed(0)} RSD
                   </Text>
                 </RNView>
               ) : (
@@ -238,7 +443,60 @@ export default function HomeScreen() {
             </RNView>
           </LinearGradient>
         </Surface>
+
       </RNView>
+
+      {/* Payment Dialog */}
+      <Portal>
+        <Dialog visible={paymentDialogVisible} onDismiss={hidePaymentDialog} style={styles.paymentDialog}>
+          <Dialog.Title style={styles.dialogTitle}>Payment Information</Dialog.Title>
+          <Dialog.Content style={styles.dialogContent}>
+            <RNView style={styles.qrCodeContainer}>
+              <QRCode
+                value={generateNBSIPSQRCode()}
+                size={200}
+                backgroundColor="white"
+              />
+            </RNView>
+            <Text variant="titleMedium" style={styles.paymentDialogAmount}>
+              Amount: {(OrderHelpers.areOrdersWaitingForConfirmation(currentWeekOrder, currentWeekSubscriptionOrder) 
+                ? OrderHelpers.getUnpaidSubmittedAmount(currentWeekOrder, currentWeekSubscriptionOrder) 
+                : OrderHelpers.getUnpaidNotSubmittedAmount(currentWeekOrder, currentWeekSubscriptionOrder)).toFixed(0)} RSD
+            </Text>
+            <RNView style={styles.bankDetailsContainer}>
+              <Text variant="bodyMedium" style={styles.bankDetailLabel}>Account:</Text>
+              <Text variant="bodyMedium" style={styles.bankDetailValue}>{paymentSettings?.bankAccountNumber}</Text>
+            </RNView>
+            <RNView style={styles.bankDetailsContainer}>
+              <Text variant="bodyMedium" style={styles.bankDetailLabel}>Recipient:</Text>
+              <Text variant="bodyMedium" style={styles.bankDetailValue}>{paymentSettings?.recipientName}</Text>
+            </RNView>
+            <RNView style={styles.bankDetailsContainer}>
+              <Text variant="bodyMedium" style={styles.bankDetailLabel}>Purpose:</Text>
+              <Text variant="bodyMedium" style={styles.bankDetailValue}>{paymentSettings?.paymentPurpose}</Text>
+            </RNView>
+            <Text variant="bodySmall" style={styles.paymentInstructions}>
+              Scan the QR code with your banking app for instant payment, or use the bank account details above.
+              {!OrderHelpers.areAllOrdersPaymentSubmitted(currentWeekOrder, currentWeekSubscriptionOrder) && ' After payment, click "Mark Paid" below. Admin will confirm once received.'}
+            </Text>
+          </Dialog.Content>
+          <Dialog.Actions style={styles.dialogActions}>
+            {!OrderHelpers.areAllOrdersPaymentSubmitted(currentWeekOrder, currentWeekSubscriptionOrder) && (
+              <Button 
+                onPress={handleMarkPaymentSubmitted} 
+                mode="contained"
+                loading={markingPayment}
+                disabled={markingPayment}
+                buttonColor={theme.colors.tertiary}
+                style={{ marginRight: 8 }}
+              >
+                Mark Paid
+              </Button>
+            )}
+            <Button onPress={hidePaymentDialog} mode="contained">Close</Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
     </ScrollView>
   );
 }
@@ -302,10 +560,19 @@ const styles = StyleSheet.create({
     color: '#2d3748',
     marginBottom: 8,
   },
+  statIcon: {
+    fontSize: 48,
+    marginBottom: 8,
+  },
   statLabel: {
     fontSize: 16,
     color: '#666',
     fontWeight: '600',
+  },
+  statSubtext: {
+    fontSize: 13,
+    color: '#999',
+    marginTop: 4,
   },
   content: {
     padding: 16,
@@ -356,6 +623,15 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(255, 255, 255, 0.6)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 1,
+  },
+  confirmPickupButton: {
+    marginTop: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
   },
   deliveryPadding: {
     padding: 20,
@@ -460,6 +736,11 @@ const styles = StyleSheet.create({
   orderFrequency: {
     opacity: 0.8,
   },
+  orderRemainingWeeks: {
+    opacity: 0.85,
+    marginTop: 8,
+    fontWeight: '600',
+  },
   orderPrice: {
     opacity: 0.8,
   },
@@ -467,5 +748,95 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     opacity: 0.6,
     paddingVertical: 12,
+  },
+  paidChip: {
+    marginBottom: 12,
+  },
+  unpaidChip: {
+    marginBottom: 12,
+  },
+  waitingChip: {
+    marginBottom: 12,
+    backgroundColor: '#e3f2fd',
+    borderColor: '#2196f3',
+    borderWidth: 1,
+  },
+  paymentAmount: {
+    fontWeight: 'bold',
+    marginTop: 8,
+    marginBottom: 4,
+    color: '#2d3748',
+  },
+  paymentAmountPaid: {
+    fontWeight: 'bold',
+    marginTop: 8,
+    marginBottom: 4,
+    color: '#28a745',
+  },
+  paymentLabel: {
+    opacity: 0.7,
+    marginBottom: 16,
+  },
+  paymentButton: {
+    marginTop: 8,
+  },
+  paymentConfirmation: {
+    fontWeight: '600',
+    color: '#28a745',
+    marginTop: 8,
+  },
+  paymentDialog: {
+    maxWidth: 400,
+    alignSelf: 'center',
+  },
+  dialogTitle: {
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
+  dialogContent: {
+    alignItems: 'center',
+  },
+  dialogActions: {
+    justifyContent: 'center',
+    paddingBottom: 16,
+  },
+  qrCodeContainer: {
+    padding: 16,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  paymentDialogAmount: {
+    fontWeight: 'bold',
+    marginBottom: 16,
+    fontSize: 20,
+    color: '#2d3748',
+  },
+  bankDetailsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  bankDetailLabel: {
+    fontWeight: '600',
+    color: '#666',
+  },
+  bankDetailValue: {
+    fontWeight: 'bold',
+    color: '#2d3748',
+  },
+  paymentInstructions: {
+    marginTop: 16,
+    textAlign: 'center',
+    opacity: 0.7,
+    lineHeight: 20,
   },
 });

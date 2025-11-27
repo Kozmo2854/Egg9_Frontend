@@ -4,11 +4,19 @@ export interface User {
   id: number;
   name: string;
   email: string;
+  phoneNumber?: string;
   role: 'customer' | 'admin';
   createdAt: string;
 }
 
-export interface WeeklyStock {
+export interface UserDetails {
+  user: User;
+  orders: Order[];
+  subscriptions: Subscription[];
+  totalEggsBought: number;
+}
+
+export interface Week {
   id: number;
   weekStart: string; // ISO date string
   weekEnd: string;
@@ -20,19 +28,37 @@ export interface WeeklyStock {
   allOrdersDelivered: boolean; // Track if all orders for this week are delivered
 }
 
+export interface AppSettings {
+  id: number;
+  defaultPricePerDozen: number;
+  paymentSettings: {
+    bankAccountNumber: string;
+    recipientName: string;
+    paymentPurpose: string;
+    paymentCode: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Order {
   id: number;
   userId: number;
+  subscriptionId?: number | null; // Foreign key to subscriptions table (if order came from subscription)
+  isSubscription?: boolean; // For admin view - indicates if order is from a subscription
+  weekId: number; // Foreign key to weeks table
   userName?: string; // For admin view
   userEmail?: string; // For admin view
   quantity: number; // Number of eggs (multiples of 10)
-  pricePerDozen: number; // Price per dozen eggs
   total: number; // Total price for the order
-  status: 'pending' | 'approved' | 'declined' | 'completed';
-  deliveryStatus: 'not_delivered' | 'delivered';
-  weekStart: string; // ISO date string - which week this order is for
+  status: 'pending' | 'completed';
+  isPaid: boolean; // Payment confirmation status (by admin)
+  paymentSubmitted: boolean; // Payment marked as submitted by user
+  pickedUp: boolean; // Pickup confirmed by user
+  weekStart?: string; // ISO date string - which week this order is for (from week relation)
+  weekEnd?: string; // ISO date string - week end date
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
 }
 
 export interface Subscription {
@@ -59,4 +85,7 @@ export interface ApiError {
   message: string;
   errors?: Record<string, string[]>;
 }
+
+// Backwards compatibility alias
+export type WeeklyStock = Week;
 
