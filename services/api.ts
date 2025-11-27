@@ -21,7 +21,7 @@ import {
  */
 
 class ApiService {
-  private baseUrl: string = 'http://localhost:8000/api';
+  private baseUrl: string = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api';
 
   // ============================================
   // HELPER METHODS

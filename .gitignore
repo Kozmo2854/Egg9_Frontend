@@ -41,4 +41,4 @@ expo-env.d.ts
 # @end expo-cli
 
 # PHPStorm settings
-.idea/
+.idea/.env
