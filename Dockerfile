@@ -13,10 +13,15 @@ RUN npm install
 # Copy app source
 COPY . .
 
-# Create .env from .env.example
-RUN cp .env.example .env || touch .env
+# Accept build-time arguments from Railway
+ARG EXPO_PUBLIC_API_URL
+ARG EXPO_PUBLIC_APP_ENV=production
 
-# Export web build (creates static files)
+# Make them available as environment variables during build
+ENV EXPO_PUBLIC_API_URL=$EXPO_PUBLIC_API_URL
+ENV EXPO_PUBLIC_APP_ENV=$EXPO_PUBLIC_APP_ENV
+
+# Export web build (creates static files with env vars baked in)
 RUN npx expo export -p web
 
 # Install serve to host static files
