@@ -219,9 +219,9 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
-  const colorScheme = useColorScheme();
-  const paperTheme = colorScheme === 'dark' ? darkTheme : lightTheme;
-  const navTheme = colorScheme === 'dark' ? DarkTheme : DefaultTheme;
+  // Force light theme always (ignore system dark mode)
+  const paperTheme = lightTheme;
+  const navTheme = DefaultTheme;
 
   return (
     <PaperProvider theme={paperTheme}>
