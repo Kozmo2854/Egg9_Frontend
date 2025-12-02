@@ -194,7 +194,9 @@ export default function RootLayout() {
 
   // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
-    if (error) throw error;
+    if (error) {
+      console.warn('Font loading error:', error);
+    }
   }, [error]);
 
   useEffect(() => {
@@ -203,10 +205,16 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
-  if (!loaded) {
-    return null;
-  }
+  // Always hide splash screen after 1 second, regardless of fonts
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      SplashScreen.hideAsync();
+    }, 1000);
+    
+    return () => clearTimeout(timeout);
+  }, []);
 
+  // Don't block rendering on fonts - show app immediately
   return <RootLayoutNav />;
 }
 
