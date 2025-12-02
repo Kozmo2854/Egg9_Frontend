@@ -344,10 +344,12 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
+    alignItems: 'center',
     paddingVertical: 40,
   },
   content: {
-    flex: 1,
+    width: '100%',
+    maxWidth: 500,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
@@ -393,6 +395,8 @@ const styles = StyleSheet.create({
     textShadowRadius: 1,
   },
   loginCard: {
+    width: Math.min(width - 48, 450),
+    maxWidth: '100%',
     backgroundColor: '#ffffff',
     borderRadius: 24,
     padding: 28,
