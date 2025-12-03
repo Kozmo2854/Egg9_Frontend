@@ -29,6 +29,7 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
 
 # typescript
@@ -40,5 +41,15 @@ yarn-error.*
 expo-env.d.ts
 # @end expo-cli
 
-# PHPStorm settings
-.idea/.env
+# IDE
+.idea/
+.vscode/
+
+# EAS
+.easignore
+
+# Logs
+*.log
+
+# Testing
+coverage/
