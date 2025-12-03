@@ -17,6 +17,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { apiService } from '@/services/api';
 import { useRouter, Link } from 'expo-router';
+import { registerForPushNotifications } from '@/utils/pushNotifications';
 
 interface FormErrors {
   email?: string;
@@ -75,6 +76,9 @@ export default function LoginScreen() {
       setEmail('');
       setPassword('');
       
+      // Register for push notifications after successful login
+      registerForPushNotifications();
+      
       setTimeout(() => {
         router.replace('/(tabs)');
       }, 500);
@@ -98,6 +102,9 @@ export default function LoginScreen() {
       setLoginSuccess(`Welcome ${response.user.name}!`);
       setEmail('');
       setPassword('');
+      
+      // Register for push notifications after successful login
+      registerForPushNotifications();
       
       setTimeout(() => {
         router.replace('/(tabs)');

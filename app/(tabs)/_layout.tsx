@@ -9,6 +9,7 @@ import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { apiService } from '@/services/api';
 import { useFocusEffect } from '@react-navigation/native';
 import { ScrollProvider, useScrollContext } from '@/contexts/ScrollContext';
+import { unregisterPushNotifications } from '@/utils/pushNotifications';
 
 // You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
 function TabBarIcon(props: {
@@ -79,6 +80,8 @@ function useAuthState() {
 
   const handleLogout = async () => {
     try {
+      // Unregister push notifications before logout
+      await unregisterPushNotifications();
       await apiService.logout();
       setIsLoggedIn(false);
       setUserName('');

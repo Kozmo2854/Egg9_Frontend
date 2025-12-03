@@ -434,6 +434,32 @@ class ApiService {
   }
 
   // ============================================
+  // PUSH NOTIFICATIONS
+  // ============================================
+
+  async registerPushToken(token: string, deviceType: 'ios' | 'android' | 'web' = 'android'): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/push-token`, {
+      method: 'POST',
+      headers: await this.getAuthHeaders(),
+      body: JSON.stringify({
+        token,
+        device_type: deviceType,
+      }),
+    });
+
+    await this.handleResponse(response);
+  }
+
+  async unregisterPushToken(): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/push-token`, {
+      method: 'DELETE',
+      headers: await this.getAuthHeaders(),
+    });
+
+    await this.handleResponse(response);
+  }
+
+  // ============================================
   // DEVELOPMENT HELPER
   // ============================================
 
