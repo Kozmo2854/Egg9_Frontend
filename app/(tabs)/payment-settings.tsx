@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, ScrollView, Alert, View as RNView } from 'react-native';
+import { StyleSheet, ScrollView, Alert, View as RNView, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { View } from '@/components/Themed';
 import { 
   Text, 
@@ -12,10 +12,12 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { apiService } from '@/services/api';
 import { useRouter } from 'expo-router';
+import { useScrollContext } from '@/contexts/ScrollContext';
 
 export default function PaymentSettingsScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const { setScrollY } = useScrollContext();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [bankAccountNumber, setBankAccountNumber] = useState('');
@@ -86,7 +88,12 @@ export default function PaymentSettingsScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView 
+      style={styles.container} 
+      showsVerticalScrollIndicator={false}
+      onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => setScrollY(e.nativeEvent.contentOffset.y)}
+      scrollEventThrottle={16}
+    >
       {/* Hero Section */}
       <LinearGradient
         colors={[theme.colors.primary, theme.colors.secondary]}

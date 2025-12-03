@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Link, Tabs, useRouter } from 'expo-router';
-import { Pressable, Alert, View, Text } from 'react-native';
+import { Pressable, Alert, View, Text, Platform, StyleSheet } from 'react-native';
 
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { apiService } from '@/services/api';
 import { useFocusEffect } from '@react-navigation/native';
+import { ScrollProvider, useScrollContext } from '@/contexts/ScrollContext';
 
 // You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
 function TabBarIcon(props: {
@@ -17,8 +18,45 @@ function TabBarIcon(props: {
   return <FontAwesome size={28} style={{ marginBottom: -3 }} {...props} />;
 }
 
-function AuthButton() {
-  const colorScheme = useColorScheme();
+// Custom header background with blur effect that responds to scroll
+function HeaderBackground() {
+  const { scrollY } = useScrollContext();
+  const SCROLL_THRESHOLD = 50;
+  
+  // Calculate progress (0 to 1) based on scroll position
+  const progress = Math.min(scrollY / SCROLL_THRESHOLD, 1);
+  
+  // At top (scrollY = 0): completely invisible
+  // After scrolling: styles fade in
+  const isScrolled = scrollY > 0;
+  
+  return (
+    <View
+      style={[
+        StyleSheet.absoluteFill,
+        {
+          // Fully transparent background - blur does the work
+          backgroundColor: 'transparent',
+          // Blur only applies after scrolling
+          // @ts-ignore - backdropFilter is web-only
+          backdropFilter: Platform.OS === 'web' && isScrolled ? `blur(${12 * progress}px)` : 'none',
+          WebkitBackdropFilter: Platform.OS === 'web' && isScrolled ? `blur(${12 * progress}px)` : 'none',
+          // Border and shadow fade in
+          borderBottomWidth: isScrolled ? 1 : 0,
+          borderBottomColor: `rgba(0, 0, 0, ${0.1 * progress})`,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1 * progress,
+          shadowRadius: 4,
+          elevation: isScrolled ? 3 * progress : 0,
+        } as any,
+      ]}
+    />
+  );
+}
+
+// Shared auth state hook
+function useAuthState() {
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState('');
@@ -29,7 +67,6 @@ function AuthButton() {
     setUserName(user?.name || '');
   };
 
-  // Check login status when component mounts and when tabs change
   useEffect(() => {
     checkLoginStatus();
   }, []);
@@ -51,17 +88,34 @@ function AuthButton() {
     }
   };
 
+  return { isLoggedIn, userName, handleLogout };
+}
+
+// Left side: User name
+function HeaderLeft() {
+  const { isLoggedIn, userName } = useAuthState();
+
+  if (!isLoggedIn) return null;
+
+  return (
+    <View style={headerStyles.leftContainer}>
+      <Text style={headerStyles.userName}>{userName}</Text>
+    </View>
+  );
+}
+
+// Right side: Login/Logout button
+function HeaderRight() {
+  const { isLoggedIn, handleLogout } = useAuthState();
+
   if (!isLoggedIn) {
     return (
       <Link href="/modal" asChild>
-        <Pressable>
+        <Pressable style={headerStyles.loginButton}>
           {({ pressed }) => (
-            <FontAwesome
-              name="sign-in"
-              size={25}
-              color={Colors[colorScheme ?? 'light'].text}
-              style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
-            />
+            <Text style={[headerStyles.loginButtonText, { opacity: pressed ? 0.7 : 1 }]}>
+              Log in
+            </Text>
           )}
         </Pressable>
       </Link>
@@ -69,28 +123,58 @@ function AuthButton() {
   }
 
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 15 }}>
-      <Text style={{ marginRight: 10, fontSize: 14, color: Colors[colorScheme ?? 'light'].text }}>
-        {userName}
-      </Text>
-      <Pressable onPress={handleLogout}>
-        {({ pressed }) => (
-          <FontAwesome
-            name="sign-out"
-            size={25}
-            color={Colors[colorScheme ?? 'light'].text}
-            style={{ opacity: pressed ? 0.5 : 1 }}
-          />
-        )}
-      </Pressable>
-    </View>
+    <Pressable onPress={handleLogout} style={headerStyles.logoutButton}>
+      {({ pressed }) => (
+        <Text style={[headerStyles.logoutButtonText, { opacity: pressed ? 0.7 : 1 }]}>
+          Log out
+        </Text>
+      )}
+    </Pressable>
   );
 }
+
+const headerStyles = StyleSheet.create({
+  leftContainer: {
+    marginLeft: 15,
+  },
+  userName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#2d3748',
+  },
+  loginButton: {
+    marginRight: 15,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    backgroundColor: '#4ecdc4',
+    borderRadius: 16,
+  },
+  loginButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  logoutButton: {
+    marginRight: 15,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(78, 205, 196, 0.15)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(78, 205, 196, 0.3)',
+  },
+  logoutButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#444',
+  },
+});
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
+
 
   // Check if user is logged in and if they're an admin
   useEffect(() => {
@@ -113,16 +197,17 @@ export default function TabLayout() {
   if (isAdmin) {
     // Admin sees Admin Panel and User Management
     return (
+      <ScrollProvider>
       <Tabs
         screenOptions={{
           tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
           headerShown: useClientOnlyValue(false, true),
-          headerRight: () => <AuthButton />,
+          headerLeft: () => <HeaderLeft />,
+          headerRight: () => <HeaderRight />,
           headerTransparent: true,
+          headerBackground: () => <HeaderBackground />,
           headerTitle: '',
-          headerStyle: {
-            backgroundColor: 'transparent',
-          },
+          headerStyle: { height: 50 },
         }}>
         <Tabs.Screen
           name="admin"
@@ -175,21 +260,23 @@ export default function TabLayout() {
           }}
         />
       </Tabs>
+      </ScrollProvider>
     );
   }
 
   // Regular users see Home, Order, Subscription
   return (
+    <ScrollProvider>
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: useClientOnlyValue(false, true),
-        headerRight: () => <AuthButton />,
+        headerLeft: () => <HeaderLeft />,
+        headerRight: () => <HeaderRight />,
         headerTransparent: true,
+        headerBackground: () => <HeaderBackground />,
         headerTitle: '',
-        headerStyle: {
-          backgroundColor: 'transparent',
-        },
+        headerStyle: { height: 50 },
       }}>
       <Tabs.Screen
         name="index"
@@ -240,5 +327,6 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    </ScrollProvider>
   );
 }

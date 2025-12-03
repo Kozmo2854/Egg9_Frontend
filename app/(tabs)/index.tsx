@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { StyleSheet, ScrollView, View as RNView } from 'react-native';
+import { StyleSheet, ScrollView, View as RNView, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { View } from '@/components/Themed';
 import { 
   Card, 
@@ -18,9 +18,11 @@ import { WeeklyStock } from '@/types/models';
 import { useFocusEffect } from '@react-navigation/native';
 import QRCode from 'react-native-qrcode-svg';
 import * as OrderHelpers from '@/utils/orderHelpers';
+import { useScrollContext } from '@/contexts/ScrollContext';
 
 export default function HomeScreen() {
   const theme = useTheme();
+  const { setScrollY } = useScrollContext();
   const [weeklyStock, setWeeklyStock] = useState<WeeklyStock | null>(null);
   const [subscription, setSubscription] = useState<any>(null);
   const [currentWeekOrder, setCurrentWeekOrder] = useState<any>(null);
@@ -37,6 +39,10 @@ export default function HomeScreen() {
     paymentPurpose: string;
     paymentCode: string;
   } | null>(null);
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    setScrollY(event.nativeEvent.contentOffset.y);
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -168,7 +174,12 @@ export default function HomeScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView 
+      style={styles.container} 
+      showsVerticalScrollIndicator={false}
+      onScroll={handleScroll}
+      scrollEventThrottle={16}
+    >
       {/* Hero Section with Gradient */}
       <LinearGradient
         colors={[theme.colors.primary, theme.colors.secondary]}
@@ -721,6 +732,8 @@ const styles = StyleSheet.create({
   },
   orderTitle: {
     fontWeight: 'bold',
+    flex: 1,
+    flexShrink: 1,
   },
   orderDetails: {
     alignItems: 'center',
@@ -824,14 +837,19 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+    flexWrap: 'wrap',
+    gap: 4,
   },
   bankDetailLabel: {
     fontWeight: '600',
     color: '#666',
+    flexShrink: 0,
   },
   bankDetailValue: {
     fontWeight: 'bold',
     color: '#2d3748',
+    flexShrink: 1,
+    textAlign: 'right',
   },
   paymentInstructions: {
     marginTop: 16,

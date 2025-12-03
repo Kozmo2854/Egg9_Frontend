@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { StyleSheet, ScrollView, View as RNView } from 'react-native';
+import { StyleSheet, ScrollView, View as RNView, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { View } from '@/components/Themed';
 import {
   Card,
@@ -20,9 +20,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { apiService } from '@/services/api';
 import { WeeklyStock } from '@/types/models';
 import { useFocusEffect } from '@react-navigation/native';
+import { useScrollContext } from '@/contexts/ScrollContext';
 
 export default function SubscriptionScreen() {
   const theme = useTheme();
+  const { setScrollY } = useScrollContext();
   const [weeklyStock, setWeeklyStock] = useState<WeeklyStock | null>(null);
   const [subscription, setSubscription] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -212,7 +214,12 @@ export default function SubscriptionScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={styles.content} 
+        showsVerticalScrollIndicator={false}
+        onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => setScrollY(e.nativeEvent.contentOffset.y)}
+        scrollEventThrottle={16}
+      >
         {/* Header with Gradient */}
         <LinearGradient
           colors={[theme.colors.tertiary, theme.colors.tertiaryContainer]}
@@ -584,7 +591,7 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 32,
-    paddingTop: 40,
+    paddingTop: 70,
     alignItems: 'center',
     marginBottom: 20,
   },
@@ -600,6 +607,7 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(255, 255, 255, 0.6)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 1,
+    textAlign: 'center',
   },
   headerSubtitle: {
     fontSize: 16,
@@ -653,13 +661,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+    flexWrap: 'wrap',
+    gap: 4,
   },
   detailLabel: {
     color: '#666',
+    flexShrink: 0,
   },
   detailValue: {
     fontWeight: 'bold',
     color: '#2d3748',
+    flexShrink: 1,
+    textAlign: 'right',
   },
   totalRow: {
     marginTop: 8,
@@ -784,16 +797,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 8,
+    flexWrap: 'wrap',
+    gap: 4,
   },
   summaryLabel: {
     fontSize: 16,
     color: '#2d3748',
     opacity: 0.85,
+    flexShrink: 0,
   },
   summaryValue: {
     fontSize: 16,
     color: '#2d3748',
     fontWeight: 'bold',
+    flexShrink: 1,
+    textAlign: 'right',
   },
   priceTotalLabel: {
     fontSize: 16,

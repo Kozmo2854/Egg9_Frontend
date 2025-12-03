@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { StyleSheet, ScrollView, View as RNView } from 'react-native';
+import { StyleSheet, ScrollView, View as RNView, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { View } from '@/components/Themed';
 import {
   Card,
@@ -16,9 +16,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { apiService } from '@/services/api';
 import { WeeklyStock } from '@/types/models';
 import { useFocusEffect } from '@react-navigation/native';
+import { useScrollContext } from '@/contexts/ScrollContext';
 
 export default function OrderScreen() {
   const theme = useTheme();
+  const { setScrollY } = useScrollContext();
   const [weeklyStock, setWeeklyStock] = useState<WeeklyStock | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -200,7 +202,12 @@ export default function OrderScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={styles.content} 
+        showsVerticalScrollIndicator={false}
+        onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => setScrollY(e.nativeEvent.contentOffset.y)}
+        scrollEventThrottle={16}
+      >
         {/* Header with Gradient */}
         <LinearGradient
           colors={[theme.colors.secondary, theme.colors.secondaryContainer]}
@@ -420,7 +427,7 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 32,
-    paddingTop: 40,
+    paddingTop: 70,
     alignItems: 'center',
     marginBottom: 16,
   },

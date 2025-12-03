@@ -1,5 +1,5 @@
 import { useCallback, useState, useEffect } from 'react';
-import { StyleSheet, ScrollView, View as RNView, RefreshControl, Platform, TouchableOpacity } from 'react-native';
+import { StyleSheet, ScrollView, View as RNView, RefreshControl, Platform, TouchableOpacity, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { View } from '@/components/Themed';
 import { 
   Text, 
@@ -16,10 +16,12 @@ import { apiService } from '@/services/api';
 import { User } from '@/types/models';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
+import { useScrollContext } from '@/contexts/ScrollContext';
 
 export default function UsersScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const { setScrollY } = useScrollContext();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -61,6 +63,8 @@ export default function UsersScreen() {
       refreshControl={
         <RefreshControl refreshing={loading} onRefresh={loadUsers} />
       }
+      onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => setScrollY(e.nativeEvent.contentOffset.y)}
+      scrollEventThrottle={16}
     >
       <LinearGradient
         colors={[theme.colors.primary, theme.colors.secondary, theme.colors.tertiary]}

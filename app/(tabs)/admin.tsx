@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { StyleSheet, ScrollView, View as RNView, Platform } from 'react-native';
+import { StyleSheet, ScrollView, View as RNView, Platform, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { View } from '@/components/Themed';
 import {
   Card,
@@ -19,10 +19,12 @@ import { apiService } from '@/services/api';
 import { Week, AppSettings } from '@/types/models';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
+import { useScrollContext } from '@/contexts/ScrollContext';
 
 export default function AdminScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const { setScrollY } = useScrollContext();
   const [week, setWeek] = useState<Week | null>(null);
 
   // Redirect non-admin users
@@ -361,7 +363,12 @@ export default function AdminScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={styles.content} 
+        showsVerticalScrollIndicator={false}
+        onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => setScrollY(e.nativeEvent.contentOffset.y)}
+        scrollEventThrottle={16}
+      >
         {/* Header with Gradient */}
         <LinearGradient
           colors={[theme.colors.primary, theme.colors.secondary]}
@@ -1154,13 +1161,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+    flexWrap: 'wrap',
+    gap: 4,
   },
   statLabel: {
     color: '#666',
+    flexShrink: 0,
   },
   statValue: {
     fontWeight: 'bold',
     color: '#2d3748',
+    flexShrink: 1,
+    textAlign: 'right',
   },
   remainingRow: {
     marginTop: 8,

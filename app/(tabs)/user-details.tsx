@@ -1,5 +1,5 @@
 import { useCallback, useState, useEffect } from 'react';
-import { StyleSheet, ScrollView, View as RNView } from 'react-native';
+import { StyleSheet, ScrollView, View as RNView, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { View } from '@/components/Themed';
 import { 
   Text, 
@@ -16,10 +16,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { apiService } from '@/services/api';
 import { UserDetails } from '@/types/models';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useScrollContext } from '@/contexts/ScrollContext';
 
 export default function UserDetailsScreen() {
   const theme = useTheme();
   const router = useRouter();
+  const { setScrollY } = useScrollContext();
   const params = useLocalSearchParams();
   const userId = params.userId as string;
   
@@ -84,7 +86,11 @@ export default function UserDetailsScreen() {
   const getInactiveSubscriptions = () => subscriptions.filter(sub => sub.status !== 'active');
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => setScrollY(e.nativeEvent.contentOffset.y)}
+      scrollEventThrottle={16}
+    >
       <LinearGradient
         colors={[theme.colors.primary, theme.colors.secondary, theme.colors.tertiary]}
         start={{ x: 0, y: 0 }}
