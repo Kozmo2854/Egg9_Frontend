@@ -4,7 +4,6 @@ import { Link, Tabs, useRouter } from 'expo-router';
 import { Pressable, Alert, View, Text, Platform, StyleSheet } from 'react-native';
 
 import Colors from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { apiService } from '@/services/api';
 import { useFocusEffect } from '@react-navigation/native';
@@ -19,37 +18,53 @@ function TabBarIcon(props: {
   return <FontAwesome size={28} style={{ marginBottom: -3 }} {...props} />;
 }
 
-// Custom header background with blur effect that responds to scroll
+// Custom header background - scroll-based effects
 function HeaderBackground() {
   const { scrollY } = useScrollContext();
   const SCROLL_THRESHOLD = 50;
-  
-  // Calculate progress (0 to 1) based on scroll position
   const progress = Math.min(scrollY / SCROLL_THRESHOLD, 1);
-  
-  // At top (scrollY = 0): completely invisible
-  // After scrolling: styles fade in
   const isScrolled = scrollY > 0;
   
+  // Native: solid background with scroll-based shadow/border
+  if (Platform.OS !== 'web') {
+    // Background opacity fades from very light to more visible on scroll
+    const bgOpacity = 0.3 + (0.7 * progress); // 0.3 at top, 1.0 when scrolled
+    
+    return (
+      <View
+        style={[
+          StyleSheet.absoluteFill,
+          {
+            backgroundColor: `rgba(254, 245, 241, ${bgOpacity})`, // #fef5f1 with opacity
+            borderBottomWidth: 1,
+            borderBottomColor: `rgba(0, 0, 0, ${0.08 * progress})`,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.08 * progress,
+            shadowRadius: 4 * progress,
+            elevation: isScrolled ? Math.round(3 * progress) : 0,
+          },
+        ]}
+      />
+    );
+  }
+  
+  // Web: blur effect with scroll-based intensity
   return (
     <View
       style={[
         StyleSheet.absoluteFill,
         {
-          // Fully transparent background - blur does the work
           backgroundColor: 'transparent',
-          // Blur only applies after scrolling
           // @ts-ignore - backdropFilter is web-only
-          backdropFilter: Platform.OS === 'web' && isScrolled ? `blur(${12 * progress}px)` : 'none',
-          WebkitBackdropFilter: Platform.OS === 'web' && isScrolled ? `blur(${12 * progress}px)` : 'none',
-          // Border and shadow fade in
+          backdropFilter: isScrolled ? `blur(${12 * progress}px)` : 'none',
+          WebkitBackdropFilter: isScrolled ? `blur(${12 * progress}px)` : 'none',
           borderBottomWidth: isScrolled ? 1 : 0,
           borderBottomColor: `rgba(0, 0, 0, ${0.1 * progress})`,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.1 * progress,
           shadowRadius: 4,
-          elevation: isScrolled ? 3 * progress : 0,
         } as any,
       ]}
     />
@@ -139,16 +154,17 @@ function HeaderRight() {
 const headerStyles = StyleSheet.create({
   leftContainer: {
     marginLeft: 15,
+    justifyContent: 'center',
   },
   userName: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
     color: '#2d3748',
   },
   loginButton: {
     marginRight: 15,
     paddingHorizontal: 16,
-    paddingVertical: 6,
+    paddingVertical: 8,
     backgroundColor: '#4ecdc4',
     borderRadius: 16,
   },
@@ -160,7 +176,7 @@ const headerStyles = StyleSheet.create({
   logoutButton: {
     marginRight: 15,
     paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingVertical: 8,
     backgroundColor: 'rgba(78, 205, 196, 0.15)',
     borderRadius: 16,
     borderWidth: 1,
@@ -169,12 +185,11 @@ const headerStyles = StyleSheet.create({
   logoutButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#444',
+    color: '#2d3748',
   },
 });
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -203,14 +218,14 @@ export default function TabLayout() {
       <ScrollProvider>
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+          tabBarActiveTintColor: Colors.light.tint,
           headerShown: useClientOnlyValue(false, true),
           headerLeft: () => <HeaderLeft />,
           headerRight: () => <HeaderRight />,
-          headerTransparent: true,
+          headerTransparent: Platform.OS === 'web',
           headerBackground: () => <HeaderBackground />,
           headerTitle: '',
-          headerStyle: { height: 50 },
+          headerStyle: { backgroundColor: Platform.OS === 'web' ? 'transparent' : '#fef5f1' },
         }}>
         <Tabs.Screen
           name="admin"
@@ -272,14 +287,14 @@ export default function TabLayout() {
     <ScrollProvider>
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: Colors.light.tint,
         headerShown: useClientOnlyValue(false, true),
         headerLeft: () => <HeaderLeft />,
         headerRight: () => <HeaderRight />,
-        headerTransparent: true,
+        headerTransparent: Platform.OS === 'web',
         headerBackground: () => <HeaderBackground />,
         headerTitle: '',
-        headerStyle: { height: 50 },
+        headerStyle: { backgroundColor: Platform.OS === 'web' ? 'transparent' : '#fef5f1' },
       }}>
       <Tabs.Screen
         name="index"
