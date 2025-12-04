@@ -1,16 +1,16 @@
 import { useState, useCallback } from 'react';
-import { StyleSheet, ScrollView, View as RNView, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { StyleSheet, ScrollView, View as RNView, NativeSyntheticEvent, NativeScrollEvent, RefreshControl } from 'react-native';
 import { View } from '@/components/Themed';
 import { 
   Card, 
   Text, 
-  ActivityIndicator, 
   Chip, 
   useTheme,
   Surface,
   Button,
   Dialog,
-  Portal 
+  Portal,
+  Snackbar,
 } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { apiService } from '@/services/api';
@@ -19,6 +19,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import QRCode from 'react-native-qrcode-svg';
 import * as OrderHelpers from '@/utils/orderHelpers';
 import { useScrollContext } from '@/contexts/ScrollContext';
+import { LoadingView, ErrorView } from '@/components/common';
+import { parseError, ACTION_ERROR_MESSAGES } from '@/utils/errorHandling';
 
 export default function HomeScreen() {
   const theme = useTheme();
@@ -33,6 +35,8 @@ export default function HomeScreen() {
   const [paymentDialogVisible, setPaymentDialogVisible] = useState(false);
   const [markingPayment, setMarkingPayment] = useState(false);
   const [confirmingPickup, setConfirmingPickup] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [snackbar, setSnackbar] = useState<{ visible: boolean; message: string }>({ visible: false, message: '' });
   const [paymentSettings, setPaymentSettings] = useState<{
     bankAccountNumber: string;
     recipientName: string;
@@ -50,9 +54,13 @@ export default function HomeScreen() {
     }, [])
   );
 
-  const loadData = async () => {
+  const loadData = async (isRefresh = false) => {
     try {
-      setLoading(true);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       setError(null);
       const [stockData, subData, currentOrder, currentSubOrder, available, settings] = await Promise.all([
         apiService.getWeeklyStock(),
@@ -69,11 +77,17 @@ export default function HomeScreen() {
       setAvailableEggs(available);
       setPaymentSettings(settings.paymentSettings);
     } catch (err) {
-      setError('Failed to load data');
+      const appError = parseError(err, 'loadData');
+      setError(appError.message);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
+  
+  const onRefresh = useCallback(() => {
+    loadData(true);
+  }, []);
 
   const formatDate = (isoDate: string) => {
     return new Date(isoDate).toLocaleDateString('en-US', { 
@@ -110,7 +124,7 @@ export default function HomeScreen() {
       const orderIds = OrderHelpers.getOrdersNeedingPaymentSubmission(currentWeekOrder, currentWeekSubscriptionOrder);
 
       if (orderIds.length === 0) {
-        alert('All unpaid orders have already been marked as paid');
+        setSnackbar({ visible: true, message: 'All orders have already been marked as paid' });
         setPaymentDialogVisible(false);
         return;
       }
@@ -118,8 +132,10 @@ export default function HomeScreen() {
       await Promise.all(orderIds.map(id => apiService.markOrderPaymentSubmitted(id)));
       await loadData();
       setPaymentDialogVisible(false);
+      setSnackbar({ visible: true, message: 'Payment marked as submitted!' });
     } catch (err: any) {
-      alert(err.message || 'Failed to mark payment as submitted');
+      const appError = parseError(err, 'markPayment');
+      setSnackbar({ visible: true, message: appError.message });
     } finally {
       setMarkingPayment(false);
     }
@@ -132,8 +148,10 @@ export default function HomeScreen() {
       const orderIds = OrderHelpers.getOrdersNeedingPickupConfirmation(currentWeekOrder, currentWeekSubscriptionOrder);
       await Promise.all(orderIds.map(id => apiService.confirmOrderPickup(id)));
       await loadData();
+      setSnackbar({ visible: true, message: 'Pickup confirmed!' });
     } catch (err: any) {
-      alert(err.message || 'Failed to confirm pickup');
+      const appError = parseError(err);
+      setSnackbar({ visible: true, message: appError.message });
     } finally {
       setConfirmingPickup(false);
     }
@@ -155,21 +173,15 @@ export default function HomeScreen() {
   };
 
   if (loading) {
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" animating={true} color={theme.colors.primary} />
-        <Text variant="bodyLarge" style={styles.loadingText}>Loading...</Text>
-      </View>
-    );
+    return <LoadingView message="Loading your orders..." />;
   }
 
   if (error || !weeklyStock) {
     return (
-      <View style={styles.centerContainer}>
-        <Text variant="bodyLarge" style={{ color: theme.colors.error }}>
-          {error || 'Failed to load data'}
-        </Text>
-      </View>
+      <ErrorView 
+        message={error || 'Unable to load data'} 
+        onRetry={() => loadData()} 
+      />
     );
   }
 
@@ -179,6 +191,14 @@ export default function HomeScreen() {
       showsVerticalScrollIndicator={false}
       onScroll={handleScroll}
       scrollEventThrottle={16}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={['#ff6b35']}
+          tintColor="#ff6b35"
+        />
+      }
     >
       {/* Hero Section with Gradient */}
       <LinearGradient
@@ -508,6 +528,18 @@ export default function HomeScreen() {
           </Dialog.Actions>
         </Dialog>
       </Portal>
+
+      <Snackbar
+        visible={snackbar.visible}
+        onDismiss={() => setSnackbar({ visible: false, message: '' })}
+        duration={3000}
+        action={{
+          label: 'OK',
+          onPress: () => setSnackbar({ visible: false, message: '' }),
+        }}
+      >
+        {snackbar.message}
+      </Snackbar>
     </ScrollView>
   );
 }

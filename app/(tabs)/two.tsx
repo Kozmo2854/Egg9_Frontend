@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { StyleSheet, ScrollView, View as RNView, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { StyleSheet, ScrollView, View as RNView, NativeSyntheticEvent, NativeScrollEvent, RefreshControl } from 'react-native';
 import { View } from '@/components/Themed';
 import {
   Card,
@@ -17,12 +17,15 @@ import { apiService } from '@/services/api';
 import { WeeklyStock } from '@/types/models';
 import { useFocusEffect } from '@react-navigation/native';
 import { useScrollContext } from '@/contexts/ScrollContext';
+import { LoadingView, ErrorView } from '@/components/common';
+import { parseError } from '@/utils/errorHandling';
 
 export default function OrderScreen() {
   const theme = useTheme();
   const { setScrollY } = useScrollContext();
   const [weeklyStock, setWeeklyStock] = useState<WeeklyStock | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(10);
   const [subscription, setSubscription] = useState<any>(null);
@@ -38,9 +41,13 @@ export default function OrderScreen() {
     }, [])
   );
 
-  const loadData = async () => {
+  const loadData = async (isRefresh = false) => {
     try {
-      setLoading(true);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       setError(null);
       const [stockData, subData, currentOrder, available] = await Promise.all([
         apiService.getWeeklyStock(),
@@ -61,11 +68,17 @@ export default function OrderScreen() {
         setQuantity(10);
       }
     } catch (err) {
-      setError('Failed to load data');
+      const appError = parseError(err, 'loadData');
+      setError(appError.message);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
+
+  const onRefresh = useCallback(() => {
+    loadData(true);
+  }, []);
 
   const handleBuyNow = async () => {
     if (!weeklyStock) return;
@@ -176,21 +189,15 @@ export default function OrderScreen() {
   };
 
   if (loading) {
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" animating={true} color={theme.colors.primary} />
-        <Text variant="bodyLarge" style={styles.loadingText}>Loading...</Text>
-      </View>
-    );
+    return <LoadingView message="Loading order..." />;
   }
 
   if (error || !weeklyStock) {
     return (
-      <View style={styles.centerContainer}>
-        <Text variant="bodyLarge" style={{ color: theme.colors.error }}>
-          {error || 'Failed to load data'}
-        </Text>
-      </View>
+      <ErrorView 
+        message={error || 'Unable to load data'} 
+        onRetry={() => loadData()} 
+      />
     );
   }
 
@@ -207,6 +214,14 @@ export default function OrderScreen() {
         showsVerticalScrollIndicator={false}
         onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => setScrollY(e.nativeEvent.contentOffset.y)}
         scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#ff6b35']}
+            tintColor="#ff6b35"
+          />
+        }
       >
         {/* Header with Gradient */}
         <LinearGradient

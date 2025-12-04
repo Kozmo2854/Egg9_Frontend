@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { StyleSheet, ScrollView, View as RNView, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { StyleSheet, ScrollView, View as RNView, NativeSyntheticEvent, NativeScrollEvent, RefreshControl } from 'react-native';
 import { View } from '@/components/Themed';
 import {
   Card,
@@ -21,6 +21,8 @@ import { apiService } from '@/services/api';
 import { WeeklyStock } from '@/types/models';
 import { useFocusEffect } from '@react-navigation/native';
 import { useScrollContext } from '@/contexts/ScrollContext';
+import { LoadingView, ErrorView } from '@/components/common';
+import { parseError } from '@/utils/errorHandling';
 
 export default function SubscriptionScreen() {
   const theme = useTheme();
@@ -28,6 +30,7 @@ export default function SubscriptionScreen() {
   const [weeklyStock, setWeeklyStock] = useState<WeeklyStock | null>(null);
   const [subscription, setSubscription] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -47,9 +50,13 @@ export default function SubscriptionScreen() {
     }, [])
   );
 
-  const loadData = async () => {
+  const loadData = async (isRefresh = false) => {
     try {
-      setLoading(true);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       setError(null);
       const [stockData, subData] = await Promise.all([
         apiService.getWeeklyStock(),
@@ -63,11 +70,17 @@ export default function SubscriptionScreen() {
         setSubscriptionPeriod(subData.period || 4);
       }
     } catch (err) {
-      setError('Failed to load data');
+      const appError = parseError(err, 'loadData');
+      setError(appError.message);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
+
+  const onRefresh = useCallback(() => {
+    loadData(true);
+  }, []);
 
   const handleSubscribe = async (startNextWeek: boolean = false) => {
     setProcessing(true);
@@ -191,24 +204,15 @@ export default function SubscriptionScreen() {
   };
 
   if (loading) {
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" animating={true} color={theme.colors.primary} />
-        <Text variant="bodyLarge" style={styles.loadingText}>Loading...</Text>
-      </View>
-    );
+    return <LoadingView message="Loading subscription..." />;
   }
 
   if (error || !weeklyStock) {
     return (
-      <View style={styles.centerContainer}>
-        <Text variant="bodyLarge" style={{ color: theme.colors.error }}>
-          {error || 'No stock available'}
-        </Text>
-        <Button mode="contained" onPress={loadData} style={{ marginTop: 16 }}>
-          Retry
-        </Button>
-      </View>
+      <ErrorView 
+        message={error || 'Unable to load data'} 
+        onRetry={() => loadData()} 
+      />
     );
   }
 
@@ -219,6 +223,14 @@ export default function SubscriptionScreen() {
         showsVerticalScrollIndicator={false}
         onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => setScrollY(e.nativeEvent.contentOffset.y)}
         scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#ff6b35']}
+            tintColor="#ff6b35"
+          />
+        }
       >
         {/* Header with Gradient */}
         <LinearGradient

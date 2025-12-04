@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { StyleSheet, ScrollView, View as RNView, Platform, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { StyleSheet, ScrollView, View as RNView, Platform, NativeSyntheticEvent, NativeScrollEvent, RefreshControl } from 'react-native';
 import { View } from '@/components/Themed';
 import {
   Card,
@@ -20,6 +20,8 @@ import { Week, AppSettings } from '@/types/models';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useScrollContext } from '@/contexts/ScrollContext';
+import { LoadingView, ErrorView } from '@/components/common';
+import { parseError } from '@/utils/errorHandling';
 
 export default function AdminScreen() {
   const theme = useTheme();
@@ -41,6 +43,7 @@ export default function AdminScreen() {
   const [allOrders, setAllOrders] = useState<any[]>([]);
   const [allSubscriptions, setAllSubscriptions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [processingOrderId, setProcessingOrderId] = useState<number | null>(null);
@@ -66,9 +69,13 @@ export default function AdminScreen() {
     }, [])
   );
 
-  const loadData = async () => {
+  const loadData = async (isRefresh = false) => {
     try {
-      setLoading(true);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       setError(null);
       const [weekData, settingsData, orders, subscriptions] = await Promise.all([
         apiService.getWeeklyStock(),
@@ -90,11 +97,17 @@ export default function AdminScreen() {
         setSelectedDate(new Date(weekData.deliveryDate));
       }
     } catch (err) {
-      setError('Failed to load admin data');
+      const appError = parseError(err, 'loadData');
+      setError(appError.message);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
+
+  const onRefresh = useCallback(() => {
+    loadData(true);
+  }, []);
 
   const handleUpdateStock = async () => {
     setProcessing(true);
@@ -337,24 +350,15 @@ export default function AdminScreen() {
   };
 
   if (loading) {
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" animating={true} color={theme.colors.primary} />
-        <Text variant="bodyLarge" style={styles.loadingText}>Loading admin data...</Text>
-      </View>
-    );
+    return <LoadingView message="Loading admin data..." />;
   }
 
   if (error || !week) {
     return (
-      <View style={styles.centerContainer}>
-        <Text variant="bodyLarge" style={{ color: theme.colors.error }}>
-          {error || 'Failed to load data'}
-        </Text>
-        <Button mode="contained" onPress={loadData} style={{ marginTop: 16 }}>
-          Retry
-        </Button>
-      </View>
+      <ErrorView 
+        message={error || 'Unable to load admin data'} 
+        onRetry={() => loadData()}
+      />
     );
   }
 
@@ -368,6 +372,14 @@ export default function AdminScreen() {
         showsVerticalScrollIndicator={false}
         onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => setScrollY(e.nativeEvent.contentOffset.y)}
         scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#ff6b35']}
+            tintColor="#ff6b35"
+          />
+        }
       >
         {/* Header with Gradient */}
         <LinearGradient
