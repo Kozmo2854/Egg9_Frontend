@@ -15,21 +15,23 @@ cd Egg9_Frontend
 # Create .env from example
 cp .env.example .env
 
-# Edit .env and set your IP
+# Edit .env and set your IP (port 8000 from Docker)
 # EXPO_PUBLIC_API_URL=http://192.168.1.100:8000/api
 ```
 
-### 3. Start Backend
+### 3. Start Backend (Docker Compose)
 ```bash
-cd Egg9_Backend
+cd Egg9  # Root folder
 
-# Start Laravel (IMPORTANT: use --host=0.0.0.0 so phone can connect)
-php artisan serve --host=0.0.0.0
+# Start backend + database
+docker compose up -d backend mysql
 
-# Backend will be at: http://0.0.0.0:8000
+# Verify it's running
+docker compose ps
+# Backend available at: http://localhost:8000
 ```
 
-### 4. Start Frontend
+### 4. Start Frontend (on your machine, not Docker)
 ```bash
 cd Egg9_Frontend
 
@@ -39,19 +41,41 @@ npx expo start --dev-client
 # Scan QR code with your phone
 ```
 
+## Summary
+
+| Service | How to Run | URL |
+|---------|------------|-----|
+| Backend | `docker compose up -d backend mysql` | `http://YOUR_IP:8000/api` |
+| Database | Started with backend | `localhost:3307` |
+| Frontend | `npx expo start --dev-client` | Expo QR code |
+
 ## Troubleshooting
 
 ### Phone can't connect to backend?
 1. Make sure phone and computer are on **same WiFi network**
-2. Check computer's IP hasn't changed
-3. Verify Laravel is running with `--host=0.0.0.0`
-4. Check firewall isn't blocking port 8000
+2. Check computer's IP hasn't changed: `hostname -I`
+3. Verify Docker is running: `docker compose ps`
+4. Check backend logs: `docker compose logs backend`
 
-### Database setup
+### Database commands
 ```bash
-cd Egg9_Backend
-php artisan migrate
-php artisan db:seed  # Optional: seed test data
+# Run migrations
+docker compose exec backend php artisan migrate
+
+# Seed test data
+docker compose exec backend php artisan db:seed
+
+# Fresh start (reset DB)
+docker compose exec backend php artisan migrate:fresh --seed
+```
+
+### Restart services
+```bash
+# Restart everything
+docker compose restart
+
+# Rebuild after code changes
+docker compose up -d --build backend
 ```
 
 ## Production Builds
@@ -60,4 +84,3 @@ For production builds, `eas.json` automatically sets the Railway backend URL:
 ```bash
 eas build --profile production --platform android
 ```
-
