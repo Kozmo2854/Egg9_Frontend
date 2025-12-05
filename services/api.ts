@@ -247,6 +247,15 @@ class ApiService {
     return data.orders;
   }
 
+  async getUnpaidOrders(): Promise<Order[]> {
+    const response = await fetch(`${this.baseUrl}/orders/unpaid`, {
+      headers: await this.getAuthHeaders(),
+    });
+
+    const data = await this.handleResponse<{ orders: Order[] }>(response);
+    return data.orders;
+  }
+
   async getAvailableEggsForUser(): Promise<number> {
     const response = await fetch(`${this.baseUrl}/available-eggs`, {
       headers: await this.getAuthHeaders(),

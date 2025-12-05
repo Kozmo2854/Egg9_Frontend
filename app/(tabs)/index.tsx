@@ -43,6 +43,7 @@ export default function HomeScreen() {
     paymentPurpose: string;
     paymentCode: string;
   } | null>(null);
+  const [outstandingOrders, setOutstandingOrders] = useState<any[]>([]);
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     setScrollY(event.nativeEvent.contentOffset.y);
@@ -62,13 +63,14 @@ export default function HomeScreen() {
         setLoading(true);
       }
       setError(null);
-      const [stockData, subData, currentOrder, currentSubOrder, available, settings] = await Promise.all([
+      const [stockData, subData, currentOrder, currentSubOrder, available, settings, unpaidOrders] = await Promise.all([
         apiService.getWeeklyStock(),
         apiService.getSubscription(),
         apiService.getCurrentWeekOrder(),
         apiService.getCurrentWeekSubscriptionOrder(),
         apiService.getAvailableEggsForUser(),
         apiService.getAppSettings(),
+        apiService.getUnpaidOrders(),
       ]);
       setWeeklyStock(stockData);
       setSubscription(subData);
@@ -76,6 +78,9 @@ export default function HomeScreen() {
       setCurrentWeekSubscriptionOrder(currentSubOrder);
       setAvailableEggs(available);
       setPaymentSettings(settings.paymentSettings);
+      // Filter out current week orders (they're shown separately)
+      const previousWeekUnpaid = unpaidOrders.filter((o: any) => o.weekId !== stockData.id);
+      setOutstandingOrders(previousWeekUnpaid);
     } catch (err) {
       const appError = parseError(err, 'loadData');
       setError(appError.message);
@@ -307,6 +312,39 @@ export default function HomeScreen() {
             </Card.Content>
           )}
         </Card>
+
+        {/* Outstanding Orders from Previous Weeks */}
+        {outstandingOrders.length > 0 && (
+          <Surface style={styles.outstandingCard} elevation={3}>
+            <RNView style={styles.outstandingHeader}>
+              <Text style={styles.outstandingIcon}>⚠️</Text>
+              <Text variant="titleLarge" style={styles.outstandingTitle}>
+                Outstanding Orders
+              </Text>
+            </RNView>
+            <Text variant="bodyMedium" style={styles.outstandingSubtitle}>
+              You have unpaid orders from previous weeks
+            </Text>
+            {outstandingOrders.map((order) => (
+              <RNView key={order.id} style={styles.outstandingItem}>
+                <RNView style={styles.outstandingItemLeft}>
+                  <Text variant="bodyLarge" style={styles.outstandingWeek}>
+                    Week of {new Date(order.weekStart).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </Text>
+                  <Text variant="bodyMedium" style={styles.outstandingDetails}>
+                    {order.quantity} eggs • {order.total.toFixed(0)} RSD
+                  </Text>
+                </RNView>
+                <Chip icon="alert-circle" mode="flat" style={styles.outstandingChip}>
+                  Unpaid
+                </Chip>
+              </RNView>
+            ))}
+            <Text variant="bodySmall" style={styles.outstandingNote}>
+              Please settle these payments at your earliest convenience
+            </Text>
+          </Surface>
+        )}
 
         {/* Payment Section */}
         {(currentWeekOrder || currentWeekSubscriptionOrder) && (
@@ -728,6 +766,64 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 16,
     marginTop: 8,
+  },
+  outstandingCard: {
+    borderRadius: 16,
+    marginBottom: 16,
+    padding: 16,
+    backgroundColor: '#fff5f5',
+    borderWidth: 1,
+    borderColor: '#feb2b2',
+  },
+  outstandingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  outstandingIcon: {
+    fontSize: 24,
+  },
+  outstandingTitle: {
+    fontWeight: 'bold',
+    color: '#c53030',
+  },
+  outstandingSubtitle: {
+    color: '#742a2a',
+    marginBottom: 12,
+    opacity: 0.8,
+  },
+  outstandingItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#fed7d7',
+  },
+  outstandingItemLeft: {
+    flex: 1,
+  },
+  outstandingWeek: {
+    fontWeight: '600',
+    color: '#2d3748',
+  },
+  outstandingDetails: {
+    color: '#718096',
+    marginTop: 2,
+  },
+  outstandingChip: {
+    backgroundColor: '#fed7d7',
+  },
+  outstandingNote: {
+    textAlign: 'center',
+    color: '#742a2a',
+    marginTop: 8,
+    fontStyle: 'italic',
+    opacity: 0.8,
   },
   orderCard: {
     borderRadius: 20,
