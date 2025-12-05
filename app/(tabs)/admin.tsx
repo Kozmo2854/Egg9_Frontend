@@ -22,6 +22,7 @@ import { useRouter } from 'expo-router';
 import { useScrollContext } from '@/contexts/ScrollContext';
 import { LoadingView, ErrorView } from '@/components/common';
 import { parseError } from '@/utils/errorHandling';
+import { isDevMode } from '@/utils/devMode';
 
 export default function AdminScreen() {
   const theme = useTheme();
@@ -391,16 +392,18 @@ export default function AdminScreen() {
           <Text style={styles.headerSubtitle}>Manage stock, delivery & orders</Text>
         </LinearGradient>
 
-        {/* Clear Data Button */}
-        <Button
-          mode="outlined"
-          onPress={handleClearData}
-          icon="delete-outline"
-          textColor={theme.colors.error}
-          style={styles.clearButton}
-        >
-          Clear All Data (Reset)
-        </Button>
+        {/* Clear Data Button - Dev Only */}
+        {isDevMode() && (
+          <Button
+            mode="outlined"
+            onPress={handleClearData}
+            icon="delete-outline"
+            textColor={theme.colors.error}
+            style={styles.clearButton}
+          >
+            Clear All Data (Reset)
+          </Button>
+        )}
 
         {/* Stock Management */}
         <Card style={styles.card} mode="elevated">

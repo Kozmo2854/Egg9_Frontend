@@ -18,6 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { apiService } from '@/services/api';
 import { useRouter, Link } from 'expo-router';
 import { registerForPushNotifications } from '@/utils/pushNotifications';
+import { isDevMode } from '@/utils/devMode';
 
 interface FormErrors {
   email?: string;
@@ -228,86 +229,90 @@ export default function LoginScreen() {
                 </Link>
               </View>
 
-              {/* Quick Login Buttons */}
-              <View style={styles.quickLoginSection}>
-                <Text style={styles.quickLoginLabel}>Quick Login (Dev)</Text>
-                <View style={styles.quickLoginButtons}>
-                  <Button
-                    mode="contained"
-                    onPress={() => quickLogin('user1@egg9.com', 'password123')}
-                    disabled={loading}
-                    style={styles.quickLoginButton}
-                    buttonColor="#4ecdc4"
-                    compact
-                  >
-                    User 1
-                  </Button>
-                  <Button
-                    mode="contained"
-                    onPress={() => quickLogin('user2@egg9.com', 'password123')}
-                    disabled={loading}
-                    style={styles.quickLoginButton}
-                    buttonColor="#4ecdc4"
-                    compact
-                  >
-                    User 2
-                  </Button>
-                  <Button
-                    mode="contained"
-                    onPress={() => quickLogin('user3@egg9.com', 'password123')}
-                    disabled={loading}
-                    style={styles.quickLoginButton}
-                    buttonColor="#4ecdc4"
-                    compact
-                  >
-                    User 3
-                  </Button>
-                  <Button
-                    mode="contained"
-                    onPress={() => quickLogin('admin@egg9.com', 'password123')}
-                    disabled={loading}
-                    style={styles.quickLoginButton}
-                    buttonColor="#ff6b35"
-                    compact
-                  >
-                    Admin
-                  </Button>
-                </View>
-              </View>
-
-              {/* Test Credentials */}
-              <View style={styles.credentialsSection}>
-                <Button
-                  mode="text"
-                  onPress={() => setShowCredentials(!showCredentials)}
-                  icon={showCredentials ? "chevron-up" : "information-outline"}
-                  textColor={theme.colors.onSurfaceVariant}
-                  compact
-                >
-                  {showCredentials ? 'Hide' : 'Show'} Test Credentials
-                </Button>
-                
-                {showCredentials && (
-                  <View style={styles.credentialsBox}>
-                    <View style={styles.credentialRow}>
-                      <Text style={styles.credentialLabel}>Admin:</Text>
-                      <Text style={styles.credentialValue}>admin@egg9.com / password123</Text>
-                    </View>
-                    <View style={styles.credentialRow}>
-                      <Text style={styles.credentialLabel}>User 1:</Text>
-                      <Text style={styles.credentialValue}>user1@egg9.com / password123</Text>
-                    </View>
-                    <View style={styles.credentialRow}>
-                      <Text style={styles.credentialLabel}>User 2:</Text>
-                      <Text style={styles.credentialValue}>user2@egg9.com / password123</Text>
-                    </View>
-                    <View style={styles.credentialRow}>
-                      <Text style={styles.credentialLabel}>User 3:</Text>
-                      <Text style={styles.credentialValue}>user3@egg9.com / password123</Text>
-                    </View>
+              {/* Quick Login Buttons - Dev Only */}
+              {isDevMode() && (
+                <View style={styles.quickLoginSection}>
+                  <Text style={styles.quickLoginLabel}>Quick Login (Dev)</Text>
+                  <View style={styles.quickLoginButtons}>
+                    <Button
+                      mode="contained"
+                      onPress={() => quickLogin('user1@egg9.com', 'password123')}
+                      disabled={loading}
+                      style={styles.quickLoginButton}
+                      buttonColor="#4ecdc4"
+                      compact
+                    >
+                      User 1
+                    </Button>
+                    <Button
+                      mode="contained"
+                      onPress={() => quickLogin('user2@egg9.com', 'password123')}
+                      disabled={loading}
+                      style={styles.quickLoginButton}
+                      buttonColor="#4ecdc4"
+                      compact
+                    >
+                      User 2
+                    </Button>
+                    <Button
+                      mode="contained"
+                      onPress={() => quickLogin('user3@egg9.com', 'password123')}
+                      disabled={loading}
+                      style={styles.quickLoginButton}
+                      buttonColor="#4ecdc4"
+                      compact
+                    >
+                      User 3
+                    </Button>
+                    <Button
+                      mode="contained"
+                      onPress={() => quickLogin('admin@egg9.com', 'password123')}
+                      disabled={loading}
+                      style={styles.quickLoginButton}
+                      buttonColor="#ff6b35"
+                      compact
+                    >
+                      Admin
+                    </Button>
                   </View>
-                )}
-              </View>
+                </View>
+              )}
+
+              {/* Test Credentials - Dev Only */}
+              {isDevMode() && (
+                <View style={styles.credentialsSection}>
+                  <Button
+                    mode="text"
+                    onPress={() => setShowCredentials(!showCredentials)}
+                    icon={showCredentials ? "chevron-up" : "information-outline"}
+                    textColor={theme.colors.onSurfaceVariant}
+                    compact
+                  >
+                    {showCredentials ? 'Hide' : 'Show'} Test Credentials
+                  </Button>
+                  
+                  {showCredentials && (
+                    <View style={styles.credentialsBox}>
+                      <View style={styles.credentialRow}>
+                        <Text style={styles.credentialLabel}>Admin:</Text>
+                        <Text style={styles.credentialValue}>admin@egg9.com / password123</Text>
+                      </View>
+                      <View style={styles.credentialRow}>
+                        <Text style={styles.credentialLabel}>User 1:</Text>
+                        <Text style={styles.credentialValue}>user1@egg9.com / password123</Text>
+                      </View>
+                      <View style={styles.credentialRow}>
+                        <Text style={styles.credentialLabel}>User 2:</Text>
+                        <Text style={styles.credentialValue}>user2@egg9.com / password123</Text>
+                      </View>
+                      <View style={styles.credentialRow}>
+                        <Text style={styles.credentialLabel}>User 3:</Text>
+                        <Text style={styles.credentialValue}>user3@egg9.com / password123</Text>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              )}
             </View>
           </View>
         </ScrollView>
