@@ -44,6 +44,7 @@ export default function HomeScreen() {
     paymentCode: string;
   } | null>(null);
   const [outstandingOrders, setOutstandingOrders] = useState<any[]>([]);
+  const [paymentOrderContext, setPaymentOrderContext] = useState<{ type: 'current' | 'outstanding', order?: any } | null>(null);
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     setScrollY(event.nativeEvent.contentOffset.y);
@@ -114,12 +115,32 @@ export default function HomeScreen() {
     return (currentWeekOrder?.total || 0) + (currentWeekSubscriptionOrder?.total || 0);
   };
 
-  const showPaymentDialog = () => {
+  const showPaymentDialog = (type: 'current' | 'outstanding' = 'current', order?: any) => {
+    setPaymentOrderContext({ type, order });
     setPaymentDialogVisible(true);
   };
 
   const hidePaymentDialog = () => {
     setPaymentDialogVisible(false);
+    setPaymentOrderContext(null);
+  };
+
+  const getPaymentDialogAmount = () => {
+    if (paymentOrderContext?.type === 'outstanding' && paymentOrderContext.order) {
+      return paymentOrderContext.order.total;
+    }
+    return OrderHelpers.areOrdersWaitingForConfirmation(currentWeekOrder, currentWeekSubscriptionOrder)
+      ? OrderHelpers.getUnpaidSubmittedAmount(currentWeekOrder, currentWeekSubscriptionOrder)
+      : OrderHelpers.getUnpaidNotSubmittedAmount(currentWeekOrder, currentWeekSubscriptionOrder);
+  };
+
+  const getPaymentDialogQuantity = () => {
+    if (paymentOrderContext?.type === 'outstanding' && paymentOrderContext.order) {
+      return paymentOrderContext.order.quantity;
+    }
+    return OrderHelpers.areOrdersWaitingForConfirmation(currentWeekOrder, currentWeekSubscriptionOrder)
+      ? OrderHelpers.getUnpaidSubmittedQuantity(currentWeekOrder, currentWeekSubscriptionOrder)
+      : OrderHelpers.getUnpaidNotSubmittedQuantity(currentWeekOrder, currentWeekSubscriptionOrder);
   };
 
   const handleMarkPaymentSubmitted = async () => {
@@ -163,13 +184,14 @@ export default function HomeScreen() {
   };
 
   /** Generates NBS IPS format QR code for Serbian payment system */
-  const generateNBSIPSQRCode = () => {
+  const generateNBSIPSQRCode = (customAmount?: number) => {
     if (!paymentSettings) return '';
     
-    const isWaiting = OrderHelpers.areOrdersWaitingForConfirmation(currentWeekOrder, currentWeekSubscriptionOrder);
-    const amount = isWaiting 
-      ? OrderHelpers.getUnpaidSubmittedAmount(currentWeekOrder, currentWeekSubscriptionOrder)
-      : OrderHelpers.getUnpaidNotSubmittedAmount(currentWeekOrder, currentWeekSubscriptionOrder);
+    const amount = customAmount ?? (
+      OrderHelpers.areOrdersWaitingForConfirmation(currentWeekOrder, currentWeekSubscriptionOrder)
+        ? OrderHelpers.getUnpaidSubmittedAmount(currentWeekOrder, currentWeekSubscriptionOrder)
+        : OrderHelpers.getUnpaidNotSubmittedAmount(currentWeekOrder, currentWeekSubscriptionOrder)
+    );
     
     const amountFormatted = `RSD${amount.toFixed(2).replace('.', ',')}`;
     const bankAccountFormatted = paymentSettings.bankAccountNumber.replace(/-/g, '');
@@ -317,13 +339,13 @@ export default function HomeScreen() {
         {outstandingOrders.length > 0 && (
           <Surface style={styles.outstandingCard} elevation={3}>
             <RNView style={styles.outstandingHeader}>
-              <Text style={styles.outstandingIcon}>⚠️</Text>
+              <Text style={styles.outstandingIcon}>🐔</Text>
               <Text variant="titleLarge" style={styles.outstandingTitle}>
                 Outstanding Orders
               </Text>
             </RNView>
             <Text variant="bodyMedium" style={styles.outstandingSubtitle}>
-              You have unpaid orders from previous weeks
+              Hey! We noticed you have some unpaid eggs waiting for you 🥚
             </Text>
             {outstandingOrders.map((order) => (
               <RNView key={order.id} style={styles.outstandingItem}>
@@ -335,13 +357,19 @@ export default function HomeScreen() {
                     {order.quantity} eggs • {order.total.toFixed(0)} RSD
                   </Text>
                 </RNView>
-                <Chip icon="alert-circle" mode="flat" style={styles.outstandingChip}>
-                  Unpaid
-                </Chip>
+                <Button 
+                  mode="contained" 
+                  compact 
+                  onPress={() => showPaymentDialog('outstanding', order)}
+                  buttonColor={theme.colors.primary}
+                  style={styles.outstandingPayButton}
+                >
+                  Pay
+                </Button>
               </RNView>
             ))}
             <Text variant="bodySmall" style={styles.outstandingNote}>
-              Please settle these payments at your earliest convenience
+              Our chickens would really appreciate it when you get a chance! 🐣
             </Text>
           </Surface>
         )}
@@ -416,7 +444,7 @@ export default function HomeScreen() {
                       </Text>
                       <Button
                         mode="contained"
-                        onPress={showPaymentDialog}
+                        onPress={() => showPaymentDialog('current')}
                         icon="qrcode"
                         style={styles.paymentButton}
                         buttonColor={theme.colors.primary}
@@ -515,22 +543,27 @@ export default function HomeScreen() {
 
       </RNView>
 
-      {/* Payment Dialog */}
+      {/* Unified Payment Dialog */}
       <Portal>
         <Dialog visible={paymentDialogVisible} onDismiss={hidePaymentDialog} style={styles.paymentDialog}>
-          <Dialog.Title style={styles.dialogTitle}>Payment Information</Dialog.Title>
+          <Dialog.Title style={styles.dialogTitle}>
+            {paymentOrderContext?.type === 'outstanding' ? '🐔 Outstanding Payment' : 'Payment Information'}
+          </Dialog.Title>
           <Dialog.Content style={styles.dialogContent}>
+            {paymentOrderContext?.type === 'outstanding' && paymentOrderContext.order && (
+              <Text variant="bodyMedium" style={styles.outstandingDialogSubtitle}>
+                Week of {new Date(paymentOrderContext.order.weekStart).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+              </Text>
+            )}
             <RNView style={styles.qrCodeContainer}>
               <QRCode
-                value={generateNBSIPSQRCode()}
+                value={generateNBSIPSQRCode(paymentOrderContext?.type === 'outstanding' ? paymentOrderContext.order?.total : undefined)}
                 size={200}
                 backgroundColor="white"
               />
             </RNView>
             <Text variant="titleMedium" style={styles.paymentDialogAmount}>
-              Amount: {(OrderHelpers.areOrdersWaitingForConfirmation(currentWeekOrder, currentWeekSubscriptionOrder) 
-                ? OrderHelpers.getUnpaidSubmittedAmount(currentWeekOrder, currentWeekSubscriptionOrder) 
-                : OrderHelpers.getUnpaidNotSubmittedAmount(currentWeekOrder, currentWeekSubscriptionOrder)).toFixed(0)} RSD
+              {getPaymentDialogQuantity()} eggs • {getPaymentDialogAmount().toFixed(0)} RSD
             </Text>
             <RNView style={styles.bankDetailsContainer}>
               <Text variant="bodyMedium" style={styles.bankDetailLabel}>Account:</Text>
@@ -546,11 +579,11 @@ export default function HomeScreen() {
             </RNView>
             <Text variant="bodySmall" style={styles.paymentInstructions}>
               Scan the QR code with your banking app for instant payment, or use the bank account details above.
-              {!OrderHelpers.areAllOrdersPaymentSubmitted(currentWeekOrder, currentWeekSubscriptionOrder) && ' After payment, click "Mark Paid" below. Admin will confirm once received.'}
+              {paymentOrderContext?.type === 'current' && !OrderHelpers.areAllOrdersPaymentSubmitted(currentWeekOrder, currentWeekSubscriptionOrder) && ' After payment, click "Mark Paid" below. Admin will confirm once received.'}
             </Text>
           </Dialog.Content>
           <Dialog.Actions style={styles.dialogActions}>
-            {!OrderHelpers.areAllOrdersPaymentSubmitted(currentWeekOrder, currentWeekSubscriptionOrder) && (
+            {paymentOrderContext?.type === 'current' && !OrderHelpers.areAllOrdersPaymentSubmitted(currentWeekOrder, currentWeekSubscriptionOrder) && (
               <Button 
                 onPress={handleMarkPaymentSubmitted} 
                 mode="contained"
@@ -815,8 +848,13 @@ const styles = StyleSheet.create({
     color: '#718096',
     marginTop: 2,
   },
-  outstandingChip: {
-    backgroundColor: '#fed7d7',
+  outstandingPayButton: {
+    borderRadius: 8,
+  },
+  outstandingDialogSubtitle: {
+    textAlign: 'center',
+    marginBottom: 16,
+    color: '#666',
   },
   outstandingNote: {
     textAlign: 'center',
