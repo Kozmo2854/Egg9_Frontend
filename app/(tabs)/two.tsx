@@ -164,6 +164,12 @@ export default function OrderScreen() {
       maxAvailable += currentWeekOrder.quantity;
     }
     
+    // Apply low season cap if applicable
+    const lowSeasonCap = weeklyStock?.lowSeasonOrderCap;
+    if (lowSeasonCap !== null && lowSeasonCap !== undefined) {
+      maxAvailable = Math.min(maxAvailable, lowSeasonCap);
+    }
+    
     if (quantity < maxAvailable) {
       setQuantity(quantity + 10);
     }
@@ -185,6 +191,13 @@ export default function OrderScreen() {
     if (currentWeekOrder) {
       maxAvailable += currentWeekOrder.quantity;
     }
+    
+    // Apply low season cap if applicable
+    const lowSeasonCap = weeklyStock?.lowSeasonOrderCap;
+    if (lowSeasonCap !== null && lowSeasonCap !== undefined) {
+      maxAvailable = Math.min(maxAvailable, lowSeasonCap);
+    }
+    
     return maxAvailable;
   };
 
@@ -234,6 +247,18 @@ export default function OrderScreen() {
             {formatDate(weeklyStock.weekStart)} - {formatDate(weeklyStock.weekEnd)}
           </Text>
         </LinearGradient>
+
+        {/* Low Season Notice */}
+        {weeklyStock.isLowSeason && (
+          <Surface style={[styles.stockCard, { backgroundColor: '#fff3e0', marginBottom: 8 }]} elevation={2}>
+            <RNView style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 8 }}>
+              <Text style={{ fontSize: 20, marginRight: 8 }}>🐔</Text>
+              <Text style={{ color: '#e65100', fontWeight: '500' }}>
+                Our chickens are resting – orders up to {weeklyStock.lowSeasonOrderCap} eggs
+              </Text>
+            </RNView>
+          </Surface>
+        )}
 
         {/* Stock Info Card */}
         <Surface style={styles.stockCard} elevation={3}>

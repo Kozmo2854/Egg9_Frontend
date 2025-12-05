@@ -77,8 +77,10 @@ export default function LoginScreen() {
       setEmail('');
       setPassword('');
       
-      // Register for push notifications after successful login
-      registerForPushNotifications();
+      // Register for push notifications after successful login (customers only)
+      if (response.user.role !== 'admin') {
+        registerForPushNotifications();
+      }
       
       setTimeout(() => {
         router.replace('/(tabs)');
@@ -104,8 +106,10 @@ export default function LoginScreen() {
       setEmail('');
       setPassword('');
       
-      // Register for push notifications after successful login
-      registerForPushNotifications();
+      // Register for push notifications after successful login (customers only)
+      if (response.user.role !== 'admin') {
+        registerForPushNotifications();
+      }
       
       setTimeout(() => {
         router.replace('/(tabs)');

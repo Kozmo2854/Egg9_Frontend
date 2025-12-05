@@ -26,11 +26,16 @@ export interface Week {
   deliveryDate: string | null; // ISO date string - optional
   deliveryTime: string | null; // e.g., "10:00 AM - 2:00 PM" - optional
   allOrdersDelivered: boolean; // Track if all orders for this week are delivered
+  isLowSeason: boolean; // Whether this week is in low season (affects subscriptions and order caps)
+  subscriptionsProcessed: boolean; // Whether subscriptions have been processed for this week
+  lowSeasonOrderCap: number | null; // Max eggs for one-time orders in low season (null if high season)
 }
 
 export interface AppSettings {
   id: number;
   defaultPricePerDozen: number;
+  maxSubscriptionEggs: number; // Total cap for all subscriptions
+  maxPerSubscription: number; // Max eggs per individual subscription
   paymentSettings: {
     bankAccountNumber: string;
     recipientName: string;
@@ -39,6 +44,18 @@ export interface AppSettings {
   };
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SubscriptionAvailability {
+  canSubscribe: boolean;
+  reason?: 'no_week' | 'low_season' | 'capacity_full';
+  message?: string;
+  maxAllowed?: number; // Max eggs this user can subscribe to
+  maxPerSubscription?: number;
+  remainingCapacity?: number;
+  currentTotal?: number;
+  maxSubscriptionEggs?: number;
+  isLowSeason?: boolean;
 }
 
 export interface Order {

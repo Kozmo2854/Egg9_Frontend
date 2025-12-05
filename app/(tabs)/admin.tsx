@@ -12,6 +12,7 @@ import {
   Surface,
   Chip,
   DataTable,
+  Switch,
 } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -235,6 +236,27 @@ export default function AdminScreen() {
     await apiService.clearAllData();
     setSuccessMessage('All data cleared! Please refresh.');
     setTimeout(() => loadData(), 1000);
+  };
+
+  const handleToggleSeason = async () => {
+    if (!week) return;
+    
+    setProcessing(true);
+    setSuccessMessage(null);
+    setErrorMessage(null);
+
+    try {
+      const newSeasonValue = !week.isLowSeason;
+      await apiService.updateCurrentWeek({ isLowSeason: newSeasonValue });
+      setSuccessMessage(`Season changed to ${newSeasonValue ? 'Low' : 'High'} season!`);
+      
+      const updatedWeek = await apiService.getWeeklyStock();
+      setWeek(updatedWeek);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to toggle season');
+    } finally {
+      setProcessing(false);
+    }
   };
 
   const formatDate = (isoDate: string) => {
@@ -490,6 +512,71 @@ export default function AdminScreen() {
                   Edit Stock
                 </Button>
               )}
+            </RNView>
+          </LinearGradient>
+        </Card>
+
+        {/* Season Management */}
+        <Card style={styles.card} mode="elevated">
+          <LinearGradient
+            colors={week.isLowSeason ? ['#ffebee', '#ffffff'] : ['#e8f5e9', '#ffffff']}
+            style={styles.cardGradient}
+          >
+            <RNView style={styles.cardContent}>
+              <RNView style={styles.cardHeader}>
+                <RNView style={styles.iconCircle}>
+                  <Text style={styles.iconEmoji}>{week.isLowSeason ? '❄️' : '☀️'}</Text>
+                </RNView>
+                <Text variant="titleLarge" style={styles.cardTitle}>Season Mode</Text>
+              </RNView>
+
+              <Surface style={styles.seasonCard} elevation={2}>
+                <RNView style={styles.seasonRow}>
+                  <RNView style={{ flex: 1 }}>
+                    <Text variant="titleMedium" style={{ fontWeight: 'bold', color: week.isLowSeason ? '#d32f2f' : '#2e7d32' }}>
+                      {week.isLowSeason ? 'Low Season' : 'High Season'}
+                    </Text>
+                    <Text variant="bodySmall" style={{ color: '#666', marginTop: 4 }}>
+                      {week.isLowSeason 
+                        ? 'Chickens resting, new subscriptions paused' 
+                        : 'Full production, all subscriptions active'}
+                    </Text>
+                  </RNView>
+                  <Switch
+                    value={!week.isLowSeason}
+                    onValueChange={handleToggleSeason}
+                    disabled={processing}
+                    color={theme.colors.primary}
+                  />
+                </RNView>
+
+                {week.isLowSeason && (
+                  <RNView style={styles.seasonInfo}>
+                    <Text variant="bodySmall" style={{ color: '#666' }}>
+                      📋 One-time order cap: <Text style={{ fontWeight: 'bold' }}>{week.lowSeasonOrderCap || 20} eggs</Text>
+                    </Text>
+                    <Text variant="bodySmall" style={{ color: '#666', marginTop: 4 }}>
+                      🚫 New subscriptions disabled
+                    </Text>
+                  </RNView>
+                )}
+
+                {!week.isLowSeason && !week.subscriptionsProcessed && week.availableEggs === 0 && (
+                  <RNView style={styles.seasonInfo}>
+                    <Text variant="bodySmall" style={{ color: '#ff9800' }}>
+                      ⚠️ Set stock to process subscriptions
+                    </Text>
+                  </RNView>
+                )}
+
+                {!week.isLowSeason && week.subscriptionsProcessed && (
+                  <RNView style={styles.seasonInfo}>
+                    <Text variant="bodySmall" style={{ color: '#4caf50' }}>
+                      ✅ Subscriptions processed for this week
+                    </Text>
+                  </RNView>
+                )}
+              </Surface>
             </RNView>
           </LinearGradient>
         </Card>
@@ -1431,5 +1518,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#d4f4d1',
     borderColor: '#4caf50',
     borderWidth: 1,
+  },
+  seasonCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 16,
+  },
+  seasonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  seasonInfo: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
   },
 });

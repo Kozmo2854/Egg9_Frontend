@@ -6,6 +6,7 @@ import {
   AppSettings,
   Order, 
   Subscription, 
+  SubscriptionAvailability,
   AuthResponse
 } from '@/types/models';
 
@@ -283,6 +284,15 @@ class ApiService {
     return data.subscription;
   }
 
+  async getSubscriptionAvailability(): Promise<SubscriptionAvailability> {
+    const response = await fetch(`${this.baseUrl}/subscriptions/availability`, {
+      headers: await this.getAuthHeaders(),
+    });
+
+    const data = await this.handleResponse<SubscriptionAvailability>(response);
+    return data;
+  }
+
   async cancelSubscription(): Promise<void> {
     const subscription = await this.getSubscription();
     if (!subscription) {
@@ -345,6 +355,7 @@ class ApiService {
     pricePerDozen?: number;
     deliveryDate?: string | null;
     deliveryTime?: string | null;
+    isLowSeason?: boolean;
   }): Promise<Week> {
     const response = await fetch(`${this.baseUrl}/admin/week/current`, {
       method: 'PUT',
@@ -354,6 +365,7 @@ class ApiService {
         price_per_dozen: params.pricePerDozen,
         delivery_date: params.deliveryDate,
         delivery_time: params.deliveryTime,
+        is_low_season: params.isLowSeason,
       }),
     });
 

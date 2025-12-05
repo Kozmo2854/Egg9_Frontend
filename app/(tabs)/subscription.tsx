@@ -286,11 +286,24 @@ export default function SubscriptionScreen() {
                   </RNView>
                 </Surface>
 
+                {/* Low Season Notice for existing subscribers */}
+                {weeklyStock?.isLowSeason && (
+                  <Surface style={[styles.detailsCard, { backgroundColor: '#fff3e0', marginBottom: 12 }]} elevation={1}>
+                    <RNView style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                      <Text style={{ fontSize: 20, marginRight: 8 }}>🐔</Text>
+                      <Text variant="bodyMedium" style={{ color: '#e65100', textAlign: 'center', flex: 1 }}>
+                        Modifications paused while our chickens rest. Your subscription continues as normal!
+                      </Text>
+                    </RNView>
+                  </Surface>
+                )}
+
                 <Button
                   mode="outlined"
                   onPress={() => setEditingSubscription(true)}
-                  style={styles.button}
+                  style={[styles.button, weeklyStock?.isLowSeason && { opacity: 0.5 }]}
                   icon="pencil"
+                  disabled={weeklyStock?.isLowSeason}
                 >
                   Modify Subscription
                 </Button>
@@ -310,8 +323,48 @@ export default function SubscriptionScreen() {
           </Card>
         )}
 
+        {/* Low Season Notice */}
+        {weeklyStock?.isLowSeason && !subscription && (
+          <Card style={[styles.card, { borderColor: '#ff9800', borderWidth: 2 }]} mode="elevated">
+            <LinearGradient
+              colors={['#fff3e0', '#ffffff']}
+              style={styles.cardGradient}
+            >
+              <RNView style={styles.cardContent}>
+                <RNView style={[styles.activeHeader, { justifyContent: 'center' }]}>
+                  <RNView style={[styles.activeIconCircle, { backgroundColor: '#fff3e0' }]}>
+                    <Text style={styles.activeIcon}>🐔</Text>
+                  </RNView>
+                  <Text variant="headlineSmall" style={[styles.activeTitle, { color: '#e65100' }]}>
+                    Subscriptions Paused
+                  </Text>
+                </RNView>
+                
+                <Surface style={styles.detailsCard} elevation={2}>
+                  <Text variant="bodyLarge" style={{ textAlign: 'center', color: '#666', marginBottom: 12 }}>
+                    It's a quieter time for our chickens right now, and they're laying fewer eggs than usual. Because of this, we're not accepting new subscriptions at the moment.
+                  </Text>
+                  <Text variant="bodyMedium" style={{ textAlign: 'center', color: '#888' }}>
+                    You can still place one-time orders (limited to {weeklyStock?.lowSeasonOrderCap || 20} eggs).
+                  </Text>
+                </Surface>
+                
+                <Button
+                  mode="contained"
+                  onPress={() => {}}
+                  disabled={true}
+                  style={[styles.button, { opacity: 0.5 }]}
+                  icon="calendar-remove"
+                >
+                  Subscriptions Unavailable
+                </Button>
+              </RNView>
+            </LinearGradient>
+          </Card>
+        )}
+
         {/* Subscription Form */}
-        {(!subscription || editingSubscription) && (
+        {(!subscription || editingSubscription) && !weeklyStock?.isLowSeason && (
           <>
             <Card style={styles.card} mode="elevated">
               <Card.Content>
