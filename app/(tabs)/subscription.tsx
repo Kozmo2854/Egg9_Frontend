@@ -17,6 +17,7 @@ import {
   Paragraph,
 } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 import { apiService } from '@/services/api';
 import { WeeklyStock } from '@/types/models';
 import { useFocusEffect } from '@react-navigation/native';
@@ -26,6 +27,7 @@ import { parseError } from '@/utils/errorHandling';
 
 export default function SubscriptionScreen() {
   const theme = useTheme();
+  const { t } = useTranslation();
   const { setScrollY } = useScrollContext();
   const [weeklyStock, setWeeklyStock] = useState<WeeklyStock | null>(null);
   const [subscription, setSubscription] = useState<any>(null);
@@ -204,7 +206,7 @@ export default function SubscriptionScreen() {
   };
 
   if (loading) {
-    return <LoadingView message="Loading subscription..." />;
+    return <LoadingView message={t('subscription.loadingSubscription')} />;
   }
 
   if (error || !weeklyStock) {
@@ -238,8 +240,8 @@ export default function SubscriptionScreen() {
           style={styles.header}
         >
           <Text style={styles.headerIcon}>📅</Text>
-          <Text style={styles.headerTitle}>Weekly Subscription</Text>
-          <Text style={styles.headerSubtitle}>Fresh eggs delivered every week</Text>
+          <Text style={styles.headerTitle}>{t('subscription.title')}</Text>
+          <Text style={styles.headerSubtitle}>{t('subscription.subtitle')}</Text>
         </LinearGradient>
 
         {/* Current Subscription Status */}
@@ -255,33 +257,33 @@ export default function SubscriptionScreen() {
                     <Text style={styles.activeIcon}>✓</Text>
                   </RNView>
                   <Text variant="headlineSmall" style={styles.activeTitle}>
-                    Active Subscription
+                    {t('subscription.activeSubscription')}
                   </Text>
                 </RNView>
 
                 <Surface style={styles.detailsCard} elevation={2}>
                   <RNView style={styles.detailRow}>
-                    <Text variant="bodyLarge" style={styles.detailLabel}>Weekly Delivery:</Text>
+                    <Text variant="bodyLarge" style={styles.detailLabel}>{t('subscription.weeklyDelivery')}</Text>
                     <Text variant="headlineSmall" style={styles.detailValue}>
-                      {subscription.quantity} eggs
+                      {subscription.quantity} {t('common.eggs')}
                     </Text>
                   </RNView>
                   <RNView style={styles.detailRow}>
-                    <Text variant="bodyLarge" style={styles.detailLabel}>Duration:</Text>
+                    <Text variant="bodyLarge" style={styles.detailLabel}>{t('subscription.duration')}</Text>
                     <Text variant="headlineSmall" style={styles.detailValue}>
-                      {subscription.period} weeks
+                      {subscription.period} {t('common.weeks')}
                     </Text>
                   </RNView>
                   <RNView style={styles.detailRow}>
-                    <Text variant="bodyLarge" style={styles.detailLabel}>Weekly Price:</Text>
+                    <Text variant="bodyLarge" style={styles.detailLabel}>{t('subscription.weeklyPrice')}</Text>
                     <Text variant="headlineSmall" style={styles.detailValue}>
-                      {calculateWeeklyPrice().toFixed(0)} RSD
+                      {calculateWeeklyPrice().toFixed(0)} {t('common.rsd')}
                     </Text>
                   </RNView>
                   <RNView style={[styles.detailRow, styles.totalRow]}>
-                    <Text variant="titleMedium" style={styles.totalLabel}>Total:</Text>
+                    <Text variant="titleMedium" style={styles.totalLabel}>{t('subscription.total')}</Text>
                     <Text variant="headlineMedium" style={styles.totalValue}>
-                      {calculateTotalPrice().toFixed(0)} RSD
+                      {calculateTotalPrice().toFixed(0)} {t('common.rsd')}
                     </Text>
                   </RNView>
                 </Surface>
@@ -292,7 +294,7 @@ export default function SubscriptionScreen() {
                     <RNView style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
                       <Text style={{ fontSize: 20, marginRight: 8 }}>🐔</Text>
                       <Text variant="bodyMedium" style={{ color: '#e65100', textAlign: 'center', flex: 1 }}>
-                        Modifications paused while our chickens rest. Your subscription continues as normal!
+                        {t('subscription.modificationsPaused')}
                       </Text>
                     </RNView>
                   </Surface>
@@ -305,7 +307,7 @@ export default function SubscriptionScreen() {
                   icon="pencil"
                   disabled={weeklyStock?.isLowSeason}
                 >
-                  Modify Subscription
+                  {t('subscription.modifySubscription')}
                 </Button>
                 <Button
                   mode="text"
@@ -316,7 +318,7 @@ export default function SubscriptionScreen() {
                   textColor={theme.colors.error}
                   icon="close-circle-outline"
                 >
-                  Cancel Subscription
+                  {t('subscription.cancelSubscription')}
                 </Button>
               </RNView>
             </LinearGradient>
@@ -336,16 +338,16 @@ export default function SubscriptionScreen() {
                     <Text style={styles.activeIcon}>🐔</Text>
                   </RNView>
                   <Text variant="headlineSmall" style={[styles.activeTitle, { color: '#e65100' }]}>
-                    Subscriptions Paused
+                    {t('subscription.subscriptionsPaused')}
                   </Text>
                 </RNView>
                 
                 <Surface style={styles.detailsCard} elevation={2}>
                   <Text variant="bodyLarge" style={{ textAlign: 'center', color: '#666', marginBottom: 12 }}>
-                    It's a quieter time for our chickens right now, and they're laying fewer eggs than usual. Because of this, we're not accepting new subscriptions at the moment.
+                    {t('subscription.lowSeasonMessage')}
                   </Text>
                   <Text variant="bodyMedium" style={{ textAlign: 'center', color: '#888' }}>
-                    You can still place one-time orders (limited to {weeklyStock?.lowSeasonOrderCap || 20} eggs).
+                    {t('subscription.canStillOrder', { cap: weeklyStock?.lowSeasonOrderCap || 20 })}
                   </Text>
                 </Surface>
                 
@@ -356,7 +358,7 @@ export default function SubscriptionScreen() {
                   style={[styles.button, { opacity: 0.5 }]}
                   icon="calendar-remove"
                 >
-                  Subscriptions Unavailable
+                  {t('subscription.subscriptionsUnavailable')}
                 </Button>
               </RNView>
             </LinearGradient>
@@ -369,11 +371,11 @@ export default function SubscriptionScreen() {
             <Card style={styles.card} mode="elevated">
               <Card.Content>
                 <Text variant="titleLarge" style={styles.cardTitle}>
-                  {subscription ? 'Edit Subscription' : 'Create Subscription'}
+                  {subscription ? t('subscription.editSubscription') : t('subscription.createSubscription')}
                 </Text>
                 
                 {/* Quantity Selector */}
-                <Text variant="titleMedium" style={styles.sectionLabel}>Weekly Quantity</Text>
+                <Text variant="titleMedium" style={styles.sectionLabel}>{t('subscription.weeklyQuantity')}</Text>
                 <RNView style={styles.quantityContainer}>
                   <IconButton
                     icon="minus-circle"
@@ -388,7 +390,7 @@ export default function SubscriptionScreen() {
                       {subscriptionQuantity}
                     </Text>
                     <Text variant="bodyLarge" style={styles.quantityLabel}>
-                      eggs/week
+                      {t('subscription.eggsPerWeek')}
                     </Text>
                     <Chip icon="egg" mode="outlined" style={styles.dozenChip}>
                       {subscriptionQuantity / 10} dozen
@@ -405,14 +407,14 @@ export default function SubscriptionScreen() {
                 </RNView>
 
                 <Text variant="bodySmall" style={styles.maxText}>
-                  Maximum: 30 eggs per week
+                  {t('subscription.maxPerWeek')}
                 </Text>
 
                 {/* Period Selector */}
-                <Text variant="titleMedium" style={styles.sectionLabel}>Subscription Duration</Text>
+                <Text variant="titleMedium" style={styles.sectionLabel}>{t('subscription.subscriptionDuration')}</Text>
                 <Surface style={styles.periodContainer} elevation={1}>
                   <RNView style={styles.periodHeader}>
-                    <Text variant="bodyMedium" style={styles.periodHeaderText}>Selected:</Text>
+                    <Text variant="bodyMedium" style={styles.periodHeaderText}>{t('subscription.selected')}</Text>
                     <Chip mode="flat" style={styles.periodChip}>
                       {subscriptionPeriod} {subscriptionPeriod === 1 ? 'week' : 'weeks'}
                     </Chip>
@@ -435,7 +437,7 @@ export default function SubscriptionScreen() {
                 </Surface>
                 
                 <Text variant="bodySmall" style={styles.periodNote}>
-                  Subscribe for 2-4 weeks (for single week, use one-time order)
+                  {t('subscription.periodNote')}
                 </Text>
               </Card.Content>
             </Card>
@@ -449,21 +451,21 @@ export default function SubscriptionScreen() {
                 style={styles.priceGradient}
               >
                 <RNView style={styles.priceContent}>
-                  <Text style={styles.priceLabel}>Subscription Summary</Text>
+                  <Text style={styles.priceLabel}>{t('subscription.subscriptionSummary')}</Text>
                   
                   <RNView style={styles.priceSummary}>
                     <RNView style={styles.summaryRow}>
-                      <Text style={styles.summaryLabel}>Weekly Price:</Text>
-                      <Text style={styles.summaryValue}>{calculateWeeklyPrice().toFixed(0)} RSD</Text>
+                      <Text style={styles.summaryLabel}>{t('subscription.weeklyPrice')}</Text>
+                      <Text style={styles.summaryValue}>{calculateWeeklyPrice().toFixed(0)} {t('common.rsd')}</Text>
                     </RNView>
                     <RNView style={styles.summaryRow}>
-                      <Text style={styles.summaryLabel}>Duration:</Text>
-                      <Text style={styles.summaryValue}>{subscriptionPeriod} weeks</Text>
+                      <Text style={styles.summaryLabel}>{t('subscription.duration')}</Text>
+                      <Text style={styles.summaryValue}>{subscriptionPeriod} {t('common.weeks')}</Text>
                     </RNView>
                   </RNView>
                   
-                  <Text style={styles.priceTotalLabel}>Total Price</Text>
-                  <Text style={styles.priceAmount}>{calculateTotalPrice().toFixed(0)} RSD</Text>
+                  <Text style={styles.priceTotalLabel}>{t('subscription.totalPrice')}</Text>
+                  <Text style={styles.priceAmount}>{calculateTotalPrice().toFixed(0)} {t('common.rsd')}</Text>
                   <Text style={styles.priceDetails}>
                     {subscriptionQuantity} eggs × {subscriptionPeriod} weeks
                   </Text>
@@ -485,7 +487,7 @@ export default function SubscriptionScreen() {
                   buttonColor={theme.colors.tertiary}
                   icon="check"
                 >
-                  Update Subscription
+                  {t('subscription.updateSubscription')}
                 </Button>
                 <Button
                   mode="outlined"
@@ -498,7 +500,7 @@ export default function SubscriptionScreen() {
                   style={styles.button}
                   icon="close"
                 >
-                  Cancel Changes
+                  {t('subscription.cancelChanges')}
                 </Button>
               </>
             ) : (
@@ -513,7 +515,7 @@ export default function SubscriptionScreen() {
                 buttonColor={theme.colors.tertiary}
                 icon="calendar-check"
               >
-                {processing ? 'Processing...' : 'Subscribe Now'}
+                {processing ? t('order.processing') : t('subscription.subscribeNow')}
               </Button>
             )}
           </>
@@ -522,13 +524,13 @@ export default function SubscriptionScreen() {
         {/* Benefits Card */}
         <Card style={styles.benefitsCard} mode="outlined">
           <Card.Content>
-            <Text variant="titleLarge" style={styles.benefitsTitle}>✨ Why Subscribe?</Text>
+            <Text variant="titleLarge" style={styles.benefitsTitle}>{t('subscription.whySubscribe')}</Text>
             
             {[
-              { icon: '🎯', text: 'Guaranteed weekly stock - never miss out!' },
-              { icon: '📦', text: 'Flexible duration: 2 to 4 weeks' },
-              { icon: '🚚', text: 'Automatic delivery scheduling' },
-              { icon: '🔄', text: 'Cancel or modify anytime' },
+              { icon: '🎯', text: t('subscription.benefit1') },
+              { icon: '📦', text: t('subscription.benefit2') },
+              { icon: '🚚', text: t('subscription.benefit3') },
+              { icon: '🔄', text: t('subscription.benefit4') },
             ].map((benefit, index) => (
               <RNView key={index} style={styles.benefitRow}>
                 <Text style={styles.benefitIcon}>{benefit.icon}</Text>

@@ -10,12 +10,14 @@ import {
   useTheme 
 } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 import { apiService } from '@/services/api';
 import { useRouter } from 'expo-router';
 import { useScrollContext } from '@/contexts/ScrollContext';
 
 export default function PaymentSettingsScreen() {
   const theme = useTheme();
+  const { t } = useTranslation();
   const router = useRouter();
   const { setScrollY } = useScrollContext();
   const [loading, setLoading] = useState(true);
@@ -49,7 +51,7 @@ export default function PaymentSettingsScreen() {
       setPaymentPurpose(settings.paymentPurpose);
       setPaymentCode(settings.paymentCode);
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to load payment settings');
+      Alert.alert(t('common.error'), error.message || t('paymentSettings.failedToLoad'));
     } finally {
       setLoading(false);
     }
@@ -58,7 +60,7 @@ export default function PaymentSettingsScreen() {
   const handleSave = async () => {
     // Validate inputs
     if (!bankAccountNumber.trim() || !recipientName.trim() || !paymentPurpose.trim() || !paymentCode.trim()) {
-      Alert.alert('Validation Error', 'All fields are required');
+      Alert.alert(t('common.error'), t('paymentSettings.allFieldsRequired'));
       return;
     }
 
@@ -70,9 +72,9 @@ export default function PaymentSettingsScreen() {
         paymentPurpose: paymentPurpose.trim(),
         paymentCode: paymentCode.trim(),
       });
-      Alert.alert('Success', 'Payment settings updated successfully');
+      Alert.alert(t('common.ok'), t('paymentSettings.settingsUpdated'));
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to update payment settings');
+      Alert.alert(t('common.error'), error.message || t('paymentSettings.failedToUpdate'));
     } finally {
       setSaving(false);
     }
@@ -82,7 +84,7 @@ export default function PaymentSettingsScreen() {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" animating={true} color={theme.colors.primary} />
-        <Text variant="bodyLarge" style={styles.loadingText}>Loading...</Text>
+        <Text variant="bodyLarge" style={styles.loadingText}>{t('common.loading')}</Text>
       </View>
     );
   }
@@ -102,8 +104,8 @@ export default function PaymentSettingsScreen() {
         style={styles.hero}
       >
         <Text style={styles.heroEmoji}>💳</Text>
-        <Text style={styles.heroTitle}>Payment Settings</Text>
-        <Text style={styles.heroSubtitle}>Configure QR code and bank details</Text>
+        <Text style={styles.heroTitle}>{t('paymentSettings.title')}</Text>
+        <Text style={styles.heroSubtitle}>{t('paymentSettings.subtitle')}</Text>
       </LinearGradient>
 
       <RNView style={styles.content}>
@@ -111,14 +113,14 @@ export default function PaymentSettingsScreen() {
         <Card style={styles.card} mode="elevated">
           <Card.Content>
             <Text variant="titleLarge" style={styles.cardTitle}>
-              Bank Account Information
+              {t('paymentSettings.bankAccountInfo')}
             </Text>
             <Text variant="bodyMedium" style={styles.cardDescription}>
-              These details will be displayed to users in the payment QR code and dialog
+              {t('paymentSettings.detailsDescription')}
             </Text>
 
             <TextInput
-              label="Bank Account Number"
+              label={t('paymentSettings.bankAccountNumber')}
               value={bankAccountNumber}
               onChangeText={setBankAccountNumber}
               mode="outlined"
@@ -128,7 +130,7 @@ export default function PaymentSettingsScreen() {
             />
 
             <TextInput
-              label="Recipient Name"
+              label={t('paymentSettings.recipientName')}
               value={recipientName}
               onChangeText={setRecipientName}
               mode="outlined"
@@ -138,7 +140,7 @@ export default function PaymentSettingsScreen() {
             />
 
             <TextInput
-              label="Payment Purpose"
+              label={t('paymentSettings.paymentPurpose')}
               value={paymentPurpose}
               onChangeText={setPaymentPurpose}
               mode="outlined"
@@ -148,7 +150,7 @@ export default function PaymentSettingsScreen() {
             />
 
             <TextInput
-              label="Payment Code (SF Code)"
+              label={t('paymentSettings.paymentCode')}
               value={paymentCode}
               onChangeText={setPaymentCode}
               mode="outlined"
@@ -166,7 +168,7 @@ export default function PaymentSettingsScreen() {
               style={styles.saveButton}
               icon="content-save"
             >
-              Save Payment Settings
+              {t('paymentSettings.saveSettings')}
             </Button>
           </Card.Content>
         </Card>
@@ -175,19 +177,19 @@ export default function PaymentSettingsScreen() {
         <Card style={styles.card} mode="outlined">
           <Card.Content>
             <Text variant="titleMedium" style={styles.infoTitle}>
-              ℹ️ Information
+              {t('paymentSettings.info')}
             </Text>
             <Text variant="bodyMedium" style={styles.infoText}>
-              <Text style={styles.bold}>Bank Account Number:</Text> The account where payments will be received (e.g., 160-0000012345678-91).
+              <Text style={styles.bold}>{t('paymentSettings.bankAccountNumber')}:</Text> {t('paymentSettings.bankAccountDesc')}
             </Text>
             <Text variant="bodyMedium" style={styles.infoText}>
-              <Text style={styles.bold}>Recipient Name:</Text> The name that will appear on the QR code and payment details.
+              <Text style={styles.bold}>{t('paymentSettings.recipientName')}:</Text> {t('paymentSettings.recipientDesc')}
             </Text>
             <Text variant="bodyMedium" style={styles.infoText}>
-              <Text style={styles.bold}>Payment Purpose:</Text> Description that will appear on bank statements (e.g., "Placanje za jaja").
+              <Text style={styles.bold}>{t('paymentSettings.paymentPurpose')}:</Text> {t('paymentSettings.purposeDesc')}
             </Text>
             <Text variant="bodyMedium" style={styles.infoText}>
-              <Text style={styles.bold}>Payment Code (SF):</Text> Serbian banking payment code. 289 is for goods and services.
+              <Text style={styles.bold}>{t('paymentSettings.paymentCode')}:</Text> {t('paymentSettings.codeDesc')}
             </Text>
           </Card.Content>
         </Card>

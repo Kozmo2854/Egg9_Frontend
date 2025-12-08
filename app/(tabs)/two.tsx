@@ -13,6 +13,7 @@ import {
   Surface,
 } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 import { apiService } from '@/services/api';
 import { WeeklyStock } from '@/types/models';
 import { useFocusEffect } from '@react-navigation/native';
@@ -22,6 +23,7 @@ import { parseError } from '@/utils/errorHandling';
 
 export default function OrderScreen() {
   const theme = useTheme();
+  const { t } = useTranslation();
   const { setScrollY } = useScrollContext();
   const [weeklyStock, setWeeklyStock] = useState<WeeklyStock | null>(null);
   const [loading, setLoading] = useState(true);
@@ -202,7 +204,7 @@ export default function OrderScreen() {
   };
 
   if (loading) {
-    return <LoadingView message="Loading order..." />;
+    return <LoadingView message={t('order.loadingOrder')} />;
   }
 
   if (error || !weeklyStock) {
@@ -242,7 +244,7 @@ export default function OrderScreen() {
           style={styles.header}
         >
           <Text style={styles.headerIcon}>🛒</Text>
-          <Text style={styles.headerTitle}>Order This Week</Text>
+          <Text style={styles.headerTitle}>{t('order.title')}</Text>
           <Text style={styles.headerSubtitle}>
             {formatDate(weeklyStock.weekStart)} - {formatDate(weeklyStock.weekEnd)}
           </Text>
@@ -254,7 +256,7 @@ export default function OrderScreen() {
             <RNView style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 8 }}>
               <Text style={{ fontSize: 20, marginRight: 8 }}>🐔</Text>
               <Text style={{ color: '#e65100', fontWeight: '500' }}>
-                Our chickens are resting – orders up to {weeklyStock.lowSeasonOrderCap} eggs
+                {t('order.lowSeasonNotice', { cap: weeklyStock.lowSeasonOrderCap })}
               </Text>
             </RNView>
           </Surface>
@@ -265,12 +267,12 @@ export default function OrderScreen() {
           <RNView style={styles.stockRow}>
             <RNView style={styles.stockItem}>
               <Text style={styles.stockNumber}>{availableEggs}</Text>
-              <Text style={styles.stockLabel}>Available</Text>
+              <Text style={styles.stockLabel}>{t('common.available')}</Text>
             </RNView>
             <RNView style={styles.stockDivider} />
             <RNView style={styles.stockItem}>
-              <Text style={styles.stockNumber}>{weeklyStock.pricePerDozen.toFixed(0)} RSD</Text>
-              <Text style={styles.stockLabel}>Per Dozen</Text>
+              <Text style={styles.stockNumber}>{weeklyStock.pricePerDozen.toFixed(0)} {t('common.rsd')}</Text>
+              <Text style={styles.stockLabel}>{t('common.perDozen')}</Text>
             </RNView>
           </RNView>
         </Surface>
@@ -287,15 +289,15 @@ export default function OrderScreen() {
                 </Text>
                 <Text variant="titleMedium" style={styles.warningText}>
                   {stockNotSetup 
-                    ? 'Stock Not Set Up Yet' 
-                    : (ordersDelivered ? 'Orders Delivered' : 'Not Enough Stock Available')}
+                    ? t('order.stockNotSetUp')
+                    : (ordersDelivered ? t('order.ordersDelivered') : t('order.notEnoughStock'))}
                 </Text>
                 <Text variant="bodyMedium" style={styles.warningSubtext}>
                   {stockNotSetup 
-                    ? 'Admin is preparing this week\'s inventory. Check back soon!' 
+                    ? t('order.stockNotSetUpDesc')
                     : (ordersDelivered 
-                      ? 'All orders have been delivered. New week starts Monday!' 
-                      : 'Try a subscription for guaranteed weekly delivery!')}
+                      ? t('order.ordersDeliveredDesc')
+                      : t('order.notEnoughStockDesc'))}
                 </Text>
               </RNView>
             </LinearGradient>
@@ -305,7 +307,7 @@ export default function OrderScreen() {
             {/* Quantity Selector */}
             <Card style={styles.quantityCard} mode="elevated">
               <Card.Content>
-                <Text variant="titleLarge" style={styles.cardTitle}>Select Quantity</Text>
+                <Text variant="titleLarge" style={styles.cardTitle}>{t('order.selectQuantity')}</Text>
                 
                 <RNView style={styles.quantityContainer}>
                   <IconButton
@@ -322,7 +324,7 @@ export default function OrderScreen() {
                       {quantity}
                     </Text>
                     <Text variant="bodyLarge" style={styles.quantityLabel}>
-                      eggs
+                      {t('common.eggs')}
                     </Text>
                     <Chip icon="egg" mode="outlined" style={styles.dozenChip}>
                       {quantity / 10} dozen
@@ -340,7 +342,7 @@ export default function OrderScreen() {
                 </RNView>
 
                 <Text variant="bodySmall" style={styles.maxText}>
-                  Maximum available: {maxAvailable} eggs
+                  {t('order.maxAvailable', { count: maxAvailable })}
                 </Text>
               </Card.Content>
             </Card>
@@ -354,8 +356,8 @@ export default function OrderScreen() {
                 style={styles.priceGradient}
               >
                 <RNView style={styles.priceContent}>
-                  <Text style={styles.priceLabel}>Total Price</Text>
-                  <Text style={styles.priceAmount}>{calculatePrice().toFixed(0)} RSD</Text>
+                  <Text style={styles.priceLabel}>{t('order.totalPrice')}</Text>
+                  <Text style={styles.priceAmount}>{calculatePrice().toFixed(0)} {t('common.rsd')}</Text>
                   <Text style={styles.priceDetails}>
                     {quantity / 10} dozen × {weeklyStock.pricePerDozen.toFixed(0)} RSD
                   </Text>
@@ -369,17 +371,17 @@ export default function OrderScreen() {
               <RNView style={styles.statusContainer}>
                 {currentWeekOrder.status === 'pending' && !currentWeekOrder.isPaid && (
                   <Chip icon="clock-outline" mode="flat" style={styles.statusPending}>
-                    ⏳ Pending Payment
+                    {t('order.pendingPayment')}
                   </Chip>
                 )}
                 {currentWeekOrder.status === 'pending' && currentWeekOrder.isPaid && (
                   <Chip icon="check-circle" mode="flat" style={styles.statusPaid}>
-                    ✓ Payment Confirmed
+                    {t('order.paymentConfirmed')}
                   </Chip>
                 )}
                 {currentWeekOrder.status === 'completed' && (
                   <Chip icon="package-check" mode="flat" style={styles.statusCompleted}>
-                    📦 Delivered
+                    {t('order.delivered')}
                   </Chip>
                 )}
               </RNView>
@@ -396,7 +398,7 @@ export default function OrderScreen() {
               buttonColor={theme.colors.primary}
               icon={currentWeekOrder ? "check" : "cart-check"}
             >
-              {processing ? 'Processing...' : currentWeekOrder?.isPaid ? 'Payment Confirmed - Cannot Update' : currentWeekOrder ? 'Update Order' : 'Place Order'}
+              {processing ? t('order.processing') : currentWeekOrder?.isPaid ? t('order.paymentConfirmedCantUpdate') : currentWeekOrder ? t('order.updateOrder') : t('order.placeOrder')}
             </Button>
 
             {currentWeekOrder && !currentWeekOrder.isPaid && (
@@ -409,7 +411,7 @@ export default function OrderScreen() {
                 icon="close-circle-outline"
                 textColor={theme.colors.error}
               >
-                Cancel Order
+                {t('order.cancelOrder')}
               </Button>
             )}
           </>
@@ -419,7 +421,7 @@ export default function OrderScreen() {
         <Surface style={styles.infoCard} elevation={1}>
           <Text style={styles.infoIcon}>ℹ️</Text>
           <Text variant="bodyMedium" style={styles.infoText}>
-            Orders must be in increments of 1 dozen (10 eggs)
+            {t('order.infoNote')}
           </Text>
         </Surface>
       </ScrollView>

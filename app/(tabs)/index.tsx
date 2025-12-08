@@ -13,6 +13,7 @@ import {
   Snackbar,
 } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 import { apiService } from '@/services/api';
 import { WeeklyStock } from '@/types/models';
 import { useFocusEffect } from '@react-navigation/native';
@@ -24,6 +25,7 @@ import { parseError, ACTION_ERROR_MESSAGES } from '@/utils/errorHandling';
 
 export default function HomeScreen() {
   const theme = useTheme();
+  const { t } = useTranslation();
   const { setScrollY } = useScrollContext();
   const [weeklyStock, setWeeklyStock] = useState<WeeklyStock | null>(null);
   const [subscription, setSubscription] = useState<any>(null);
@@ -152,7 +154,7 @@ export default function HomeScreen() {
         await apiService.markOrderPaymentSubmitted(paymentOrderContext.order.id);
         await loadData();
         hidePaymentDialog();
-        setSnackbar({ visible: true, message: 'Payment marked as submitted!' });
+        setSnackbar({ visible: true, message: t('payment.paymentMarked') });
         return;
       }
       
@@ -160,7 +162,7 @@ export default function HomeScreen() {
       const orderIds = OrderHelpers.getOrdersNeedingPaymentSubmission(currentWeekOrder, currentWeekSubscriptionOrder);
 
       if (orderIds.length === 0) {
-        setSnackbar({ visible: true, message: 'All orders have already been marked as paid' });
+        setSnackbar({ visible: true, message: t('payment.allOrdersMarked') });
         hidePaymentDialog();
         return;
       }
@@ -168,7 +170,7 @@ export default function HomeScreen() {
       await Promise.all(orderIds.map(id => apiService.markOrderPaymentSubmitted(id)));
       await loadData();
       hidePaymentDialog();
-      setSnackbar({ visible: true, message: 'Payment marked as submitted!' });
+      setSnackbar({ visible: true, message: t('payment.paymentMarked') });
     } catch (err: any) {
       const appError = parseError(err, 'markPayment');
       setSnackbar({ visible: true, message: appError.message });
@@ -184,7 +186,7 @@ export default function HomeScreen() {
       const orderIds = OrderHelpers.getOrdersNeedingPickupConfirmation(currentWeekOrder, currentWeekSubscriptionOrder);
       await Promise.all(orderIds.map(id => apiService.confirmOrderPickup(id)));
       await loadData();
-      setSnackbar({ visible: true, message: 'Pickup confirmed!' });
+      setSnackbar({ visible: true, message: t('payment.pickupConfirmed') });
     } catch (err: any) {
       const appError = parseError(err);
       setSnackbar({ visible: true, message: appError.message });
@@ -210,7 +212,7 @@ export default function HomeScreen() {
   };
 
   if (loading) {
-    return <LoadingView message="Loading your orders..." />;
+    return <LoadingView message={t('common.loading')} />;
   }
 
   if (error || !weeklyStock) {
@@ -245,7 +247,7 @@ export default function HomeScreen() {
         style={styles.hero}
       >
         <Text style={styles.heroEmoji}>🥚</Text>
-        <Text style={styles.heroTitle}>Egg9</Text>
+        <Text style={styles.heroTitle}>{t('home.title')}</Text>
         <Text style={styles.heroSubtitle}>
           {formatDate(weeklyStock.weekStart)} - {formatDate(weeklyStock.weekEnd)}
         </Text>
@@ -255,19 +257,19 @@ export default function HomeScreen() {
           {weeklyStock.isOrderingOpen ? (
             <>
           <Text style={styles.statNumber}>{availableEggs}</Text>
-          <Text style={styles.statLabel}>Available Eggs</Text>
+          <Text style={styles.statLabel}>{t('home.availableEggs')}</Text>
             </>
           ) : weeklyStock.allOrdersDelivered ? (
             <>
               <Text style={styles.statIcon}>✅</Text>
-              <Text style={styles.statLabel}>Orders Delivered!</Text>
-              <Text style={styles.statSubtext}>See you next week!</Text>
+              <Text style={styles.statLabel}>{t('home.ordersDelivered')}</Text>
+              <Text style={styles.statSubtext}>{t('home.seeYouNextWeek')}</Text>
             </>
           ) : (
             <>
               <Text style={styles.statIcon}>📦</Text>
-              <Text style={styles.statLabel}>Stock not set up yet</Text>
-              <Text style={styles.statSubtext}>Admin will update soon</Text>
+              <Text style={styles.statLabel}>{t('home.stockNotSetUp')}</Text>
+              <Text style={styles.statSubtext}>{t('home.adminWillUpdate')}</Text>
             </>
           )}
         </Surface>
@@ -288,12 +290,12 @@ export default function HomeScreen() {
                   <Text style={styles.deliveryIconCheck}>✓</Text>
                 </RNView>
                 <Text style={styles.deliveryTitle}>
-                  {OrderHelpers.areAllOrdersComplete(currentWeekOrder, currentWeekSubscriptionOrder) ? 'Order Complete!' : 'Order Delivered!'}
+                  {OrderHelpers.areAllOrdersComplete(currentWeekOrder, currentWeekSubscriptionOrder) ? t('home.orderComplete') : t('home.orderDelivered')}
                 </Text>
                 <Text style={styles.deliverySubtitle}>
                   {OrderHelpers.areAllOrdersComplete(currentWeekOrder, currentWeekSubscriptionOrder) 
-                    ? 'Thank you! Your order is complete. See you next week!' 
-                    : `${((currentWeekOrder?.quantity || 0) + (currentWeekSubscriptionOrder?.quantity || 0))} eggs have been delivered`}
+                    ? t('home.thankYouComplete') 
+                    : t('home.eggsDelivered', { count: (currentWeekOrder?.quantity || 0) + (currentWeekSubscriptionOrder?.quantity || 0) })}
                 </Text>
                 {!OrderHelpers.areAllOrdersComplete(currentWeekOrder, currentWeekSubscriptionOrder) && (
                   <Button
@@ -306,7 +308,7 @@ export default function HomeScreen() {
                     buttonColor="#ffffff"
                     textColor={theme.colors.tertiary}
                   >
-                    {OrderHelpers.areAllOrdersPickedUp(currentWeekOrder, currentWeekSubscriptionOrder) ? 'Pickup Confirmed' : 'Confirm Pickup'}
+                    {OrderHelpers.areAllOrdersPickedUp(currentWeekOrder, currentWeekSubscriptionOrder) ? t('home.pickupConfirmed') : t('home.confirmPickup')}
                   </Button>
                 )}
               </RNView>
@@ -319,7 +321,7 @@ export default function HomeScreen() {
                 </RNView>
                 <RNView style={styles.deliveryInfo}>
                   <Text variant="titleMedium" style={styles.deliveryInfoTitle}>
-                    Delivery Scheduled
+                    {t('home.deliveryScheduled')}
                   </Text>
                   <Text variant="bodyLarge" style={styles.deliveryDate}>
                     {formatDeliveryDate(weeklyStock.deliveryDate)}
@@ -335,10 +337,10 @@ export default function HomeScreen() {
               <RNView style={styles.deliveryPendingContainer}>
                 <Text style={styles.deliveryPendingIcon}>📅</Text>
                 <Text variant="titleMedium" style={styles.deliveryPendingText}>
-                  Delivery time pending
+                  {t('home.deliveryPending')}
                 </Text>
                 <Text variant="bodySmall" style={styles.deliveryPendingSubtext}>
-                  We'll notify you once scheduled
+                  {t('home.wellNotifyYou')}
                 </Text>
               </RNView>
             </Card.Content>
@@ -351,17 +353,17 @@ export default function HomeScreen() {
             <RNView style={styles.outstandingHeader}>
               <Text style={styles.outstandingIcon}>🐔</Text>
               <Text variant="titleLarge" style={styles.outstandingTitle}>
-                Outstanding Orders
+                {t('home.outstandingOrders')}
               </Text>
             </RNView>
             <Text variant="bodyMedium" style={styles.outstandingSubtitle}>
-              Hey! We noticed you have some unpaid eggs waiting for you 🥚
+              {t('home.outstandingMessage')}
             </Text>
             {outstandingOrders.map((order) => (
               <RNView key={order.id} style={styles.outstandingItem}>
                 <RNView style={styles.outstandingItemLeft}>
                   <Text variant="bodyLarge" style={styles.outstandingWeek}>
-                    Week of {new Date(order.weekStart).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    {t('home.weekOf', { date: new Date(order.weekStart).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) })}
                   </Text>
                   <Text variant="bodyMedium" style={styles.outstandingDetails}>
                     {order.quantity} eggs • {order.total.toFixed(0)} RSD
@@ -369,7 +371,7 @@ export default function HomeScreen() {
                 </RNView>
                 {order.paymentSubmitted ? (
                   <Chip icon="clock-outline" mode="flat" style={styles.outstandingWaitingChip}>
-                    Waiting
+                    {t('home.waiting')}
                   </Chip>
                 ) : (
                   <Button 
@@ -379,13 +381,13 @@ export default function HomeScreen() {
                     buttonColor={theme.colors.primary}
                     style={styles.outstandingPayButton}
                   >
-                    Pay
+                    {t('home.pay')}
                   </Button>
                 )}
               </RNView>
             ))}
             <Text variant="bodySmall" style={styles.outstandingNote}>
-              Our chickens would really appreciate it when you get a chance! 🐣
+              {t('home.outstandingNote')}
             </Text>
           </Surface>
         )}
@@ -409,7 +411,7 @@ export default function HomeScreen() {
                     </Text>
                   </RNView>
                   <Text variant="titleLarge" style={styles.orderTitle}>
-                    Payment Status
+                    {t('home.paymentStatus')}
                   </Text>
                 </RNView>
                 
@@ -417,46 +419,46 @@ export default function HomeScreen() {
                   {OrderHelpers.areAllOrdersPaid(currentWeekOrder, currentWeekSubscriptionOrder) ? (
                     <>
                       <Chip icon="check-circle" mode="flat" style={styles.paidChip}>
-                        Paid
+                        {t('home.paid')}
                       </Chip>
                       <Text variant="headlineSmall" style={styles.orderQuantity}>
-                        {((currentWeekOrder?.quantity || 0) + (currentWeekSubscriptionOrder?.quantity || 0))} eggs
+                        {((currentWeekOrder?.quantity || 0) + (currentWeekSubscriptionOrder?.quantity || 0))} {t('common.eggs')}
                       </Text>
                       <Text variant="headlineMedium" style={styles.paymentAmountPaid}>
-                        {getTotalAmount().toFixed(0)} RSD
+                        {getTotalAmount().toFixed(0)} {t('common.rsd')}
                       </Text>
                       <Text variant="bodyLarge" style={styles.paymentConfirmation}>
-                        Your order was paid
+                        {t('home.yourOrderWasPaid')}
                       </Text>
                     </>
                   ) : OrderHelpers.areOrdersWaitingForConfirmation(currentWeekOrder, currentWeekSubscriptionOrder) ? (
                     <>
                       <Chip icon="clock-outline" mode="flat" style={styles.waitingChip}>
-                        Waiting for Admin confirmation
+                        {t('home.waitingForAdmin')}
                       </Chip>
                       <Text variant="headlineSmall" style={styles.orderQuantity}>
-                        {OrderHelpers.getUnpaidSubmittedQuantity(currentWeekOrder, currentWeekSubscriptionOrder)} eggs
+                        {OrderHelpers.getUnpaidSubmittedQuantity(currentWeekOrder, currentWeekSubscriptionOrder)} {t('common.eggs')}
                       </Text>
                       <Text variant="headlineMedium" style={styles.paymentAmount}>
-                        {OrderHelpers.getUnpaidSubmittedAmount(currentWeekOrder, currentWeekSubscriptionOrder).toFixed(0)} RSD
+                        {OrderHelpers.getUnpaidSubmittedAmount(currentWeekOrder, currentWeekSubscriptionOrder).toFixed(0)} {t('common.rsd')}
                       </Text>
                       <Text variant="bodyMedium" style={styles.paymentLabel}>
-                        Payment submitted - awaiting confirmation
+                        {t('home.paymentSubmitted')}
                       </Text>
                     </>
                   ) : (
                     <>
                       <Chip icon="alert-circle" mode="flat" style={styles.unpaidChip}>
-                        Unpaid
+                        {t('home.unpaid')}
                       </Chip>
                       <Text variant="headlineSmall" style={styles.orderQuantity}>
-                        {OrderHelpers.getUnpaidNotSubmittedQuantity(currentWeekOrder, currentWeekSubscriptionOrder)} eggs
+                        {OrderHelpers.getUnpaidNotSubmittedQuantity(currentWeekOrder, currentWeekSubscriptionOrder)} {t('common.eggs')}
                       </Text>
                       <Text variant="headlineMedium" style={styles.paymentAmount}>
-                        {OrderHelpers.getUnpaidNotSubmittedAmount(currentWeekOrder, currentWeekSubscriptionOrder).toFixed(0)} RSD
+                        {OrderHelpers.getUnpaidNotSubmittedAmount(currentWeekOrder, currentWeekSubscriptionOrder).toFixed(0)} {t('common.rsd')}
                       </Text>
                       <Text variant="bodyMedium" style={styles.paymentLabel}>
-                        Total to be paid
+                        {t('home.totalToBePaid')}
                       </Text>
                       <Button
                         mode="contained"
@@ -465,7 +467,7 @@ export default function HomeScreen() {
                         style={styles.paymentButton}
                         buttonColor={theme.colors.primary}
                       >
-                        View Payment Details
+                        {t('home.viewPaymentDetails')}
                       </Button>
                     </>
                   )}
@@ -477,7 +479,7 @@ export default function HomeScreen() {
 
         {/* Your Orders */}
         <Text variant="headlineSmall" style={styles.sectionTitle}>
-          Your Orders
+          {t('home.yourOrders')}
         </Text>
 
         {/* Subscription */}
@@ -492,28 +494,28 @@ export default function HomeScreen() {
                   <Text style={styles.orderIcon}>📅</Text>
                 </RNView>
                 <Text variant="titleLarge" style={styles.orderTitle}>
-                  Subscription
+                  {t('home.subscription')}
                 </Text>
               </RNView>
               
               {subscription ? (
                 <RNView style={styles.orderDetails}>
                   <Chip icon="check-circle" mode="flat" style={styles.activeChip}>
-                    Active
+                    {t('home.active')}
                   </Chip>
                   <Text variant="headlineSmall" style={styles.orderQuantity}>
-                    {subscription.quantity} eggs
+                    {subscription.quantity} {t('common.eggs')}
                   </Text>
                   <Text variant="bodyMedium" style={styles.orderFrequency}>
-                    delivered weekly
+                    {t('home.deliveredWeekly')}
                   </Text>
                   <Text variant="bodyLarge" style={styles.orderRemainingWeeks}>
-                    {subscription.weeksRemaining} {subscription.weeksRemaining === 1 ? 'week' : 'weeks'} remaining
+                    {t('home.weeksRemaining', { count: subscription.weeksRemaining })}
                   </Text>
                 </RNView>
               ) : (
                 <Text variant="bodyMedium" style={styles.orderInactive}>
-                  No active subscription
+                  {t('home.noActiveSubscription')}
                 </Text>
               )}
             </RNView>
@@ -532,25 +534,25 @@ export default function HomeScreen() {
                   <Text style={styles.orderIcon}>🛒</Text>
                 </RNView>
                 <Text variant="titleLarge" style={styles.orderTitle}>
-                  One time orders for this week
+                  {t('home.oneTimeOrders')}
                 </Text>
               </RNView>
               
               {currentWeekOrder ? (
                 <RNView style={styles.orderDetails}>
                   <Chip icon="check-circle" mode="flat" style={styles.activeChip}>
-                    Ordered
+                    {t('home.ordered')}
                   </Chip>
                   <Text variant="headlineSmall" style={styles.orderQuantity}>
-                    {currentWeekOrder.quantity} eggs
+                    {currentWeekOrder.quantity} {t('common.eggs')}
                   </Text>
                   <Text variant="bodyMedium" style={styles.orderPrice}>
-                    {currentWeekOrder.total.toFixed(0)} RSD
+                    {currentWeekOrder.total.toFixed(0)} {t('common.rsd')}
                   </Text>
                 </RNView>
               ) : (
                 <Text variant="bodyMedium" style={styles.orderInactive}>
-                  No order for this week
+                  {t('home.noOrderThisWeek')}
                 </Text>
               )}
             </RNView>
@@ -563,7 +565,7 @@ export default function HomeScreen() {
       <Portal>
         <Dialog visible={paymentDialogVisible} onDismiss={hidePaymentDialog} style={styles.paymentDialog}>
           <Dialog.Title style={styles.dialogTitle}>
-            {paymentOrderContext?.type === 'outstanding' ? '🐔 Outstanding Payment' : 'Payment Information'}
+            {paymentOrderContext?.type === 'outstanding' ? t('home.outstandingPayment') : t('payment.title')}
           </Dialog.Title>
           <Dialog.Content style={styles.dialogContent}>
             {paymentOrderContext?.type === 'outstanding' && paymentOrderContext.order && (
@@ -582,20 +584,19 @@ export default function HomeScreen() {
               {getPaymentDialogQuantity()} eggs • {getPaymentDialogAmount().toFixed(0)} RSD
             </Text>
             <RNView style={styles.bankDetailsContainer}>
-              <Text variant="bodyMedium" style={styles.bankDetailLabel}>Account:</Text>
+              <Text variant="bodyMedium" style={styles.bankDetailLabel}>{t('payment.account')}</Text>
               <Text variant="bodyMedium" style={styles.bankDetailValue}>{paymentSettings?.bankAccountNumber}</Text>
             </RNView>
             <RNView style={styles.bankDetailsContainer}>
-              <Text variant="bodyMedium" style={styles.bankDetailLabel}>Recipient:</Text>
+              <Text variant="bodyMedium" style={styles.bankDetailLabel}>{t('payment.recipient')}</Text>
               <Text variant="bodyMedium" style={styles.bankDetailValue}>{paymentSettings?.recipientName}</Text>
             </RNView>
             <RNView style={styles.bankDetailsContainer}>
-              <Text variant="bodyMedium" style={styles.bankDetailLabel}>Purpose:</Text>
+              <Text variant="bodyMedium" style={styles.bankDetailLabel}>{t('payment.purpose')}</Text>
               <Text variant="bodyMedium" style={styles.bankDetailValue}>{paymentSettings?.paymentPurpose}</Text>
             </RNView>
             <Text variant="bodySmall" style={styles.paymentInstructions}>
-              Scan the QR code with your banking app for instant payment, or use the bank account details above.
-              {' After payment, click "Mark Paid" below. Admin will confirm once received.'}
+              {t('payment.scanQR')} {t('payment.afterPayment')}
             </Text>
           </Dialog.Content>
           <Dialog.Actions style={styles.dialogActions}>
@@ -609,7 +610,7 @@ export default function HomeScreen() {
                 buttonColor={theme.colors.tertiary}
                 style={{ marginRight: 8 }}
               >
-                Mark Paid
+                {t('payment.markPaid')}
               </Button>
             )}
             {/* Show Mark Paid for current week orders if not all submitted */}
@@ -622,10 +623,10 @@ export default function HomeScreen() {
                 buttonColor={theme.colors.tertiary}
                 style={{ marginRight: 8 }}
               >
-                Mark Paid
+                {t('payment.markPaid')}
               </Button>
             )}
-            <Button onPress={hidePaymentDialog} mode="contained">Close</Button>
+            <Button onPress={hidePaymentDialog} mode="contained">{t('common.close')}</Button>
           </Dialog.Actions>
         </Dialog>
       </Portal>

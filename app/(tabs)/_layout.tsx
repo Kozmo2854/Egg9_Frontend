@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Link, Tabs, useRouter } from 'expo-router';
-import { Pressable, Alert, View, Text, Platform, StyleSheet } from 'react-native';
+import { Pressable, Alert, View, Text, Platform, StyleSheet, TouchableOpacity } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import Colors from '@/constants/Colors';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
@@ -109,7 +110,34 @@ function useAuthState() {
   return { isLoggedIn, userName, handleLogout };
 }
 
-// Left side: User name
+// Language switcher component
+function LanguageSwitcher() {
+  const { i18n } = useTranslation();
+  const currentLang = i18n.language;
+
+  const changeLanguage = (lng: string) => {
+    i18n.changeLanguage(lng);
+  };
+
+  return (
+    <View style={headerStyles.languageContainer}>
+      <TouchableOpacity 
+        onPress={() => changeLanguage('en')}
+        style={[headerStyles.flagButton, currentLang === 'en' && headerStyles.flagButtonActive]}
+      >
+        <Text style={[headerStyles.flagText, currentLang !== 'en' && headerStyles.flagTextInactive]}>🇬🇧</Text>
+      </TouchableOpacity>
+      <TouchableOpacity 
+        onPress={() => changeLanguage('sr')}
+        style={[headerStyles.flagButton, currentLang === 'sr' && headerStyles.flagButtonActive]}
+      >
+        <Text style={[headerStyles.flagText, currentLang !== 'sr' && headerStyles.flagTextInactive]}>🇷🇸</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+// Left side: User name + language switcher
 function HeaderLeft() {
   const { isLoggedIn, userName } = useAuthState();
 
@@ -118,6 +146,7 @@ function HeaderLeft() {
   return (
     <View style={headerStyles.leftContainer}>
       <Text style={headerStyles.userName}>{userName}</Text>
+      <LanguageSwitcher />
     </View>
   );
 }
@@ -125,6 +154,7 @@ function HeaderLeft() {
 // Right side: Login/Logout button
 function HeaderRight() {
   const { isLoggedIn, handleLogout } = useAuthState();
+  const { t } = useTranslation();
 
   if (!isLoggedIn) {
     return (
@@ -132,7 +162,7 @@ function HeaderRight() {
         <Pressable style={headerStyles.loginButton}>
           {({ pressed }) => (
             <Text style={[headerStyles.loginButtonText, { opacity: pressed ? 0.7 : 1 }]}>
-              Log in
+              {t('auth.logIn')}
             </Text>
           )}
         </Pressable>
@@ -144,7 +174,7 @@ function HeaderRight() {
     <Pressable onPress={handleLogout} style={headerStyles.logoutButton}>
       {({ pressed }) => (
         <Text style={[headerStyles.logoutButtonText, { opacity: pressed ? 0.7 : 1 }]}>
-          Log out
+          {t('auth.logout')}
         </Text>
       )}
     </Pressable>
@@ -154,12 +184,32 @@ function HeaderRight() {
 const headerStyles = StyleSheet.create({
   leftContainer: {
     marginLeft: 15,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   userName: {
     fontSize: 16,
     fontWeight: '600',
     color: '#2d3748',
+  },
+  languageContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  flagButton: {
+    padding: 4,
+    borderRadius: 4,
+  },
+  flagButtonActive: {
+    backgroundColor: 'rgba(78, 205, 196, 0.2)',
+  },
+  flagText: {
+    fontSize: 18,
+  },
+  flagTextInactive: {
+    opacity: 0.4,
   },
   loginButton: {
     marginRight: 15,
@@ -191,6 +241,7 @@ const headerStyles = StyleSheet.create({
 
 export default function TabLayout() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [isAdmin, setIsAdmin] = useState(false);
 
 
@@ -230,7 +281,7 @@ export default function TabLayout() {
         <Tabs.Screen
           name="admin"
           options={{
-            title: 'Admin Panel',
+            title: t('tabs.adminPanel'),
             headerTitle: '',
             tabBarIcon: ({ color }) => <TabBarIcon name="dashboard" color={color} />,
           }}
@@ -238,7 +289,7 @@ export default function TabLayout() {
         <Tabs.Screen
           name="users"
           options={{
-            title: 'Users',
+            title: t('tabs.users'),
             headerTitle: '',
             tabBarIcon: ({ color }) => <TabBarIcon name="users" color={color} />,
           }}
@@ -246,7 +297,7 @@ export default function TabLayout() {
         <Tabs.Screen
           name="payment-settings"
           options={{
-            title: 'Payment',
+            title: t('tabs.payment'),
             headerTitle: '',
             tabBarIcon: ({ color }) => <TabBarIcon name="credit-card" color={color} />,
           }}
@@ -255,7 +306,7 @@ export default function TabLayout() {
           name="user-details"
           options={{
             href: null, // Hide from tabs
-            title: 'User Details',
+            title: t('admin.userDetails'),
             headerTitle: '',
           }}
         />
@@ -299,7 +350,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: t('tabs.home'),
           headerTitle: '',
           tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
         }}
@@ -307,7 +358,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="two"
         options={{
-          title: 'Order',
+          title: t('tabs.order'),
           headerTitle: '',
           tabBarIcon: ({ color }) => <TabBarIcon name="shopping-basket" color={color} />,
         }}
@@ -315,7 +366,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="subscription"
         options={{
-          title: 'Subscription',
+          title: t('tabs.subscription'),
           headerTitle: '',
           tabBarIcon: ({ color }) => <TabBarIcon name="calendar" color={color} />,
         }}

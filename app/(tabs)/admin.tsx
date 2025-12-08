@@ -16,6 +16,7 @@ import {
 } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 import { apiService } from '@/services/api';
 import { Week, AppSettings } from '@/types/models';
 import { useFocusEffect } from '@react-navigation/native';
@@ -27,6 +28,7 @@ import { isDevMode } from '@/utils/devMode';
 
 export default function AdminScreen() {
   const theme = useTheme();
+  const { t } = useTranslation();
   const router = useRouter();
   const { setScrollY } = useScrollContext();
   const [week, setWeek] = useState<Week | null>(null);
@@ -194,7 +196,7 @@ export default function AdminScreen() {
 
     try {
       await apiService.confirmOrderPayment(orderId);
-      setSuccessMessage('Payment confirmed!');
+      setSuccessMessage(t('admin.paymentConfirmed'));
       
       const [weekData, orders] = await Promise.all([
         apiService.getWeeklyStock(),
@@ -216,7 +218,7 @@ export default function AdminScreen() {
 
     try {
       await apiService.markAllOrdersDelivered();
-      setSuccessMessage('All paid orders marked as delivered!');
+      setSuccessMessage(t('admin.allPaidDelivered'));
       
       const [weekData, orders] = await Promise.all([
         apiService.getWeeklyStock(),
@@ -380,13 +382,13 @@ export default function AdminScreen() {
   };
 
   if (loading) {
-    return <LoadingView message="Loading admin data..." />;
+    return <LoadingView message={t('admin.loadingAdmin')} />;
   }
 
   if (error || !week) {
     return (
       <ErrorView 
-        message={error || 'Unable to load admin data'} 
+        message={error || t('admin.unableToLoad')} 
         onRetry={() => loadData()}
       />
     );
@@ -417,8 +419,8 @@ export default function AdminScreen() {
           style={styles.header}
         >
           <Text style={styles.headerIcon}>📊</Text>
-          <Text style={styles.headerTitle}>Admin Panel</Text>
-          <Text style={styles.headerSubtitle}>Manage stock, delivery & orders</Text>
+          <Text style={styles.headerTitle}>{t('admin.title')}</Text>
+          <Text style={styles.headerSubtitle}>{t('admin.subtitle')}</Text>
         </LinearGradient>
 
         {/* Clear Data Button - Dev Only */}
@@ -430,7 +432,7 @@ export default function AdminScreen() {
             textColor={theme.colors.error}
             style={styles.clearButton}
           >
-            Clear All Data (Reset)
+            {t('admin.clearAllData')}
           </Button>
         )}
 
@@ -445,31 +447,31 @@ export default function AdminScreen() {
                 <RNView style={styles.iconCircle}>
                   <Text style={styles.iconEmoji}>📦</Text>
                 </RNView>
-                <Text variant="titleLarge" style={styles.cardTitle}>Weekly Stock</Text>
+                <Text variant="titleLarge" style={styles.cardTitle}>{t('admin.weeklyStock')}</Text>
               </RNView>
 
               {week.availableEggs === 0 ? (
                 <Surface style={styles.infoCard} elevation={2}>
                   <Text variant="bodyLarge" style={styles.noDataText}>
-                    📦 Please add stock for this week
+                    {t('admin.addStockPrompt')}
                   </Text>
                 </Surface>
               ) : (
               <Surface style={styles.statsCard} elevation={2}>
                 <RNView style={styles.statRow}>
-                  <Text variant="bodyMedium" style={styles.statLabel}>Total Set:</Text>
+                  <Text variant="bodyMedium" style={styles.statLabel}>{t('admin.totalSet')}</Text>
                   <Text variant="headlineSmall" style={styles.statValue}>
                       {week.availableEggs}
                   </Text>
                 </RNView>
                 <RNView style={styles.statRow}>
-                  <Text variant="bodyMedium" style={styles.statLabel}>Ordered:</Text>
+                  <Text variant="bodyMedium" style={styles.statLabel}>{t('admin.ordered')}</Text>
                   <Text variant="headlineSmall" style={[styles.statValue, { color: theme.colors.error }]}>
                       {getAllThisWeeksOrders()}
                   </Text>
                 </RNView>
                 <RNView style={[styles.statRow, styles.remainingRow]}>
-                  <Text variant="titleMedium" style={styles.remainingLabel}>Remaining:</Text>
+                  <Text variant="titleMedium" style={styles.remainingLabel}>{t('admin.remaining')}</Text>
                   <Text variant="headlineMedium" style={styles.remainingValue}>
                     {getRemainingStock()}
                   </Text>
@@ -480,7 +482,7 @@ export default function AdminScreen() {
               {editingStock ? (
                 <>
                   <TextInput
-                    label="New Stock Amount"
+                    label={t('admin.newStockAmount')}
                     value={newStockAmount}
                     onChangeText={setNewStockAmount}
                     keyboardType="numeric"
@@ -495,7 +497,7 @@ export default function AdminScreen() {
                       disabled={processing}
                       style={styles.halfButton}
                     >
-                      Save
+                      {t('common.save')}
                     </Button>
                     <Button
                       mode="outlined"
@@ -505,7 +507,7 @@ export default function AdminScreen() {
                       }}
                       style={styles.halfButton}
                     >
-                      Cancel
+                      {t('common.cancel')}
                     </Button>
                   </RNView>
                 </>
@@ -516,7 +518,7 @@ export default function AdminScreen() {
                   icon="pencil"
                   style={styles.button}
                 >
-                  Edit Stock
+                  {t('admin.editStock')}
                 </Button>
               )}
             </RNView>
@@ -534,19 +536,19 @@ export default function AdminScreen() {
                 <RNView style={styles.iconCircle}>
                   <Text style={styles.iconEmoji}>{week.isLowSeason ? '❄️' : '☀️'}</Text>
                 </RNView>
-                <Text variant="titleLarge" style={styles.cardTitle}>Season Mode</Text>
+                <Text variant="titleLarge" style={styles.cardTitle}>{t('admin.seasonMode')}</Text>
               </RNView>
 
               <Surface style={styles.seasonCard} elevation={2}>
                 <RNView style={styles.seasonRow}>
                   <RNView style={{ flex: 1 }}>
                     <Text variant="titleMedium" style={{ fontWeight: 'bold', color: week.isLowSeason ? '#d32f2f' : '#2e7d32' }}>
-                      {week.isLowSeason ? 'Low Season' : 'High Season'}
+                      {week.isLowSeason ? t('admin.lowSeason') : t('admin.highSeason')}
                     </Text>
                     <Text variant="bodySmall" style={{ color: '#666', marginTop: 4 }}>
                       {week.isLowSeason 
-                        ? 'Chickens resting, new subscriptions paused' 
-                        : 'Full production, all subscriptions active'}
+                        ? t('admin.lowSeasonDesc')
+                        : t('admin.highSeasonDesc')}
                     </Text>
                   </RNView>
                   <Switch
@@ -560,10 +562,10 @@ export default function AdminScreen() {
                 {week.isLowSeason && (
                   <RNView style={styles.seasonInfo}>
                     <Text variant="bodySmall" style={{ color: '#666' }}>
-                      📋 One-time order cap: <Text style={{ fontWeight: 'bold' }}>{week.lowSeasonOrderCap || 20} eggs</Text>
+                      {t('admin.orderCapLabel')} <Text style={{ fontWeight: 'bold' }}>{week.lowSeasonOrderCap || 20} {t('common.eggs')}</Text>
                     </Text>
                     <Text variant="bodySmall" style={{ color: '#666', marginTop: 4 }}>
-                      🚫 New subscriptions disabled
+                      {t('admin.newSubsDisabled')}
                     </Text>
                   </RNView>
                 )}
@@ -571,7 +573,7 @@ export default function AdminScreen() {
                 {!week.isLowSeason && !week.subscriptionsProcessed && week.availableEggs === 0 && (
                   <RNView style={styles.seasonInfo}>
                     <Text variant="bodySmall" style={{ color: '#ff9800' }}>
-                      ⚠️ Set stock to process subscriptions
+                      {t('admin.setStockToProcess')}
                     </Text>
                   </RNView>
                 )}
@@ -579,7 +581,7 @@ export default function AdminScreen() {
                 {!week.isLowSeason && week.subscriptionsProcessed && (
                   <RNView style={styles.seasonInfo}>
                     <Text variant="bodySmall" style={{ color: '#4caf50' }}>
-                      ✅ Subscriptions processed for this week
+                      {t('admin.subsProcessed')}
                     </Text>
                   </RNView>
                 )}
@@ -599,26 +601,26 @@ export default function AdminScreen() {
                 <RNView style={styles.iconCircle}>
                   <Text style={styles.iconEmoji}>💰</Text>
                 </RNView>
-                <Text variant="titleLarge" style={styles.cardTitle}>Price Management</Text>
+                <Text variant="titleLarge" style={styles.cardTitle}>{t('admin.priceManagement')}</Text>
               </RNView>
 
               <Surface style={styles.statsCard} elevation={2}>
                 <RNView style={styles.statRow}>
-                  <Text variant="bodyMedium" style={styles.statLabel}>Current Price:</Text>
+                  <Text variant="bodyMedium" style={styles.statLabel}>{t('admin.currentPrice')}</Text>
                   <Text variant="headlineSmall" style={styles.statValue}>
-                    {week.pricePerDozen.toFixed(0)} RSD / dozen
+                    {week.pricePerDozen.toFixed(0)} RSD / {t('common.dozen')}
                   </Text>
                 </RNView>
               </Surface>
 
               <Text variant="bodySmall" style={styles.helperText}>
-                💡 Changes apply to current week and all future weeks
+                {t('admin.priceHelperText')}
               </Text>
 
               {editingDefaultPrice ? (
                 <>
                   <TextInput
-                    label="Price per Dozen (RSD)"
+                    label={t('admin.pricePerDozen')}
                     value={newDefaultPrice}
                     onChangeText={setNewDefaultPrice}
                     keyboardType="decimal-pad"
@@ -634,7 +636,7 @@ export default function AdminScreen() {
                       disabled={processing}
                       style={styles.halfButton}
                     >
-                      Save
+                      {t('common.save')}
                     </Button>
                     <Button
                       mode="outlined"
@@ -644,7 +646,7 @@ export default function AdminScreen() {
                       }}
                       style={styles.halfButton}
                     >
-                      Cancel
+                      {t('common.cancel')}
                     </Button>
                   </RNView>
                 </>
@@ -655,7 +657,7 @@ export default function AdminScreen() {
                   icon="pencil"
                   style={styles.button}
                 >
-                  Update Price
+                  {t('admin.updatePrice')}
                 </Button>
               )}
             </RNView>
@@ -673,7 +675,7 @@ export default function AdminScreen() {
                 <RNView style={styles.iconCircle}>
                   <Text style={styles.iconEmoji}>🚚</Text>
                 </RNView>
-                <Text variant="titleLarge" style={styles.cardTitle}>Delivery Info</Text>
+                <Text variant="titleLarge" style={styles.cardTitle}>{t('admin.deliveryInfo')}</Text>
               </RNView>
 
               {!editingDelivery && week.deliveryDate && week.deliveryTime ? (
@@ -688,7 +690,7 @@ export default function AdminScreen() {
               ) : !editingDelivery ? (
                 <Surface style={styles.infoCard} elevation={2}>
                   <Text variant="bodyLarge" style={styles.noDataText}>
-                    🚚 Please add delivery information for this week
+                    {t('admin.addDeliveryPrompt')}
                 </Text>
                 </Surface>
               ) : null}
@@ -699,7 +701,7 @@ export default function AdminScreen() {
                   {Platform.OS === 'web' ? (
                     <>
                       <RNView style={styles.webInputContainer}>
-                        <Text style={styles.webInputLabel}>Delivery Date</Text>
+                        <Text style={styles.webInputLabel}>{t('admin.deliveryDate')}</Text>
                         <input
                           type="date"
                     value={newDeliveryDate}
@@ -722,7 +724,7 @@ export default function AdminScreen() {
                       </RNView>
                       
                       <RNView style={styles.webInputContainer}>
-                        <Text style={styles.webInputLabel}>Delivery Start Time</Text>
+                        <Text style={styles.webInputLabel}>{t('admin.deliveryStartTime')}</Text>
                         <input
                           type="time"
                           value={(() => {
@@ -768,7 +770,7 @@ export default function AdminScreen() {
                             backgroundColor: '#ffffff',
                           }}
                         />
-                        <Text style={styles.webInputHelper}>4-hour delivery window will be added automatically</Text>
+                        <Text style={styles.webInputHelper}>{t('admin.deliveryWindowNote')}</Text>
                       </RNView>
                     </>
                   ) : (
@@ -779,7 +781,7 @@ export default function AdminScreen() {
                         icon="calendar"
                         style={styles.pickerButton}
                       >
-                        {newDeliveryDate ? selectedDate.toLocaleDateString() : 'Select Delivery Date'}
+                        {newDeliveryDate ? selectedDate.toLocaleDateString() : t('admin.selectDeliveryDate')}
                       </Button>
                       
                       <Button
@@ -788,7 +790,7 @@ export default function AdminScreen() {
                         icon="clock-outline"
                         style={styles.pickerButton}
                       >
-                        {newDeliveryTime || 'Select Delivery Time'}
+                        {newDeliveryTime || t('admin.selectDeliveryTime')}
                       </Button>
                     </>
                   )}
@@ -801,7 +803,7 @@ export default function AdminScreen() {
                       disabled={processing}
                       style={styles.halfButton}
                     >
-                      Save
+                      {t('common.save')}
                     </Button>
                     <Button
                       mode="outlined"
@@ -815,7 +817,7 @@ export default function AdminScreen() {
                       }}
                       style={styles.halfButton}
                     >
-                      Cancel
+                      {t('common.cancel')}
                     </Button>
                   </RNView>
                 </>
@@ -826,7 +828,7 @@ export default function AdminScreen() {
                   icon="pencil"
                   style={styles.button}
                 >
-                  Edit Delivery
+                  {t('admin.editDelivery')}
                 </Button>
               ) : null}
 
@@ -841,13 +843,13 @@ export default function AdminScreen() {
                   style={[styles.button, { marginTop: 16 }]}
                   buttonColor={theme.colors.tertiary}
                 >
-                  Mark All as Delivered ({getAllPendingItems().length} {getAllPendingItems().length === 1 ? 'order' : 'orders'})
+                  {t('admin.markAllDelivered')} ({getAllPendingItems().length})
                 </Button>
               )}
 
               {week.allOrdersDelivered && (
                 <Chip icon="check-circle" mode="flat" style={[styles.deliveredChip, { marginTop: 10 }]}>
-                  All orders have been delivered!
+                  {t('admin.allDeliveredChip')}
                 </Chip>
               )}
             </RNView>
@@ -859,7 +861,7 @@ export default function AdminScreen() {
           <Card.Content>
             <RNView style={styles.sectionHeader}>
               <Text variant="titleLarge" style={styles.sectionTitle}>
-                📅 Active Subscriptions
+                {t('admin.activeSubscriptions')}
               </Text>
               <Chip mode="flat">{allSubscriptions.length}</Chip>
             </RNView>
@@ -870,11 +872,11 @@ export default function AdminScreen() {
                   <RNView style={{ flex: 1 }}>
                     <Text variant="titleMedium">{sub.userName}</Text>
                     <Text variant="bodySmall" style={styles.dateText}>
-                    {sub.quantity} eggs/week
+                    {sub.quantity} {t('subscription.eggsPerWeek')}
                   </Text>
                     <RNView style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 8 }}>
                       <Chip mode="flat" style={styles.weeksChip} textStyle={styles.weeksChipText}>
-                        {sub.weeksRemaining} {sub.weeksRemaining === 1 ? 'week' : 'weeks'} remaining
+                        {sub.weeksRemaining === 1 ? t('admin.weekRemaining', { count: sub.weeksRemaining }) : t('admin.weeksRemaining', { count: sub.weeksRemaining })}
                       </Chip>
                     </RNView>
                   </RNView>
@@ -882,7 +884,7 @@ export default function AdminScreen() {
               ))
             ) : (
               <Text variant="bodyMedium" style={styles.noDataText}>
-                No active subscriptions
+                {t('admin.noActiveSubscriptions')}
               </Text>
             )}
           </Card.Content>
@@ -899,45 +901,47 @@ export default function AdminScreen() {
                 <RNView style={styles.iconCircle}>
                   <Text style={styles.iconEmoji}>📋</Text>
                 </RNView>
-                <Text variant="titleLarge" style={styles.cardTitle}>This Week's Summary</Text>
+                <Text variant="titleLarge" style={styles.cardTitle}>{t('admin.thisWeekSummary')}</Text>
               </RNView>
 
               {allWeekItems.length > 0 ? (
                 <Surface style={styles.tableContainer} elevation={2}>
                   <DataTable>
-                    <DataTable.Header>
-                      <DataTable.Title>User</DataTable.Title>
-                      <DataTable.Title>Type</DataTable.Title>
-                      <DataTable.Title numeric>Eggs</DataTable.Title>
-                      <DataTable.Title numeric>Price</DataTable.Title>
+                    <DataTable.Header style={styles.tableHeader}>
+                      <DataTable.Title style={[styles.tableCell, { flex: 2.5 }]}>{t('common.user')}</DataTable.Title>
+                      <DataTable.Title style={[styles.tableCell, { flex: 1 }]}>{t('common.type')}</DataTable.Title>
+                      <DataTable.Title style={[styles.tableCell, { flex: 0.8 }]} numeric>{t('common.eggs')}</DataTable.Title>
+                      <DataTable.Title style={[styles.tableCell, styles.tableCellLast, { flex: 1 }]} numeric>RSD</DataTable.Title>
                     </DataTable.Header>
 
                     {allWeekItems.map((item) => (
-                      <DataTable.Row key={item.id}>
-                        <DataTable.Cell>{item.userName}</DataTable.Cell>
-                        <DataTable.Cell>
+                      <DataTable.Row key={item.id} style={styles.tableRow}>
+                        <DataTable.Cell style={[styles.tableCell, { flex: 2.5 }]}>
+                          <Text numberOfLines={2} style={{ fontSize: 12 }}>{item.userName}</Text>
+                        </DataTable.Cell>
+                        <DataTable.Cell style={[styles.tableCell, { flex: 1 }]}>
                           {item.type === 'Subscription' ? '📅' : '🛒'}
                         </DataTable.Cell>
-                        <DataTable.Cell numeric>{item.quantity}</DataTable.Cell>
-                        <DataTable.Cell numeric>{item.price.toFixed(0)} RSD</DataTable.Cell>
+                        <DataTable.Cell style={[styles.tableCell, { flex: 0.8 }]} numeric>{item.quantity}</DataTable.Cell>
+                        <DataTable.Cell style={[styles.tableCell, styles.tableCellLast, { flex: 1 }]} numeric>{item.price.toFixed(0)}</DataTable.Cell>
                       </DataTable.Row>
                     ))}
 
-                    <DataTable.Row style={styles.totalRow}>
-                      <DataTable.Cell>
-                        <Text style={styles.totalText}>Total</Text>
+                    <DataTable.Row style={[styles.totalRow, styles.tableRow]}>
+                      <DataTable.Cell style={[styles.tableCell, { flex: 2.5 }]}>
+                        <Text style={styles.totalText}>{t('common.total')}</Text>
                       </DataTable.Cell>
-                      <DataTable.Cell>
+                      <DataTable.Cell style={[styles.tableCell, { flex: 1 }]}>
                         <Text> </Text>
                       </DataTable.Cell>
-                      <DataTable.Cell numeric>
+                      <DataTable.Cell style={[styles.tableCell, { flex: 0.8 }]} numeric>
                         <Text style={styles.totalText}>
                           {allWeekItems.reduce((sum, item) => sum + item.quantity, 0)}
                         </Text>
                       </DataTable.Cell>
-                      <DataTable.Cell numeric>
+                      <DataTable.Cell style={[styles.tableCell, styles.tableCellLast, { flex: 1 }]} numeric>
                         <Text style={styles.totalText}>
-                          {allWeekItems.reduce((sum, item) => sum + item.price, 0).toFixed(0)} RSD
+                          {allWeekItems.reduce((sum, item) => sum + item.price, 0).toFixed(0)}
                         </Text>
                       </DataTable.Cell>
                     </DataTable.Row>
@@ -945,7 +949,7 @@ export default function AdminScreen() {
                 </Surface>
               ) : (
                 <Text variant="bodyMedium" style={styles.noDataText}>
-                  No orders for this week
+                  {t('admin.noOrdersThisWeek')}
                 </Text>
               )}
             </RNView>
@@ -964,13 +968,13 @@ export default function AdminScreen() {
                   <RNView style={[styles.iconCircle, { backgroundColor: '#fff3e0' }]}>
                     <Text style={styles.iconEmoji}>⚠️</Text>
                   </RNView>
-                  <Text variant="titleLarge" style={[styles.cardTitle, { color: '#e65100' }]}>Outstanding Orders</Text>
+                  <Text variant="titleLarge" style={[styles.cardTitle, { color: '#e65100' }]}>{t('admin.outstandingOrders')}</Text>
                   <Chip icon="alert" mode="flat" style={[styles.countChip, { backgroundColor: '#fff3e0' }]}>
                     {getOutstandingOrders().length}
                   </Chip>
                 </RNView>
                 <Text variant="bodySmall" style={{ color: '#666', marginBottom: 12 }}>
-                  Unpaid orders from previous weeks
+                  {t('admin.unpaidFromPrevious')}
                 </Text>
               
                 {getOutstandingOrders().map((order, index) => (
@@ -984,26 +988,28 @@ export default function AdminScreen() {
                     elevation={1}
                   >
                     <RNView style={{ flex: 1 }}>
-                      {/* User Name and Order Type */}
-                      <RNView style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
-                        <Text variant="titleMedium" style={styles.unpaidText}>
-                          {order.userName}
-                        </Text>
+                      {/* User Name */}
+                      <Text variant="titleMedium" style={[styles.unpaidText, { marginBottom: 6 }]}>
+                        {order.userName}
+                      </Text>
+                      
+                      {/* Order Type Badge */}
+                      <RNView style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
                         {order.subscriptionId && (
                           <Chip mode="flat" style={styles.subscriptionBadge} textStyle={styles.subscriptionBadgeText}>
-                            🔄 Sub
+                            {t('admin.sub')}
                           </Chip>
                         )}
                         {!order.subscriptionId && (
                           <Chip mode="flat" style={styles.oneTimeBadge} textStyle={styles.oneTimeBadgeText}>
-                            🛒 One-time
+                            {t('admin.oneTime')}
                           </Chip>
                         )}
                       </RNView>
                       
                       {/* Week info */}
                       <Text variant="bodySmall" style={{ color: '#666', marginBottom: 8 }}>
-                        Week of {order.weekStart ? new Date(order.weekStart).toLocaleDateString() : 'Unknown'}
+                        {t('admin.weekOfDate', { date: order.weekStart ? new Date(order.weekStart).toLocaleDateString() : 'Unknown' })}
                       </Text>
                       
                       {/* Status Indicators */}
@@ -1015,7 +1021,7 @@ export default function AdminScreen() {
                             backgroundColor: order.paymentSubmitted ? '#fff3e0' : '#ffebee',
                             borderColor: order.paymentSubmitted ? '#ff9800' : '#ef5350',
                             borderWidth: 1,
-                            height: 28,
+                            height: 32,
                           }}
                           textStyle={{ 
                             color: order.paymentSubmitted ? '#e65100' : '#d32f2f', 
@@ -1023,7 +1029,7 @@ export default function AdminScreen() {
                             fontWeight: '600' 
                           }}
                         >
-                          {order.paymentSubmitted ? 'Awaiting Confirmation' : 'Not Paid'}
+                          {order.paymentSubmitted ? t('admin.awaitingConfirmation') : t('admin.notPaid')}
                         </Chip>
                       </RNView>
                       
@@ -1050,7 +1056,7 @@ export default function AdminScreen() {
                         textColor={order.paymentSubmitted ? undefined : '#fff'}
                         style={styles.confirmButton}
                       >
-                        {order.paymentSubmitted ? 'Confirm Payment' : 'Confirm (Not marked)'}
+                        {order.paymentSubmitted ? t('admin.confirmPayment') : t('admin.confirmNotMarked')}
                       </Button>
                     </RNView>
                   </Surface>
@@ -1072,7 +1078,7 @@ export default function AdminScreen() {
                   <RNView style={styles.iconCircle}>
                     <Text style={styles.iconEmoji}>📋</Text>
                   </RNView>
-                  <Text variant="titleLarge" style={styles.cardTitle}>Orders</Text>
+                  <Text variant="titleLarge" style={styles.cardTitle}>{t('admin.orders')}</Text>
                   <Chip icon="cart" mode="flat" style={styles.countChip}>
                     {getAllWeekOrders().length}
                   </Chip>
@@ -1094,19 +1100,21 @@ export default function AdminScreen() {
                     elevation={1}
                   >
                     <RNView style={{ flex: 1 }}>
-                      {/* User Name and Order Type */}
-                      <RNView style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
-                        <Text variant="titleMedium" style={isUnpaid && styles.unpaidText}>
-                          {order.userName}
-                        </Text>
+                      {/* User Name */}
+                      <Text variant="titleMedium" style={[isUnpaid && styles.unpaidText, { marginBottom: 6 }]}>
+                        {order.userName}
+                      </Text>
+                      
+                      {/* Order Type Badge */}
+                      <RNView style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
                         {order.subscriptionId && (
                           <Chip mode="flat" style={styles.subscriptionBadge} textStyle={styles.subscriptionBadgeText}>
-                            🔄 Sub
+                            {t('admin.sub')}
                           </Chip>
                         )}
                         {!order.subscriptionId && (
                           <Chip mode="flat" style={styles.oneTimeBadge} textStyle={styles.oneTimeBadgeText}>
-                            🛒 One-time
+                            {t('admin.oneTime')}
                           </Chip>
                         )}
                       </RNView>
@@ -1121,7 +1129,7 @@ export default function AdminScreen() {
                             backgroundColor: order.isPaid ? '#d4f4d1' : order.paymentSubmitted ? '#fff3e0' : '#ffebee',
                             borderColor: order.isPaid ? '#4caf50' : order.paymentSubmitted ? '#ff9800' : '#ef5350',
                             borderWidth: 1,
-                            height: 28,
+                            height: 32,
                           }}
                           textStyle={{ 
                             color: order.isPaid ? '#2e7d32' : order.paymentSubmitted ? '#e65100' : '#d32f2f', 
@@ -1129,7 +1137,7 @@ export default function AdminScreen() {
                             fontWeight: '600' 
                           }}
                         >
-                          {order.isPaid ? 'Paid' : order.paymentSubmitted ? 'Awaiting Confirmation' : 'Not Paid'}
+                          {order.isPaid ? t('home.paid') : order.paymentSubmitted ? t('admin.awaitingConfirmation') : t('admin.notPaid')}
                         </Chip>
                         
                         {/* Delivery Status */}
@@ -1140,7 +1148,7 @@ export default function AdminScreen() {
                             backgroundColor: ['delivered', 'completed'].includes(order.status) ? '#e3f2fd' : '#fff3e0',
                             borderColor: ['delivered', 'completed'].includes(order.status) ? '#2196f3' : '#ff9800',
                             borderWidth: 1,
-                            height: 28,
+                            height: 32,
                           }}
                           textStyle={{ 
                             color: ['delivered', 'completed'].includes(order.status) ? '#1976d2' : '#e65100', 
@@ -1148,7 +1156,7 @@ export default function AdminScreen() {
                             fontWeight: '600' 
                           }}
                         >
-                          {['delivered', 'completed'].includes(order.status) ? 'Delivered' : 'Awaiting Delivery'}
+                          {['delivered', 'completed'].includes(order.status) ? t('order.delivered') : t('admin.awaitingDelivery')}
                         </Chip>
                         
                         {/* Pickup Status - only show for delivered orders */}
@@ -1160,7 +1168,7 @@ export default function AdminScreen() {
                               backgroundColor: order.pickedUp ? '#e8f5e9' : '#fff3e0',
                               borderColor: order.pickedUp ? '#4caf50' : '#ff9800',
                               borderWidth: 1,
-                              height: 28,
+                              height: 32,
                             }}
                             textStyle={{ 
                               color: order.pickedUp ? '#2e7d32' : '#e65100', 
@@ -1168,7 +1176,7 @@ export default function AdminScreen() {
                               fontWeight: '600' 
                             }}
                           >
-                            {order.pickedUp ? 'Picked Up' : 'Awaiting Pickup'}
+                            {order.pickedUp ? t('admin.pickedUp') : t('admin.awaitingPickup')}
                           </Chip>
                         )}
                       </RNView>
@@ -1200,7 +1208,7 @@ export default function AdminScreen() {
                           textColor={order.paymentSubmitted ? undefined : '#fff'}
                           style={styles.confirmButton}
                         >
-                          {order.paymentSubmitted ? 'Confirm Payment' : 'Confirm (Not marked)'}
+                          {order.paymentSubmitted ? t('admin.confirmPayment') : t('admin.confirmNotMarked')}
                         </Button>
                       )}
                     </RNView>
@@ -1228,7 +1236,7 @@ export default function AdminScreen() {
         onDismiss={() => setErrorMessage(null)}
         duration={3000}
         action={{
-          label: 'Dismiss',
+          label: t('common.dismiss'),
           onPress: () => setErrorMessage(null),
         }}
         style={{ backgroundColor: theme.colors.error }}
@@ -1471,9 +1479,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 8,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: 'column',
+    gap: 12,
   },
   firstItem: {
     marginTop: 8,
@@ -1504,6 +1511,23 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
   },
+  tableHeader: {
+    backgroundColor: '#f8f9fa',
+    borderBottomWidth: 2,
+    borderBottomColor: '#e0e0e0',
+  },
+  tableRow: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  tableCell: {
+    borderRightWidth: 1,
+    borderRightColor: '#f0f0f0',
+    paddingHorizontal: 8,
+  },
+  tableCellLast: {
+    borderRightWidth: 0,
+  },
   totalRow: {
     backgroundColor: '#f5f5f5',
   },
@@ -1520,11 +1544,11 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   orderActions: {
-    flexDirection: 'column',
+    flexDirection: 'row',
     gap: 8,
     marginTop: 0,
-    marginLeft: 12,
-    alignItems: 'flex-end',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
   },
   actionButton: {
     borderRadius: 8,
@@ -1555,29 +1579,31 @@ const styles = StyleSheet.create({
     backgroundColor: '#e3f2fd',
     borderColor: '#2196f3',
     borderWidth: 1,
-    height: 24,
+    height: 30,
+    minWidth: 70,
   },
   subscriptionBadgeText: {
-    fontSize: 10,
+    fontSize: 11,
     color: '#1976d2',
-    lineHeight: 12,
+    lineHeight: 14,
   },
   oneTimeBadge: {
     backgroundColor: '#fff3e0',
     borderColor: '#ff9800',
     borderWidth: 1,
-    height: 24,
+    height: 30,
+    minWidth: 90,
   },
   oneTimeBadgeText: {
-    fontSize: 10,
+    fontSize: 11,
     color: '#e65100',
-    lineHeight: 12,
+    lineHeight: 14,
   },
   weeksChip: {
     backgroundColor: '#fff3e0',
     borderColor: '#ff9800',
     borderWidth: 1,
-    height: 24,
+    height: 28,
   },
   weeksChipText: {
     fontSize: 11,

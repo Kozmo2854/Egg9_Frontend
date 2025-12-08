@@ -12,6 +12,7 @@ import {
   Divider,
 } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 import { apiService } from '@/services/api';
 import { User } from '@/types/models';
 import { useFocusEffect } from '@react-navigation/native';
@@ -20,6 +21,7 @@ import { useScrollContext } from '@/contexts/ScrollContext';
 
 export default function UsersScreen() {
   const theme = useTheme();
+  const { t } = useTranslation();
   const router = useRouter();
   const { setScrollY } = useScrollContext();
   const [users, setUsers] = useState<User[]>([]);
@@ -76,7 +78,7 @@ export default function UsersScreen() {
           {/* Header */}
           <Surface style={styles.headerCard} elevation={4}>
             <Text variant="headlineMedium" style={styles.headerTitle}>
-              👥 User Management
+              {t('users.title')}
             </Text>
             <RNView style={styles.statsContainer}>
               <RNView style={styles.statItem}>
@@ -84,7 +86,7 @@ export default function UsersScreen() {
                   {getCustomers().length}
                 </Text>
                 <Text variant="bodyMedium" style={styles.statLabel}>
-                  Customers
+                  {t('users.customers')}
                 </Text>
               </RNView>
               <Divider style={styles.statDivider} />
@@ -93,7 +95,7 @@ export default function UsersScreen() {
                   {getAdmins().length}
                 </Text>
                 <Text variant="bodyMedium" style={styles.statLabel}>
-                  Admins
+                  {t('users.administrators')}
                 </Text>
               </RNView>
               <Divider style={styles.statDivider} />
@@ -102,7 +104,7 @@ export default function UsersScreen() {
                   {users.length}
                 </Text>
                 <Text variant="bodyMedium" style={styles.statLabel}>
-                  Total Users
+                  {t('users.totalUsers')}
                 </Text>
               </RNView>
             </RNView>
@@ -111,20 +113,20 @@ export default function UsersScreen() {
           {/* Customers Table */}
           <Card style={styles.tableCard} mode="elevated">
             <Card.Title 
-              title="Customers" 
+              title={t('users.customers')} 
               titleVariant="titleLarge"
               left={(props) => <IconButton {...props} icon="account-group" />}
             />
             <Card.Content>
               <DataTable>
                 <DataTable.Header>
-                  <DataTable.Title style={{ flex: 2 }}>Name</DataTable.Title>
-                  <DataTable.Title style={{ flex: 2 }}>Phone</DataTable.Title>
+                  <DataTable.Title style={{ flex: 2 }}>{t('common.name')}</DataTable.Title>
+                  <DataTable.Title style={{ flex: 2 }}>{t('common.phone')}</DataTable.Title>
                 </DataTable.Header>
 
                 {getCustomers().length === 0 ? (
                   <RNView style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>No customers yet</Text>
+                    <Text style={styles.emptyText}>{t('users.noCustomers')}</Text>
                   </RNView>
                 ) : (
                   getCustomers().map((user) => (
@@ -138,7 +140,7 @@ export default function UsersScreen() {
                         </DataTable.Cell>
                         <DataTable.Cell style={{ flex: 2 }}>
                           <Text style={styles.userContact}>
-                            {user.phoneNumber || 'No phone'}
+                            {user.phoneNumber || t('users.noPhone')}
                           </Text>
                         </DataTable.Cell>
                       </DataTable.Row>
@@ -152,20 +154,20 @@ export default function UsersScreen() {
           {/* Admins Table */}
           <Card style={styles.tableCard} mode="elevated">
             <Card.Title 
-              title="Administrators" 
+              title={t('users.administrators')} 
               titleVariant="titleLarge"
               left={(props) => <IconButton {...props} icon="shield-account" />}
             />
             <Card.Content>
               <DataTable>
                 <DataTable.Header>
-                  <DataTable.Title style={{ flex: 2 }}>Name</DataTable.Title>
-                  <DataTable.Title style={{ flex: 2 }}>Phone</DataTable.Title>
+                  <DataTable.Title style={{ flex: 2 }}>{t('common.name')}</DataTable.Title>
+                  <DataTable.Title style={{ flex: 2 }}>{t('common.phone')}</DataTable.Title>
                 </DataTable.Header>
 
                 {getAdmins().length === 0 ? (
                   <RNView style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>No administrators</Text>
+                    <Text style={styles.emptyText}>{t('users.noAdministrators')}</Text>
                   </RNView>
                 ) : (
                   getAdmins().map((user) => (
@@ -179,7 +181,7 @@ export default function UsersScreen() {
                         </DataTable.Cell>
                         <DataTable.Cell style={{ flex: 2 }}>
                           <Text style={styles.userContact}>
-                            {user.phoneNumber || 'No phone'}
+                            {user.phoneNumber || t('users.noPhone')}
                           </Text>
                         </DataTable.Cell>
                       </DataTable.Row>

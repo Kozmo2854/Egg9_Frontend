@@ -6,6 +6,9 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 import { PaperProvider, MD3LightTheme, MD3DarkTheme, configureFonts } from 'react-native-paper';
+
+// Initialize i18n
+import '@/i18n';
 import {
   Roboto_400Regular,
   Roboto_500Medium,
