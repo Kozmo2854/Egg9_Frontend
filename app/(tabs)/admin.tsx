@@ -340,6 +340,13 @@ export default function AdminScreen() {
     });
   };
 
+  // Get outstanding orders from previous weeks (unpaid, not current week)
+  const getOutstandingOrders = () => {
+    return allOrders
+      .filter(order => !order.isPaid && order.weekId !== week?.id)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  };
+
   const getOrderStatusInfo = (order: any) => {
     if (order.status === 'completed') {
       return {
@@ -945,6 +952,114 @@ export default function AdminScreen() {
           </LinearGradient>
         </Card>
 
+        {/* Outstanding Orders from Previous Weeks */}
+        {getOutstandingOrders().length > 0 && (
+          <Card style={[styles.card, { borderColor: '#ff9800', borderWidth: 2 }]} mode="elevated">
+            <LinearGradient
+              colors={['#fff3e0', '#ffffff']}
+              style={styles.cardGradient}
+            >
+              <RNView style={styles.cardContent}>
+                <RNView style={styles.cardHeader}>
+                  <RNView style={[styles.iconCircle, { backgroundColor: '#fff3e0' }]}>
+                    <Text style={styles.iconEmoji}>⚠️</Text>
+                  </RNView>
+                  <Text variant="titleLarge" style={[styles.cardTitle, { color: '#e65100' }]}>Outstanding Orders</Text>
+                  <Chip icon="alert" mode="flat" style={[styles.countChip, { backgroundColor: '#fff3e0' }]}>
+                    {getOutstandingOrders().length}
+                  </Chip>
+                </RNView>
+                <Text variant="bodySmall" style={{ color: '#666', marginBottom: 12 }}>
+                  Unpaid orders from previous weeks
+                </Text>
+              
+                {getOutstandingOrders().map((order, index) => (
+                  <Surface 
+                    key={order.id} 
+                    style={[
+                      styles.listItem, 
+                      index === 0 && styles.firstItem,
+                      styles.unpaidListItem,
+                    ]} 
+                    elevation={1}
+                  >
+                    <RNView style={{ flex: 1 }}>
+                      {/* User Name and Order Type */}
+                      <RNView style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+                        <Text variant="titleMedium" style={styles.unpaidText}>
+                          {order.userName}
+                        </Text>
+                        {order.subscriptionId && (
+                          <Chip mode="flat" style={styles.subscriptionBadge} textStyle={styles.subscriptionBadgeText}>
+                            🔄 Sub
+                          </Chip>
+                        )}
+                        {!order.subscriptionId && (
+                          <Chip mode="flat" style={styles.oneTimeBadge} textStyle={styles.oneTimeBadgeText}>
+                            🛒 One-time
+                          </Chip>
+                        )}
+                      </RNView>
+                      
+                      {/* Week info */}
+                      <Text variant="bodySmall" style={{ color: '#666', marginBottom: 8 }}>
+                        Week of {order.weekStart ? new Date(order.weekStart).toLocaleDateString() : 'Unknown'}
+                      </Text>
+                      
+                      {/* Status Indicators */}
+                      <RNView style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+                        <Chip 
+                          icon={order.paymentSubmitted ? "clock-check" : "close-circle"} 
+                          mode="flat" 
+                          style={{
+                            backgroundColor: order.paymentSubmitted ? '#fff3e0' : '#ffebee',
+                            borderColor: order.paymentSubmitted ? '#ff9800' : '#ef5350',
+                            borderWidth: 1,
+                            height: 28,
+                          }}
+                          textStyle={{ 
+                            color: order.paymentSubmitted ? '#e65100' : '#d32f2f', 
+                            fontSize: 11, 
+                            fontWeight: '600' 
+                          }}
+                        >
+                          {order.paymentSubmitted ? 'Awaiting Confirmation' : 'Not Paid'}
+                        </Chip>
+                      </RNView>
+                      
+                      {/* Order Details - same style as regular orders */}
+                      <RNView style={styles.orderQuantityRow}>
+                        <Text variant="bodyMedium" style={styles.itemValue}>
+                          {order.quantity} eggs
+                        </Text>
+                        <Text variant="bodyMedium" style={styles.priceText}>
+                          {order.total.toFixed(0)} RSD
+                        </Text>
+                      </RNView>
+                    </RNView>
+                    
+                    {/* Action button */}
+                    <RNView style={styles.orderActions}>
+                      <Button
+                        mode={order.paymentSubmitted ? "contained" : "contained-tonal"}
+                        onPress={() => handleConfirmPayment(order.id)}
+                        loading={processingOrderId === order.id}
+                        disabled={processingOrderId !== null}
+                        icon="check"
+                        buttonColor={order.paymentSubmitted ? theme.colors.tertiary : '#ff9800'}
+                        textColor={order.paymentSubmitted ? undefined : '#fff'}
+                        style={styles.confirmButton}
+                      >
+                        {order.paymentSubmitted ? 'Confirm Payment' : 'Confirm (Not marked)'}
+                      </Button>
+                    </RNView>
+                  </Surface>
+                ))}
+              </RNView>
+            </LinearGradient>
+          </Card>
+        )}
+
         {/* All Orders - Consolidated View */}
         {getAllWeekOrders().length > 0 && (
           <Card style={styles.card} mode="elevated">
@@ -1072,19 +1187,20 @@ export default function AdminScreen() {
                       </RNView>
                     </RNView>
                     
-                    {/* Action button - only show when there's an action to take */}
+                    {/* Action button - show for all unpaid orders */}
                     <RNView style={styles.orderActions}>
-                      {!order.isPaid && order.paymentSubmitted && (
+                      {!order.isPaid && (
                         <Button
-                          mode="contained"
+                          mode={order.paymentSubmitted ? "contained" : "contained-tonal"}
                           onPress={() => handleConfirmPayment(order.id)}
                           loading={processingOrderId === order.id}
                           disabled={processingOrderId !== null}
                           icon="check"
-                          buttonColor={theme.colors.tertiary}
+                          buttonColor={order.paymentSubmitted ? theme.colors.tertiary : '#ff9800'}
+                          textColor={order.paymentSubmitted ? undefined : '#fff'}
                           style={styles.confirmButton}
                         >
-                          Confirm Payment
+                          {order.paymentSubmitted ? 'Confirm Payment' : 'Confirm (Not marked)'}
                         </Button>
                       )}
                     </RNView>

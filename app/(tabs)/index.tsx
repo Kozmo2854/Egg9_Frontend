@@ -147,17 +147,27 @@ export default function HomeScreen() {
     try {
       setMarkingPayment(true);
       
+      // Handle outstanding orders
+      if (paymentOrderContext?.type === 'outstanding' && paymentOrderContext.order) {
+        await apiService.markOrderPaymentSubmitted(paymentOrderContext.order.id);
+        await loadData();
+        hidePaymentDialog();
+        setSnackbar({ visible: true, message: 'Payment marked as submitted!' });
+        return;
+      }
+      
+      // Handle current week orders
       const orderIds = OrderHelpers.getOrdersNeedingPaymentSubmission(currentWeekOrder, currentWeekSubscriptionOrder);
 
       if (orderIds.length === 0) {
         setSnackbar({ visible: true, message: 'All orders have already been marked as paid' });
-        setPaymentDialogVisible(false);
+        hidePaymentDialog();
         return;
       }
 
       await Promise.all(orderIds.map(id => apiService.markOrderPaymentSubmitted(id)));
       await loadData();
-      setPaymentDialogVisible(false);
+      hidePaymentDialog();
       setSnackbar({ visible: true, message: 'Payment marked as submitted!' });
     } catch (err: any) {
       const appError = parseError(err, 'markPayment');
@@ -357,15 +367,21 @@ export default function HomeScreen() {
                     {order.quantity} eggs • {order.total.toFixed(0)} RSD
                   </Text>
                 </RNView>
-                <Button 
-                  mode="contained" 
-                  compact 
-                  onPress={() => showPaymentDialog('outstanding', order)}
-                  buttonColor={theme.colors.primary}
-                  style={styles.outstandingPayButton}
-                >
-                  Pay
-                </Button>
+                {order.paymentSubmitted ? (
+                  <Chip icon="clock-outline" mode="flat" style={styles.outstandingWaitingChip}>
+                    Waiting
+                  </Chip>
+                ) : (
+                  <Button 
+                    mode="contained" 
+                    compact 
+                    onPress={() => showPaymentDialog('outstanding', order)}
+                    buttonColor={theme.colors.primary}
+                    style={styles.outstandingPayButton}
+                  >
+                    Pay
+                  </Button>
+                )}
               </RNView>
             ))}
             <Text variant="bodySmall" style={styles.outstandingNote}>
@@ -579,10 +595,24 @@ export default function HomeScreen() {
             </RNView>
             <Text variant="bodySmall" style={styles.paymentInstructions}>
               Scan the QR code with your banking app for instant payment, or use the bank account details above.
-              {paymentOrderContext?.type === 'current' && !OrderHelpers.areAllOrdersPaymentSubmitted(currentWeekOrder, currentWeekSubscriptionOrder) && ' After payment, click "Mark Paid" below. Admin will confirm once received.'}
+              {' After payment, click "Mark Paid" below. Admin will confirm once received.'}
             </Text>
           </Dialog.Content>
           <Dialog.Actions style={styles.dialogActions}>
+            {/* Show Mark Paid for outstanding orders if not already submitted */}
+            {paymentOrderContext?.type === 'outstanding' && paymentOrderContext.order && !paymentOrderContext.order.paymentSubmitted && (
+              <Button 
+                onPress={handleMarkPaymentSubmitted} 
+                mode="contained"
+                loading={markingPayment}
+                disabled={markingPayment}
+                buttonColor={theme.colors.tertiary}
+                style={{ marginRight: 8 }}
+              >
+                Mark Paid
+              </Button>
+            )}
+            {/* Show Mark Paid for current week orders if not all submitted */}
             {paymentOrderContext?.type === 'current' && !OrderHelpers.areAllOrdersPaymentSubmitted(currentWeekOrder, currentWeekSubscriptionOrder) && (
               <Button 
                 onPress={handleMarkPaymentSubmitted} 
@@ -850,6 +880,9 @@ const styles = StyleSheet.create({
   },
   outstandingPayButton: {
     borderRadius: 8,
+  },
+  outstandingWaitingChip: {
+    backgroundColor: '#e3f2fd',
   },
   outstandingDialogSubtitle: {
     textAlign: 'center',
