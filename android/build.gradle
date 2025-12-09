@@ -39,4 +39,12 @@ allprojects {
         mavenCentral()
         maven { url 'https://www.jitpack.io' }
     }
+    
+    // Force older androidx.core to be compatible with compileSdk 34
+    configurations.all {
+        resolutionStrategy {
+            force 'androidx.core:core:1.13.1'
+            force 'androidx.core:core-ktx:1.13.1'
+        }
+    }
 }

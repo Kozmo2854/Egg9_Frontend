@@ -237,6 +237,8 @@ function RootLayoutNav() {
             headerShown: true,
             headerTitle: 'Register'
           }} />
+          <Stack.Screen name="settings" options={{ headerShown: false }} />
+          <Stack.Screen name="order-history" options={{ headerShown: false }} />
         </Stack>
       </ThemeProvider>
     </PaperProvider>

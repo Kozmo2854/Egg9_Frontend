@@ -10,6 +10,7 @@ import { apiService } from '@/services/api';
 import { useFocusEffect } from '@react-navigation/native';
 import { ScrollProvider, useScrollContext } from '@/contexts/ScrollContext';
 import { unregisterPushNotifications } from '@/utils/pushNotifications';
+import { DrawerMenu } from '@/components/DrawerMenu';
 
 // You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
 function TabBarIcon(props: {
@@ -77,11 +78,13 @@ function useAuthState() {
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState('');
+  const [userEmail, setUserEmail] = useState('');
 
   const checkLoginStatus = async () => {
     const user = await apiService.getCurrentUser();
     setIsLoggedIn(!!user);
     setUserName(user?.name || '');
+    setUserEmail(user?.email || '');
   };
 
   useEffect(() => {
@@ -101,83 +104,63 @@ function useAuthState() {
       await apiService.logout();
       setIsLoggedIn(false);
       setUserName('');
+      setUserEmail('');
       router.replace('/modal');
     } catch (error) {
       Alert.alert('Error', 'Failed to logout');
     }
   };
 
-  return { isLoggedIn, userName, handleLogout };
+  return { isLoggedIn, userName, userEmail, handleLogout };
 }
 
-// Language switcher component
-function LanguageSwitcher() {
-  const { i18n } = useTranslation();
-  const currentLang = i18n.language;
-
-  const changeLanguage = (lng: string) => {
-    i18n.changeLanguage(lng);
-  };
-
+// Hamburger menu button for opening drawer
+function HamburgerButton({ onPress }: { onPress: () => void }) {
   return (
-    <View style={headerStyles.languageContainer}>
-      <TouchableOpacity 
-        onPress={() => changeLanguage('en')}
-        style={[headerStyles.flagButton, currentLang === 'en' && headerStyles.flagButtonActive]}
-      >
-        <Text style={[headerStyles.flagText, currentLang !== 'en' && headerStyles.flagTextInactive]}>🇬🇧</Text>
-      </TouchableOpacity>
-      <TouchableOpacity 
-        onPress={() => changeLanguage('sr')}
-        style={[headerStyles.flagButton, currentLang === 'sr' && headerStyles.flagButtonActive]}
-      >
-        <Text style={[headerStyles.flagText, currentLang !== 'sr' && headerStyles.flagTextInactive]}>🇷🇸</Text>
-      </TouchableOpacity>
-    </View>
+    <Pressable onPress={onPress} style={headerStyles.hamburgerButton}>
+      {({ pressed }) => (
+        <FontAwesome 
+          name="bars" 
+          size={22} 
+          color="#2d3748" 
+          style={{ opacity: pressed ? 0.7 : 1 }}
+        />
+      )}
+    </Pressable>
   );
 }
 
-// Left side: User name + language switcher
-function HeaderLeft() {
+// Left side: Hamburger menu + User name
+function HeaderLeft({ onMenuPress }: { onMenuPress: () => void }) {
   const { isLoggedIn, userName } = useAuthState();
 
   if (!isLoggedIn) return null;
 
   return (
     <View style={headerStyles.leftContainer}>
+      <HamburgerButton onPress={onMenuPress} />
       <Text style={headerStyles.userName}>{userName}</Text>
-      <LanguageSwitcher />
     </View>
   );
 }
 
-// Right side: Login/Logout button
+// Right side: Login button (only shown when logged out)
 function HeaderRight() {
-  const { isLoggedIn, handleLogout } = useAuthState();
+  const { isLoggedIn } = useAuthState();
   const { t } = useTranslation();
 
-  if (!isLoggedIn) {
-    return (
-      <Link href="/modal" asChild>
-        <Pressable style={headerStyles.loginButton}>
-          {({ pressed }) => (
-            <Text style={[headerStyles.loginButtonText, { opacity: pressed ? 0.7 : 1 }]}>
-              {t('auth.logIn')}
-            </Text>
-          )}
-        </Pressable>
-      </Link>
-    );
-  }
+  if (isLoggedIn) return null;
 
   return (
-    <Pressable onPress={handleLogout} style={headerStyles.logoutButton}>
-      {({ pressed }) => (
-        <Text style={[headerStyles.logoutButtonText, { opacity: pressed ? 0.7 : 1 }]}>
-          {t('auth.logout')}
-        </Text>
-      )}
-    </Pressable>
+    <Link href="/modal" asChild>
+      <Pressable style={headerStyles.loginButton}>
+        {({ pressed }) => (
+          <Text style={[headerStyles.loginButtonText, { opacity: pressed ? 0.7 : 1 }]}>
+            {t('auth.logIn')}
+          </Text>
+        )}
+      </Pressable>
+    </Link>
   );
 }
 
@@ -186,30 +169,15 @@ const headerStyles = StyleSheet.create({
     marginLeft: 15,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
+  },
+  hamburgerButton: {
+    padding: 8,
   },
   userName: {
     fontSize: 16,
     fontWeight: '600',
     color: '#2d3748',
-  },
-  languageContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  flagButton: {
-    padding: 4,
-    borderRadius: 4,
-  },
-  flagButtonActive: {
-    backgroundColor: 'rgba(78, 205, 196, 0.2)',
-  },
-  flagText: {
-    fontSize: 18,
-  },
-  flagTextInactive: {
-    opacity: 0.4,
   },
   loginButton: {
     marginRight: 15,
@@ -223,27 +191,14 @@ const headerStyles = StyleSheet.create({
     fontWeight: '600',
     color: '#ffffff',
   },
-  logoutButton: {
-    marginRight: 15,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: 'rgba(78, 205, 196, 0.15)',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(78, 205, 196, 0.3)',
-  },
-  logoutButtonText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#2d3748',
-  },
 });
 
 export default function TabLayout() {
   const router = useRouter();
   const { t } = useTranslation();
   const [isAdmin, setIsAdmin] = useState(false);
-
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const { userName, userEmail, handleLogout } = useAuthState();
 
   // Check if user is logged in and if they're an admin
   useEffect(() => {
@@ -263,72 +218,89 @@ export default function TabLayout() {
     checkAuth();
   }, []);
 
+  const openDrawer = () => setDrawerOpen(true);
+  const closeDrawer = () => setDrawerOpen(false);
+  
+  const handleDrawerLogout = async () => {
+    closeDrawer();
+    await handleLogout();
+  };
+
   if (isAdmin) {
     // Admin sees Admin Panel and User Management
     return (
       <ScrollProvider>
-      <Tabs
-        screenOptions={{
-          tabBarActiveTintColor: Colors.light.tint,
-          headerShown: useClientOnlyValue(false, true),
-          headerLeft: () => <HeaderLeft />,
-          headerRight: () => <HeaderRight />,
-          headerTransparent: Platform.OS === 'web',
-          headerBackground: () => <HeaderBackground />,
-          headerTitle: '',
-          headerStyle: { backgroundColor: Platform.OS === 'web' ? 'transparent' : '#fef5f1' },
-        }}>
-        <Tabs.Screen
-          name="admin"
-          options={{
-            title: t('tabs.adminPanel'),
-            headerTitle: '',
-            tabBarIcon: ({ color }) => <TabBarIcon name="dashboard" color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="users"
-          options={{
-            title: t('tabs.users'),
-            headerTitle: '',
-            tabBarIcon: ({ color }) => <TabBarIcon name="users" color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="payment-settings"
-          options={{
-            title: t('tabs.payment'),
-            headerTitle: '',
-            tabBarIcon: ({ color }) => <TabBarIcon name="credit-card" color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="user-details"
-          options={{
-            href: null, // Hide from tabs
-            title: t('admin.userDetails'),
-            headerTitle: '',
-          }}
-        />
-        <Tabs.Screen
-          name="index"
-          options={{
-            href: null, // Hide from tabs
-          }}
-        />
-        <Tabs.Screen
-          name="two"
-          options={{
-            href: null, // Hide from tabs
-          }}
-        />
-        <Tabs.Screen
-          name="subscription"
-          options={{
-            href: null, // Hide from tabs
-          }}
-        />
-      </Tabs>
+        <View style={{ flex: 1 }}>
+          <Tabs
+            screenOptions={{
+              tabBarActiveTintColor: Colors.light.tint,
+              headerShown: useClientOnlyValue(false, true),
+              headerLeft: () => <HeaderLeft onMenuPress={openDrawer} />,
+              headerRight: () => <HeaderRight />,
+              headerTransparent: Platform.OS === 'web',
+              headerBackground: () => <HeaderBackground />,
+              headerTitle: '',
+              headerStyle: { backgroundColor: Platform.OS === 'web' ? 'transparent' : '#fef5f1' },
+            }}>
+            <Tabs.Screen
+              name="admin"
+              options={{
+                title: t('tabs.adminPanel'),
+                headerTitle: '',
+                tabBarIcon: ({ color }) => <TabBarIcon name="dashboard" color={color} />,
+              }}
+            />
+            <Tabs.Screen
+              name="users"
+              options={{
+                title: t('tabs.users'),
+                headerTitle: '',
+                tabBarIcon: ({ color }) => <TabBarIcon name="users" color={color} />,
+              }}
+            />
+            <Tabs.Screen
+              name="payment-settings"
+              options={{
+                title: t('tabs.payment'),
+                headerTitle: '',
+                tabBarIcon: ({ color }) => <TabBarIcon name="credit-card" color={color} />,
+              }}
+            />
+            <Tabs.Screen
+              name="user-details"
+              options={{
+                href: null, // Hide from tabs
+                title: t('admin.userDetails'),
+                headerTitle: '',
+              }}
+            />
+            <Tabs.Screen
+              name="index"
+              options={{
+                href: null, // Hide from tabs
+              }}
+            />
+            <Tabs.Screen
+              name="two"
+              options={{
+                href: null, // Hide from tabs
+              }}
+            />
+            <Tabs.Screen
+              name="subscription"
+              options={{
+                href: null, // Hide from tabs
+              }}
+            />
+          </Tabs>
+          <DrawerMenu
+            isOpen={drawerOpen}
+            onClose={closeDrawer}
+            userName={userName}
+            userEmail={userEmail}
+            onLogout={handleDrawerLogout}
+          />
+        </View>
       </ScrollProvider>
     );
   }
@@ -336,66 +308,75 @@ export default function TabLayout() {
   // Regular users see Home, Order, Subscription
   return (
     <ScrollProvider>
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors.light.tint,
-        headerShown: useClientOnlyValue(false, true),
-        headerLeft: () => <HeaderLeft />,
-        headerRight: () => <HeaderRight />,
-        headerTransparent: Platform.OS === 'web',
-        headerBackground: () => <HeaderBackground />,
-        headerTitle: '',
-        headerStyle: { backgroundColor: Platform.OS === 'web' ? 'transparent' : '#fef5f1' },
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: t('tabs.home'),
-          headerTitle: '',
-          tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="two"
-        options={{
-          title: t('tabs.order'),
-          headerTitle: '',
-          tabBarIcon: ({ color }) => <TabBarIcon name="shopping-basket" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="subscription"
-        options={{
-          title: t('tabs.subscription'),
-          headerTitle: '',
-          tabBarIcon: ({ color }) => <TabBarIcon name="calendar" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="admin"
-        options={{
-          href: null, // Hide from tabs
-        }}
-      />
-      <Tabs.Screen
-        name="users"
-        options={{
-          href: null, // Hide from tabs
-        }}
-      />
-      <Tabs.Screen
-        name="payment-settings"
-        options={{
-          href: null, // Hide from tabs
-        }}
-      />
-      <Tabs.Screen
-        name="user-details"
-        options={{
-          href: null, // Hide from tabs
-        }}
-      />
-    </Tabs>
+      <View style={{ flex: 1 }}>
+        <Tabs
+          screenOptions={{
+            tabBarActiveTintColor: Colors.light.tint,
+            headerShown: useClientOnlyValue(false, true),
+            headerLeft: () => <HeaderLeft onMenuPress={openDrawer} />,
+            headerRight: () => <HeaderRight />,
+            headerTransparent: Platform.OS === 'web',
+            headerBackground: () => <HeaderBackground />,
+            headerTitle: '',
+            headerStyle: { backgroundColor: Platform.OS === 'web' ? 'transparent' : '#fef5f1' },
+          }}>
+          <Tabs.Screen
+            name="index"
+            options={{
+              title: t('tabs.home'),
+              headerTitle: '',
+              tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
+            }}
+          />
+          <Tabs.Screen
+            name="two"
+            options={{
+              title: t('tabs.order'),
+              headerTitle: '',
+              tabBarIcon: ({ color }) => <TabBarIcon name="shopping-basket" color={color} />,
+            }}
+          />
+          <Tabs.Screen
+            name="subscription"
+            options={{
+              title: t('tabs.subscription'),
+              headerTitle: '',
+              tabBarIcon: ({ color }) => <TabBarIcon name="calendar" color={color} />,
+            }}
+          />
+          <Tabs.Screen
+            name="admin"
+            options={{
+              href: null, // Hide from tabs
+            }}
+          />
+          <Tabs.Screen
+            name="users"
+            options={{
+              href: null, // Hide from tabs
+            }}
+          />
+          <Tabs.Screen
+            name="payment-settings"
+            options={{
+              href: null, // Hide from tabs
+            }}
+          />
+          <Tabs.Screen
+            name="user-details"
+            options={{
+              href: null, // Hide from tabs
+            }}
+          />
+        </Tabs>
+        <DrawerMenu
+          isOpen={drawerOpen}
+          onClose={closeDrawer}
+          userName={userName}
+          userEmail={userEmail}
+          onLogout={handleDrawerLogout}
+        />
+      </View>
     </ScrollProvider>
   );
 }

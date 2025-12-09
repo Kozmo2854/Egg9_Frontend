@@ -481,6 +481,75 @@ class ApiService {
   }
 
   // ============================================
+  // USER PROFILE MANAGEMENT
+  // ============================================
+
+  async updateProfile(data: { name?: string; phone_number?: string }): Promise<{ user: User; message: string }> {
+    const response = await fetch(`${this.baseUrl}/user/profile`, {
+      method: 'PATCH',
+      headers: await this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    const result = await this.handleResponse<{ user: User; message: string }>(response);
+    await AsyncStorage.setItem('currentUser', JSON.stringify(result.user));
+    return result;
+  }
+
+  async updateEmail(email: string, password: string): Promise<{ user: User; message: string }> {
+    const response = await fetch(`${this.baseUrl}/user/email`, {
+      method: 'PATCH',
+      headers: await this.getAuthHeaders(),
+      body: JSON.stringify({ email, password }),
+    });
+
+    const result = await this.handleResponse<{ user: User; message: string }>(response);
+    await AsyncStorage.setItem('currentUser', JSON.stringify(result.user));
+    return result;
+  }
+
+  async updatePassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
+    const response = await fetch(`${this.baseUrl}/user/password`, {
+      method: 'PATCH',
+      headers: await this.getAuthHeaders(),
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword,
+        new_password_confirmation: newPassword,
+      }),
+    });
+
+    return await this.handleResponse<{ message: string }>(response);
+  }
+
+  async updateNotifications(data: { 
+    push_notifications_enabled?: boolean; 
+    email_notifications_enabled?: boolean 
+  }): Promise<{ user: User; message: string }> {
+    const response = await fetch(`${this.baseUrl}/user/notifications`, {
+      method: 'PATCH',
+      headers: await this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    const result = await this.handleResponse<{ user: User; message: string }>(response);
+    await AsyncStorage.setItem('currentUser', JSON.stringify(result.user));
+    return result;
+  }
+
+  async deleteAccount(password: string): Promise<{ message: string }> {
+    const response = await fetch(`${this.baseUrl}/user`, {
+      method: 'DELETE',
+      headers: await this.getAuthHeaders(),
+      body: JSON.stringify({ password }),
+    });
+
+    const result = await this.handleResponse<{ message: string }>(response);
+    await AsyncStorage.multiRemove(['auth_token', 'currentUser']);
+    return result;
+  }
+
+  // ============================================
   // DEVELOPMENT HELPER
   // ============================================
 
