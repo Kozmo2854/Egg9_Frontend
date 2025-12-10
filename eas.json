@@ -7,7 +7,7 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://egg9backend-production.up.railway.app/api",
+        "EXPO_PUBLIC_API_URL": "https://egg9backend-staging.up.railway.app/api",
         "EXPO_PUBLIC_APP_ENV": "development"
       },
       "android": {
@@ -21,8 +21,8 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://egg9backend-production.up.railway.app/api",
-        "EXPO_PUBLIC_APP_ENV": "production"
+        "EXPO_PUBLIC_API_URL": "https://egg9backend-staging.up.railway.app/api",
+        "EXPO_PUBLIC_APP_ENV": "staging"
       },
       "android": {
         "buildType": "apk"

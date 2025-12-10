@@ -529,7 +529,6 @@ export default function SubscriptionScreen() {
             {[
               { icon: '🎯', text: t('subscription.benefit1') },
               { icon: '📦', text: t('subscription.benefit2') },
-              { icon: '🚚', text: t('subscription.benefit3') },
               { icon: '🔄', text: t('subscription.benefit4') },
             ].map((benefit, index) => (
               <RNView key={index} style={styles.benefitRow}>

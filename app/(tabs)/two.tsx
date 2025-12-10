@@ -11,7 +11,10 @@ import {
   Chip,
   useTheme,
   Surface,
+  Dialog,
+  Portal,
 } from 'react-native-paper';
+import QRCode from 'react-native-qrcode-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { apiService } from '@/services/api';
@@ -36,6 +39,14 @@ export default function OrderScreen() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [availableEggs, setAvailableEggs] = useState(0);
+  const [paymentDialogVisible, setPaymentDialogVisible] = useState(false);
+  const [markingPayment, setMarkingPayment] = useState(false);
+  const [paymentSettings, setPaymentSettings] = useState<{
+    bankAccountNumber: string;
+    recipientName: string;
+    paymentPurpose: string;
+    paymentCode: string;
+  } | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -51,11 +62,12 @@ export default function OrderScreen() {
         setLoading(true);
       }
       setError(null);
-      const [stockData, subData, currentOrder, available] = await Promise.all([
+      const [stockData, subData, currentOrder, available, settings] = await Promise.all([
         apiService.getWeeklyStock(),
         apiService.getSubscription(),
         apiService.getCurrentWeekOrder(),
         apiService.getAvailableEggsForUser(),
+        apiService.getAppSettings(),
       ]);
       setWeeklyStock(stockData);
       setSubscription(subData);
@@ -63,6 +75,7 @@ export default function OrderScreen() {
       const oneTimeOrder = currentOrder && !currentOrder.subscriptionId ? currentOrder : null;
       setCurrentWeekOrder(oneTimeOrder);
       setAvailableEggs(available);
+      setPaymentSettings(settings.paymentSettings);
       
       if (oneTimeOrder) {
         setQuantity(oneTimeOrder.quantity);
@@ -203,6 +216,33 @@ export default function OrderScreen() {
     return maxAvailable;
   };
 
+  /** Generates NBS IPS format QR code for Serbian payment system */
+  const generateNBSIPSQRCode = () => {
+    if (!paymentSettings || !currentWeekOrder) return '';
+    
+    const amount = currentWeekOrder.total;
+    const amountFormatted = `RSD${amount.toFixed(2).replace('.', ',')}`;
+    const bankAccountFormatted = paymentSettings.bankAccountNumber.replace(/-/g, '');
+    
+    return `K:PR|V:01|C:1|R:${bankAccountFormatted}|N:${paymentSettings.recipientName}|I:${amountFormatted}|SF:${paymentSettings.paymentCode}|S:${paymentSettings.paymentPurpose}`;
+  };
+
+  const handleMarkPaymentSubmitted = async () => {
+    if (!currentWeekOrder) return;
+    
+    try {
+      setMarkingPayment(true);
+      await apiService.markOrderPaymentSubmitted(currentWeekOrder.id);
+      await loadData();
+      setPaymentDialogVisible(false);
+      setSuccessMessage(t('payment.paymentMarked'));
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to mark payment');
+    } finally {
+      setMarkingPayment(false);
+    }
+  };
+
   if (loading) {
     return <LoadingView message={t('order.loadingOrder')} />;
   }
@@ -313,9 +353,9 @@ export default function OrderScreen() {
                   <IconButton
                     icon="minus-circle"
                     size={48}
-                    iconColor={quantity <= 10 || currentWeekOrder?.isPaid ? theme.colors.outlineVariant : theme.colors.primary}
+                    iconColor={quantity <= 10 || currentWeekOrder?.isPaid || currentWeekOrder?.paymentSubmitted ? theme.colors.outlineVariant : theme.colors.primary}
                     onPress={decrementQuantity}
-                    disabled={quantity <= 10 || processing || currentWeekOrder?.isPaid}
+                    disabled={quantity <= 10 || processing || currentWeekOrder?.isPaid || currentWeekOrder?.paymentSubmitted}
                     style={styles.quantityButton}
                   />
                   
@@ -334,16 +374,13 @@ export default function OrderScreen() {
                   <IconButton
                     icon="plus-circle"
                     size={48}
-                    iconColor={quantity >= maxAvailable || currentWeekOrder?.isPaid ? theme.colors.outlineVariant : theme.colors.primary}
+                    iconColor={quantity >= maxAvailable || currentWeekOrder?.isPaid || currentWeekOrder?.paymentSubmitted ? theme.colors.outlineVariant : theme.colors.primary}
                     onPress={incrementQuantity}
-                    disabled={quantity >= maxAvailable || processing || currentWeekOrder?.isPaid}
+                    disabled={quantity >= maxAvailable || processing || currentWeekOrder?.isPaid || currentWeekOrder?.paymentSubmitted}
                     style={styles.quantityButton}
                   />
                 </RNView>
 
-                <Text variant="bodySmall" style={styles.maxText}>
-                  {t('order.maxAvailable', { count: maxAvailable })}
-                </Text>
               </Card.Content>
             </Card>
 
@@ -369,9 +406,14 @@ export default function OrderScreen() {
             {/* Order Status Badge */}
             {currentWeekOrder && (
               <RNView style={styles.statusContainer}>
-                {currentWeekOrder.status === 'pending' && !currentWeekOrder.isPaid && (
+                {currentWeekOrder.status === 'pending' && !currentWeekOrder.isPaid && !currentWeekOrder.paymentSubmitted && (
                   <Chip icon="clock-outline" mode="flat" style={styles.statusPending}>
                     {t('order.pendingPayment')}
+                  </Chip>
+                )}
+                {currentWeekOrder.status === 'pending' && !currentWeekOrder.isPaid && currentWeekOrder.paymentSubmitted && (
+                  <Chip icon="clock-outline" mode="flat" style={styles.statusWaiting}>
+                    {t('order.awaitingConfirmation')}
                   </Chip>
                 )}
                 {currentWeekOrder.status === 'pending' && currentWeekOrder.isPaid && (
@@ -391,17 +433,17 @@ export default function OrderScreen() {
               mode="contained"
               onPress={handleBuyNow}
               loading={processing}
-              disabled={processing || quantity > maxAvailable || currentWeekOrder?.isPaid}
+              disabled={processing || quantity > maxAvailable || currentWeekOrder?.isPaid || currentWeekOrder?.paymentSubmitted}
               style={styles.orderButton}
               contentStyle={styles.orderButtonContent}
               labelStyle={styles.orderButtonLabel}
               buttonColor={theme.colors.primary}
               icon={currentWeekOrder ? "check" : "cart-check"}
             >
-              {processing ? t('order.processing') : currentWeekOrder?.isPaid ? t('order.paymentConfirmedCantUpdate') : currentWeekOrder ? t('order.updateOrder') : t('order.placeOrder')}
+              {processing ? t('order.processing') : (currentWeekOrder?.isPaid || currentWeekOrder?.paymentSubmitted) ? t('order.paymentSubmittedCantUpdate') : currentWeekOrder ? t('order.updateOrder') : t('order.placeOrder')}
             </Button>
 
-            {currentWeekOrder && !currentWeekOrder.isPaid && (
+            {currentWeekOrder && !currentWeekOrder.isPaid && !currentWeekOrder.paymentSubmitted && (
               <Button
                 mode="outlined"
                 onPress={handleCancelOrder}
@@ -412,6 +454,20 @@ export default function OrderScreen() {
                 textColor={theme.colors.error}
               >
                 {t('order.cancelOrder')}
+              </Button>
+            )}
+
+            {/* Payment Button - show when order exists and not fully paid */}
+            {currentWeekOrder && !currentWeekOrder.isPaid && (
+              <Button
+                mode="contained"
+                onPress={() => setPaymentDialogVisible(true)}
+                style={styles.paymentButton}
+                contentStyle={styles.paymentButtonContent}
+                icon="qrcode"
+                buttonColor={theme.colors.tertiary}
+              >
+                {currentWeekOrder.paymentSubmitted ? t('order.viewPayment') : t('order.payNow')}
               </Button>
             )}
           </>
@@ -425,6 +481,59 @@ export default function OrderScreen() {
           </Text>
         </Surface>
       </ScrollView>
+
+      {/* Payment Dialog */}
+      <Portal>
+        <Dialog visible={paymentDialogVisible} onDismiss={() => setPaymentDialogVisible(false)} style={styles.paymentDialog}>
+          <Dialog.Title style={styles.dialogTitle}>{t('payment.title')}</Dialog.Title>
+          <Dialog.Content style={styles.dialogContent}>
+            {currentWeekOrder && (
+              <>
+                <RNView style={styles.qrCodeContainer}>
+                  <QRCode
+                    value={generateNBSIPSQRCode()}
+                    size={200}
+                    backgroundColor="white"
+                  />
+                </RNView>
+                <Text variant="titleMedium" style={styles.paymentDialogAmount}>
+                  {currentWeekOrder.quantity} {t('common.eggs')} • {currentWeekOrder.total.toFixed(0)} {t('common.rsd')}
+                </Text>
+                <RNView style={styles.bankDetailsContainer}>
+                  <Text variant="bodyMedium" style={styles.bankDetailLabel}>{t('payment.account')}</Text>
+                  <Text variant="bodyMedium" style={styles.bankDetailValue}>{paymentSettings?.bankAccountNumber}</Text>
+                </RNView>
+                <RNView style={styles.bankDetailsContainer}>
+                  <Text variant="bodyMedium" style={styles.bankDetailLabel}>{t('payment.recipient')}</Text>
+                  <Text variant="bodyMedium" style={styles.bankDetailValue}>{paymentSettings?.recipientName}</Text>
+                </RNView>
+                <RNView style={styles.bankDetailsContainer}>
+                  <Text variant="bodyMedium" style={styles.bankDetailLabel}>{t('payment.purpose')}</Text>
+                  <Text variant="bodyMedium" style={styles.bankDetailValue}>{paymentSettings?.paymentPurpose}</Text>
+                </RNView>
+                <Text variant="bodySmall" style={styles.paymentInstructions}>
+                  {t('payment.scanQR')} {t('payment.afterPayment')}
+                </Text>
+              </>
+            )}
+          </Dialog.Content>
+          <Dialog.Actions style={styles.dialogActions}>
+            {!currentWeekOrder?.paymentSubmitted && (
+              <Button 
+                onPress={handleMarkPaymentSubmitted} 
+                mode="contained"
+                loading={markingPayment}
+                disabled={markingPayment}
+                buttonColor={theme.colors.tertiary}
+                style={{ marginRight: 8 }}
+              >
+                {t('payment.markPaid')}
+              </Button>
+            )}
+            <Button onPress={() => setPaymentDialogVisible(false)} mode="contained">{t('common.close')}</Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
 
       <Snackbar
         visible={!!successMessage}
@@ -673,6 +782,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#4ecdc4',
   },
+  statusWaiting: {
+    backgroundColor: '#e3f2fd',
+    borderWidth: 1,
+    borderColor: '#2196f3',
+  },
   statusCompleted: {
     backgroundColor: '#e6ffe6',
     borderWidth: 1,
@@ -694,5 +808,72 @@ const styles = StyleSheet.create({
   infoText: {
     flex: 1,
     color: '#524541',
+  },
+  paymentButton: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 16,
+  },
+  paymentButtonContent: {
+    paddingVertical: 12,
+  },
+  paymentDialog: {
+    maxWidth: 400,
+    alignSelf: 'center',
+  },
+  dialogTitle: {
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
+  dialogContent: {
+    alignItems: 'center',
+  },
+  dialogActions: {
+    justifyContent: 'center',
+    paddingBottom: 16,
+  },
+  qrCodeContainer: {
+    padding: 16,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  paymentDialogAmount: {
+    fontWeight: 'bold',
+    marginBottom: 16,
+    fontSize: 20,
+    color: '#2d3748',
+  },
+  bankDetailsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  bankDetailLabel: {
+    fontWeight: '600',
+    color: '#666',
+    flexShrink: 0,
+  },
+  bankDetailValue: {
+    fontWeight: 'bold',
+    color: '#2d3748',
+    flexShrink: 1,
+    textAlign: 'right',
+  },
+  paymentInstructions: {
+    marginTop: 16,
+    textAlign: 'center',
+    opacity: 0.7,
+    lineHeight: 20,
   },
 });

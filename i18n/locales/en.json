@@ -105,6 +105,8 @@
     "cancelOrder": "Cancel Order",
     "processing": "Processing...",
     "paymentConfirmedCantUpdate": "Payment Confirmed - Cannot Update",
+    "paymentSubmittedCantUpdate": "Payment Submitted - Cannot Update",
+    "awaitingConfirmation": "⏳ Awaiting Confirmation",
     "orderPlaced": "Order placed! {{count}} eggs ordered.",
     "orderUpdated": "Order updated! {{count}} eggs for this week.",
     "orderCancelled": "Order cancelled successfully",
@@ -120,6 +122,8 @@
     "paymentConfirmed": "✓ Payment Confirmed",
     "delivered": "📦 Delivered",
     "infoNote": "Orders must be in increments of 1 dozen (10 eggs)",
+    "payNow": "Pay Now",
+    "viewPayment": "View Payment",
     "lowSeasonNotice": "Our chickens are resting – orders up to {{cap}} eggs"
   },
   "subscription": {

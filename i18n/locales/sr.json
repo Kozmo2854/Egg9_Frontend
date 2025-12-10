@@ -105,6 +105,8 @@
     "cancelOrder": "Otkaži porudžbinu",
     "processing": "Obrađujem...",
     "paymentConfirmedCantUpdate": "Plaćanje potvrđeno - Ne može se menjati",
+    "paymentSubmittedCantUpdate": "Plaćanje prijavljeno - Ne može se menjati",
+    "awaitingConfirmation": "⏳ Čeka potvrdu",
     "orderPlaced": "Porudžbina postavljena! {{count}} jaja naručeno.",
     "orderUpdated": "Porudžbina ažurirana! {{count}} jaja za ovu nedelju.",
     "orderCancelled": "Porudžbina uspešno otkazana",
@@ -120,7 +122,9 @@
     "paymentConfirmed": "✓ Plaćanje potvrđeno",
     "delivered": "📦 Isporučeno",
     "infoNote": "Porudžbine se prodaju po kartonu (10 jaja)",
-    "lowSeasonNotice": "Naše kokoške se odmaraju – porudžbine do {{cap}} jaja"
+    "lowSeasonNotice": "Naše kokoške se odmaraju – porudžbine do {{cap}} jaja",
+    "payNow": "Plati sada",
+    "viewPayment": "Pogledaj plaćanje"
   },
   "subscription": {
     "title": "Nedeljna pretplata",

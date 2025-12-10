@@ -62,6 +62,7 @@ export interface Order {
   id: number;
   userId: number;
   subscriptionId?: number | null; // Foreign key to subscriptions table (if order came from subscription)
+  type: 'subscription' | 'one-time'; // Order type based on subscription_id
   isSubscription?: boolean; // For admin view - indicates if order is from a subscription
   weekId: number; // Foreign key to weeks table
   userName?: string; // For admin view

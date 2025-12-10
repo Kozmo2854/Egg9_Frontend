@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
-import { StyleSheet, ScrollView, View as RNView, NativeSyntheticEvent, NativeScrollEvent, RefreshControl } from 'react-native';
+import { StyleSheet, ScrollView, View as RNView, NativeSyntheticEvent, NativeScrollEvent, RefreshControl, Pressable } from 'react-native';
 import { View } from '@/components/Themed';
+import { useRouter } from 'expo-router';
 import { 
   Card, 
   Text, 
@@ -27,6 +28,7 @@ export default function HomeScreen() {
   const theme = useTheme();
   const { t } = useTranslation();
   const { setScrollY } = useScrollContext();
+  const router = useRouter();
   const [weeklyStock, setWeeklyStock] = useState<WeeklyStock | null>(null);
   const [subscription, setSubscription] = useState<any>(null);
   const [currentWeekOrder, setCurrentWeekOrder] = useState<any>(null);
@@ -335,7 +337,7 @@ export default function HomeScreen() {
           ) : (
             <Card.Content style={styles.deliveryPadding}>
               <RNView style={styles.deliveryPendingContainer}>
-                <Text style={styles.deliveryPendingIcon}>📅</Text>
+                <Text style={styles.deliveryPendingIcon}>🚚</Text>
                 <Text variant="titleMedium" style={styles.deliveryPendingText}>
                   {t('home.deliveryPending')}
                 </Text>
@@ -460,15 +462,28 @@ export default function HomeScreen() {
                       <Text variant="bodyMedium" style={styles.paymentLabel}>
                         {t('home.totalToBePaid')}
                       </Text>
-                      <Button
-                        mode="contained"
-                        onPress={() => showPaymentDialog('current')}
-                        icon="qrcode"
-                        style={styles.paymentButton}
-                        buttonColor={theme.colors.primary}
-                      >
-                        {t('home.viewPaymentDetails')}
-                      </Button>
+                      <RNView style={styles.paymentButtonsRow}>
+                        <Button
+                          mode="contained"
+                          onPress={() => showPaymentDialog('current')}
+                          icon="qrcode"
+                          style={styles.paymentButtonLeft}
+                          buttonColor={theme.colors.primary}
+                        >
+                          {t('home.viewPaymentDetails')}
+                        </Button>
+                        <Button
+                          mode="contained"
+                          onPress={handleMarkPaymentSubmitted}
+                          loading={markingPayment}
+                          disabled={markingPayment}
+                          icon="check"
+                          style={styles.paymentButtonRight}
+                          buttonColor={theme.colors.tertiary}
+                        >
+                          {t('payment.markPaid')}
+                        </Button>
+                      </RNView>
                     </>
                   )}
                 </RNView>
@@ -483,81 +498,85 @@ export default function HomeScreen() {
         </Text>
 
         {/* Subscription */}
-        <Surface style={styles.orderCard} elevation={2}>
-          <LinearGradient
-            colors={subscription ? [theme.colors.primaryContainer, theme.colors.surfaceVariant] : ['#f5f5f5', '#fafafa']}
-            style={styles.orderGradient}
-          >
-            <RNView style={styles.orderContent}>
-              <RNView style={styles.orderHeader}>
-                <RNView style={styles.orderIconContainer}>
-                  <Text style={styles.orderIcon}>📅</Text>
+        <Pressable onPress={() => router.push('/(tabs)/subscription')}>
+          <Surface style={styles.orderCard} elevation={2}>
+            <LinearGradient
+              colors={subscription ? [theme.colors.primaryContainer, theme.colors.surfaceVariant] : ['#f5f5f5', '#fafafa']}
+              style={styles.orderGradient}
+            >
+              <RNView style={styles.orderContent}>
+                <RNView style={styles.orderHeader}>
+                  <RNView style={styles.orderIconContainer}>
+                    <Text style={styles.orderIcon}>🔄</Text>
+                  </RNView>
+                  <Text variant="titleLarge" style={styles.orderTitle}>
+                    {t('home.subscription')}
+                  </Text>
                 </RNView>
-                <Text variant="titleLarge" style={styles.orderTitle}>
-                  {t('home.subscription')}
-                </Text>
+                
+                {subscription ? (
+                  <RNView style={styles.orderDetails}>
+                    <Chip icon="check-circle" mode="flat" style={styles.activeChip}>
+                      {t('home.active')}
+                    </Chip>
+                    <Text variant="headlineSmall" style={styles.orderQuantity}>
+                      {subscription.quantity} {t('common.eggs')}
+                    </Text>
+                    <Text variant="bodyMedium" style={styles.orderFrequency}>
+                      {t('home.deliveredWeekly')}
+                    </Text>
+                    <Text variant="bodyLarge" style={styles.orderRemainingWeeks}>
+                      {t('home.weeksRemaining', { count: subscription.weeksRemaining })}
+                    </Text>
+                  </RNView>
+                ) : (
+                  <Text variant="bodyMedium" style={styles.orderInactive}>
+                    {t('home.noActiveSubscription')}
+                  </Text>
+                )}
               </RNView>
-              
-              {subscription ? (
-                <RNView style={styles.orderDetails}>
-                  <Chip icon="check-circle" mode="flat" style={styles.activeChip}>
-                    {t('home.active')}
-                  </Chip>
-                  <Text variant="headlineSmall" style={styles.orderQuantity}>
-                    {subscription.quantity} {t('common.eggs')}
-                  </Text>
-                  <Text variant="bodyMedium" style={styles.orderFrequency}>
-                    {t('home.deliveredWeekly')}
-                  </Text>
-                  <Text variant="bodyLarge" style={styles.orderRemainingWeeks}>
-                    {t('home.weeksRemaining', { count: subscription.weeksRemaining })}
-                  </Text>
-                </RNView>
-              ) : (
-                <Text variant="bodyMedium" style={styles.orderInactive}>
-                  {t('home.noActiveSubscription')}
-                </Text>
-              )}
-            </RNView>
-          </LinearGradient>
-        </Surface>
+            </LinearGradient>
+          </Surface>
+        </Pressable>
 
         {/* One-Time Order */}
-        <Surface style={styles.orderCard} elevation={2}>
-          <LinearGradient
-            colors={currentWeekOrder ? [theme.colors.secondaryContainer, theme.colors.surfaceVariant] : ['#f5f5f5', '#fafafa']}
-            style={styles.orderGradient}
-          >
-            <RNView style={styles.orderContent}>
-              <RNView style={styles.orderHeader}>
-                <RNView style={styles.orderIconContainer}>
-                  <Text style={styles.orderIcon}>🛒</Text>
+        <Pressable onPress={() => router.push('/(tabs)/two')}>
+          <Surface style={styles.orderCard} elevation={2}>
+            <LinearGradient
+              colors={currentWeekOrder ? [theme.colors.secondaryContainer, theme.colors.surfaceVariant] : ['#f5f5f5', '#fafafa']}
+              style={styles.orderGradient}
+            >
+              <RNView style={styles.orderContent}>
+                <RNView style={styles.orderHeader}>
+                  <RNView style={styles.orderIconContainer}>
+                    <Text style={styles.orderIcon}>🛒</Text>
+                  </RNView>
+                  <Text variant="titleLarge" style={styles.orderTitle}>
+                    {t('home.oneTimeOrders')}
+                  </Text>
                 </RNView>
-                <Text variant="titleLarge" style={styles.orderTitle}>
-                  {t('home.oneTimeOrders')}
-                </Text>
+                
+                {currentWeekOrder ? (
+                  <RNView style={styles.orderDetails}>
+                    <Chip icon="check-circle" mode="flat" style={styles.activeChip}>
+                      {t('home.ordered')}
+                    </Chip>
+                    <Text variant="headlineSmall" style={styles.orderQuantity}>
+                      {currentWeekOrder.quantity} {t('common.eggs')}
+                    </Text>
+                    <Text variant="bodyMedium" style={styles.orderPrice}>
+                      {currentWeekOrder.total.toFixed(0)} {t('common.rsd')}
+                    </Text>
+                  </RNView>
+                ) : (
+                  <Text variant="bodyMedium" style={styles.orderInactive}>
+                    {t('home.noOrderThisWeek')}
+                  </Text>
+                )}
               </RNView>
-              
-              {currentWeekOrder ? (
-                <RNView style={styles.orderDetails}>
-                  <Chip icon="check-circle" mode="flat" style={styles.activeChip}>
-                    {t('home.ordered')}
-                  </Chip>
-                  <Text variant="headlineSmall" style={styles.orderQuantity}>
-                    {currentWeekOrder.quantity} {t('common.eggs')}
-                  </Text>
-                  <Text variant="bodyMedium" style={styles.orderPrice}>
-                    {currentWeekOrder.total.toFixed(0)} {t('common.rsd')}
-                  </Text>
-                </RNView>
-              ) : (
-                <Text variant="bodyMedium" style={styles.orderInactive}>
-                  {t('home.noOrderThisWeek')}
-                </Text>
-              )}
-            </RNView>
-          </LinearGradient>
-        </Surface>
+            </LinearGradient>
+          </Surface>
+        </Pressable>
 
       </RNView>
 
@@ -992,6 +1011,21 @@ const styles = StyleSheet.create({
   },
   paymentButton: {
     marginTop: 8,
+  },
+  paymentButtonsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+  paymentButtonLeft: {
+    flex: 1,
+    minWidth: 140,
+  },
+  paymentButtonRight: {
+    flex: 1,
+    minWidth: 120,
   },
   paymentConfirmation: {
     fontWeight: '600',

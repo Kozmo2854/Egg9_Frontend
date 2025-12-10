@@ -341,7 +341,7 @@ export default function TabLayout() {
             options={{
               title: t('tabs.subscription'),
               headerTitle: '',
-              tabBarIcon: ({ color }) => <TabBarIcon name="calendar" color={color} />,
+              tabBarIcon: ({ color }) => <TabBarIcon name="refresh" color={color} />,
             }}
           />
           <Tabs.Screen
