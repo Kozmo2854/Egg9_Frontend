@@ -6,6 +6,7 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "channel": "development",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://egg9backend-staging.up.railway.app/api",
         "EXPO_PUBLIC_APP_ENV": "development"
@@ -20,6 +21,7 @@
     },
     "preview": {
       "distribution": "internal",
+      "channel": "preview",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://egg9backend-staging.up.railway.app/api",
         "EXPO_PUBLIC_APP_ENV": "staging"
@@ -32,6 +34,7 @@
       }
     },
     "production": {
+      "channel": "production",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://egg9backend-production.up.railway.app/api",
         "EXPO_PUBLIC_APP_ENV": "production"
