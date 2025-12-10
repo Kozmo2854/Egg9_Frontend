@@ -333,7 +333,9 @@
     "orderHistory": "Istorija narudžbina"
   },
   "orderHistory": {
-    "totalOrders": "{{count}} narudžbina ukupno",
+    "totalOrders_one": "{{count}} narudžbina ukupno",
+    "totalOrders_few": "{{count}} narudžbine ukupno",
+    "totalOrders_other": "{{count}} narudžbina ukupno",
     "noOrders": "Još nema narudžbina",
     "completed": "Završeno",
     "delivered": "Isporučeno",

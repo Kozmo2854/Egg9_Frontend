@@ -333,7 +333,8 @@
     "orderHistory": "Order History"
   },
   "orderHistory": {
-    "totalOrders": "{{count}} orders total",
+    "totalOrders_one": "{{count}} order total",
+    "totalOrders_other": "{{count}} orders total",
     "noOrders": "No orders yet",
     "completed": "Completed",
     "delivered": "Delivered",
