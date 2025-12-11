@@ -135,9 +135,14 @@ export default function DashboardScreen() {
       : OrderHelpers.getUnpaidNotSubmittedQuantity(currentWeekOrder, currentWeekSubscriptionOrder);
   };
 
+  // Returns the amount that needs action (not submitted) OR all submitted amounts if waiting for confirmation
   const getCurrentUnpaidAmount = () => {
-    return OrderHelpers.getUnpaidNotSubmittedAmount(currentWeekOrder, currentWeekSubscriptionOrder) +
-           OrderHelpers.getUnpaidSubmittedAmount(currentWeekOrder, currentWeekSubscriptionOrder);
+    const notSubmittedAmount = OrderHelpers.getUnpaidNotSubmittedAmount(currentWeekOrder, currentWeekSubscriptionOrder);
+    const submittedAmount = OrderHelpers.getUnpaidSubmittedAmount(currentWeekOrder, currentWeekSubscriptionOrder);
+    
+    // If there are still orders to mark as paid, show that amount
+    // Otherwise show the submitted amount waiting for confirmation
+    return notSubmittedAmount > 0 ? notSubmittedAmount : submittedAmount;
   };
 
   const showConfirmPayment = () => {

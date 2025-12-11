@@ -104,10 +104,10 @@ export default function OrderScreen() {
     try {
       if (currentWeekOrder) {
         await apiService.updateOrder(currentWeekOrder.id, quantity, weeklyStock.pricePerDozen);
-        setSuccessMessage(t('order.orderUpdated'));
+        setSuccessMessage(t('order.orderUpdated', { count: quantity }));
       } else {
         await apiService.createOrder(quantity, weeklyStock.pricePerDozen);
-        setSuccessMessage(t('order.orderPlaced'));
+        setSuccessMessage(t('order.orderPlaced', { count: quantity }));
       }
       
       const [updatedStock, subData, currentOrder, available] = await Promise.all([
@@ -272,8 +272,8 @@ export default function OrderScreen() {
           </RNView>
         )}
 
-        {/* Low Season Notice */}
-        {weeklyStock.isLowSeason && canOrder && (
+        {/* Low Season Notice - only show when no order placed yet */}
+        {weeklyStock.isLowSeason && canOrder && !currentWeekOrder && (
           <Surface style={styles.lowSeasonBadge} elevation={1}>
             <Text style={styles.lowSeasonText}>🐔 {t('order.lowSeasonNotice', { cap: weeklyStock.lowSeasonOrderCap })}</Text>
           </Surface>
@@ -346,28 +346,46 @@ export default function OrderScreen() {
           </Surface>
         )}
 
-        {/* Order Summary - Show when order exists */}
+        {/* Hero Section - Show when order exists and locked */}
+        {currentWeekOrder && isLocked && (
+          <RNView style={styles.heroSection}>
+            <Text style={styles.heroEmoji}>
+              {currentWeekOrder.isPaid ? '✅' : '🛒'}
+            </Text>
+            <Text style={styles.heroTitle}>
+              {currentWeekOrder.isPaid ? t('order.paymentConfirmed') : t('dashboard.thankYouOrder')}
+            </Text>
+            <Text style={styles.heroSubtitle}>
+              {currentWeekOrder.isPaid 
+                ? t('dashboard.seeYouNext') 
+                : (currentWeekOrder.paymentSubmitted 
+                    ? t('dashboard.waitingConfirmation') 
+                    : t('dashboard.pleasePayOrder'))}
+            </Text>
+          </RNView>
+        )}
+
+        {/* Order Summary - Show when order exists and locked */}
         {currentWeekOrder && isLocked && (
           <Surface style={styles.summaryCard} elevation={2}>
-            <RNView style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>{t('common.eggs')}</Text>
-              <Text style={styles.summaryValue}>{currentWeekOrder.quantity}</Text>
+            {/* Large quantity display */}
+            <RNView style={styles.summaryQuantityDisplay}>
+              <Text style={styles.summaryQuantityNumber}>{currentWeekOrder.quantity}</Text>
+              <Text style={styles.summaryQuantityLabel}>{t('common.eggs')}</Text>
             </RNView>
-            <RNView style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>{t('order.totalPrice')}</Text>
-              <Text style={styles.summaryValue}>{currentWeekOrder.total.toFixed(0)} {t('common.rsd')}</Text>
-            </RNView>
-            <Chip 
-              icon={currentWeekOrder.isPaid ? "check-circle" : "clock-outline"} 
-              style={[styles.statusChip, currentWeekOrder.isPaid ? styles.statusPaid : styles.statusPending]}
-            >
-              {currentWeekOrder.isPaid ? t('order.paymentConfirmed') : t('order.awaitingConfirmation')}
-            </Chip>
+            
+            {/* Only show price if not paid yet */}
+            {!currentWeekOrder.isPaid && (
+              <RNView style={styles.summaryPriceRow}>
+                <Text style={styles.summaryPriceLabel}>{t('order.totalPrice')}</Text>
+                <Text style={styles.summaryPriceValue}>{currentWeekOrder.total.toFixed(0)} {t('common.rsd')}</Text>
+              </RNView>
+            )}
           </Surface>
         )}
 
-        {/* Payment Button */}
-        {currentWeekOrder && !currentWeekOrder.isPaid && (
+        {/* Payment Button - only show when not paid and not submitted */}
+        {currentWeekOrder && !currentWeekOrder.isPaid && !currentWeekOrder.paymentSubmitted && (
           <Button
             mode="contained"
             onPress={() => setPaymentDialogVisible(true)}
@@ -375,7 +393,7 @@ export default function OrderScreen() {
             icon="qrcode"
             buttonColor={theme.colors.tertiary}
           >
-            {currentWeekOrder.paymentSubmitted ? t('order.viewPayment') : t('order.payNow')}
+            {t('order.payNow')}
           </Button>
         )}
       </RNView>
@@ -436,6 +454,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   
+  // Hero Section (shown when order is placed)
+  heroSection: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  heroEmoji: {
+    fontSize: 56,
+    marginBottom: 8,
+  },
+  heroTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2d3748',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  heroSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+  },
+
   // Warning Section (only shown when can't order)
   warningSection: {
     alignItems: 'center',
@@ -530,27 +570,46 @@ const styles = StyleSheet.create({
   summaryCard: {
     backgroundColor: '#ffffff',
     borderRadius: 20,
-    padding: 20,
+    padding: 24,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  summaryQuantityDisplay: {
+    alignItems: 'center',
     marginBottom: 16,
   },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  summaryLabel: {
-    fontSize: 16,
-    color: '#666',
-  },
-  summaryValue: {
-    fontSize: 18,
+  summaryQuantityNumber: {
+    fontSize: 64,
     fontWeight: 'bold',
     color: '#2d3748',
   },
+  summaryQuantityLabel: {
+    fontSize: 18,
+    color: '#666',
+    marginTop: -8,
+  },
+  summaryPriceRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8f4f2',
+    borderRadius: 12,
+    padding: 12,
+    paddingHorizontal: 24,
+    marginBottom: 16,
+    gap: 8,
+  },
+  summaryPriceLabel: {
+    fontSize: 14,
+    color: '#666',
+  },
+  summaryPriceValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#ff6b35',
+  },
   statusChip: {
     alignSelf: 'center',
-    marginTop: 8,
   },
   statusPaid: {
     backgroundColor: '#d4f4f1',

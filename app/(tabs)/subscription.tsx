@@ -90,7 +90,7 @@ export default function SubscriptionScreen() {
         startNextWeek
       );
       setSubscription(sub);
-      setSuccessMessage(t('subscription.subscriptionCreated'));
+      setSuccessMessage(t('subscription.subscriptionCreated', { quantity: subscriptionQuantity, period: subscriptionPeriod }));
       setEditingSubscription(false);
       setNextWeekConfirmation(null);
       
@@ -124,7 +124,7 @@ export default function SubscriptionScreen() {
         startNextWeek
       );
       setSubscription(sub);
-      setSuccessMessage(t('subscription.subscriptionUpdated'));
+      setSuccessMessage(t('subscription.subscriptionUpdated', { quantity: subscriptionQuantity, period: subscriptionPeriod }));
       setEditingSubscription(false);
       setNextWeekConfirmation(null);
       
