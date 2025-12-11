@@ -6,12 +6,12 @@ This file contains important context and rules for AI assistants working on this
 
 ## Git + EAS Update Workflow
 
-**⚠️ IMPORTANT: After pushing code, also push EAS updates!**
+**⚠️ IMPORTANT: After pushing code, also push EAS updates with the correct environment!**
 
 ### Pushing to Test Branch (QA/Staging)
 ```bash
 git add -A && git commit -m "Description" && git push
-eas update --channel preview --message "Description"
+eas update --channel preview --environment preview --message "Description"
 ```
 
 ### Pushing to Production
@@ -19,8 +19,27 @@ eas update --channel preview --message "Description"
 git checkout main
 git merge test
 git push
-eas update --channel production --message "Description"
+eas update --channel production --environment production --message "Description"
 ```
+
+**Note:** The `--environment` flag uses environment variables from EAS Dashboard, NOT your local `.env` file.
+
+---
+
+## Environment Variables
+
+### Local Development (`.env` file - gitignored)
+```
+EXPO_PUBLIC_API_URL=http://localhost:8000/api
+EXPO_PUBLIC_APP_ENV=development
+```
+
+### EAS Dashboard Environments
+Environment variables are stored in EAS Dashboard for staging and production:
+- **preview**: `EXPO_PUBLIC_API_URL=https://egg9backend-staging.up.railway.app/api`, `EXPO_PUBLIC_APP_ENV=staging`
+- **production**: `EXPO_PUBLIC_API_URL=https://egg9backend-production.up.railway.app/api`, `EXPO_PUBLIC_APP_ENV=production`
+
+**Never manually edit `.env` for EAS updates!** Always use `--environment` flag.
 
 ---
 
@@ -36,7 +55,7 @@ eas update --channel production --message "Description"
 - API call changes
 - New images/icons (bundled)
 
-**Command:** `eas update --channel <channel> --message "Description"`
+**Command:** `eas update --channel <channel> --environment <env> --message "Description"`
 
 ### Use `eas build` (requires new APK download):
 - Installing npm packages with native code (camera, maps, etc.)
@@ -53,12 +72,12 @@ eas update --channel production --message "Description"
 
 ---
 
-## Channels
+## Channels & Environments
 
-| Branch | EAS Channel | Backend |
-|--------|-------------|---------|
-| `test` | `preview` | egg9backend-staging.up.railway.app |
-| `main` | `production` | egg9backend-production.up.railway.app |
+| Branch | EAS Channel | EAS Environment | Backend |
+|--------|-------------|-----------------|---------|
+| `test` | `preview` | `preview` | egg9backend-staging.up.railway.app |
+| `main` | `production` | `production` | egg9backend-production.up.railway.app |
 
 ---
 
