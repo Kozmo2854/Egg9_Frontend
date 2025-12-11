@@ -1,45 +1,41 @@
 import { useState, useCallback } from 'react';
-import { StyleSheet, ScrollView, View as RNView, NativeSyntheticEvent, NativeScrollEvent, RefreshControl } from 'react-native';
+import { StyleSheet, View as RNView, Dimensions, ScrollView } from 'react-native';
 import { View } from '@/components/Themed';
 import {
-  Card,
   Text,
   Button,
   IconButton,
-  ActivityIndicator,
   Snackbar,
   Chip,
   useTheme,
   Surface,
-  SegmentedButtons,
   Dialog,
   Portal,
   Paragraph,
 } from 'react-native-paper';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { apiService } from '@/services/api';
 import { WeeklyStock } from '@/types/models';
 import { useFocusEffect } from '@react-navigation/native';
-import { useScrollContext } from '@/contexts/ScrollContext';
 import { LoadingView, ErrorView } from '@/components/common';
 import { parseError } from '@/utils/errorHandling';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const HORIZONTAL_PADDING = 16;
 
 export default function SubscriptionScreen() {
   const theme = useTheme();
   const { t } = useTranslation();
-  const { setScrollY } = useScrollContext();
   const [weeklyStock, setWeeklyStock] = useState<WeeklyStock | null>(null);
   const [subscription, setSubscription] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [editingSubscription, setEditingSubscription] = useState(false);
   const [subscriptionQuantity, setSubscriptionQuantity] = useState(10);
-  const [subscriptionPeriod, setSubscriptionPeriod] = useState(2); // Default 2 weeks
+  const [subscriptionPeriod, setSubscriptionPeriod] = useState(2);
   const [nextWeekConfirmation, setNextWeekConfirmation] = useState<{
     show: boolean;
     nextWeekStart: string;
@@ -52,13 +48,9 @@ export default function SubscriptionScreen() {
     }, [])
   );
 
-  const loadData = async (isRefresh = false) => {
+  const loadData = async () => {
     try {
-      if (isRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
+      setLoading(true);
       setError(null);
       const [stockData, subData] = await Promise.all([
         apiService.getWeeklyStock(),
@@ -76,13 +68,8 @@ export default function SubscriptionScreen() {
       setError(appError.message);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
-
-  const onRefresh = useCallback(() => {
-    loadData(true);
-  }, []);
 
   const handleSubscribe = async (startNextWeek: boolean = false) => {
     setProcessing(true);
@@ -96,18 +83,13 @@ export default function SubscriptionScreen() {
         startNextWeek
       );
       setSubscription(sub);
-      setSuccessMessage(
-        startNextWeek 
-          ? `Subscription created! Starting next week: ${subscriptionQuantity} eggs per week for ${subscriptionPeriod} weeks.`
-          : `Subscription created! ${subscriptionQuantity} eggs per week for ${subscriptionPeriod} weeks.`
-      );
+      setSuccessMessage(t('subscription.subscriptionCreated'));
       setEditingSubscription(false);
       setNextWeekConfirmation(null);
       
       const updatedStock = await apiService.getWeeklyStock();
       setWeeklyStock(updatedStock);
     } catch (err: any) {
-      // Handle insufficient stock error with next week confirmation dialog
       if (err.statusCode === 409 && err.data?.message === 'insufficient_stock_this_week') {
         setNextWeekConfirmation({
           show: true,
@@ -135,18 +117,13 @@ export default function SubscriptionScreen() {
         startNextWeek
       );
       setSubscription(sub);
-      setSuccessMessage(
-        startNextWeek 
-          ? `Subscription updated! Starting next week: ${subscriptionQuantity} eggs per week for ${subscriptionPeriod} weeks.`
-          : `Subscription updated! ${subscriptionQuantity} eggs per week for ${subscriptionPeriod} weeks.`
-      );
+      setSuccessMessage(t('subscription.subscriptionUpdated'));
       setEditingSubscription(false);
       setNextWeekConfirmation(null);
       
       const updatedStock = await apiService.getWeeklyStock();
       setWeeklyStock(updatedStock);
     } catch (err: any) {
-      // Handle insufficient stock error with next week confirmation dialog
       if (err.statusCode === 409 && err.data?.message === 'insufficient_stock_this_week') {
         setNextWeekConfirmation({
           show: true,
@@ -170,7 +147,7 @@ export default function SubscriptionScreen() {
     try {
       await apiService.cancelSubscription();
       setSubscription(null);
-      setSuccessMessage('Subscription cancelled');
+      setSuccessMessage(t('subscription.subscriptionCancelled'));
       setEditingSubscription(false);
       setSubscriptionQuantity(10);
       setSubscriptionPeriod(4);
@@ -218,328 +195,207 @@ export default function SubscriptionScreen() {
     );
   }
 
+  // Determine state for hero section
+  const getStateInfo = () => {
+    if (weeklyStock.isLowSeason && !subscription) {
+      return { icon: '🐔', message: t('subscription.subscriptionsPaused'), subtitle: t('subscription.lowSeasonMessage') };
+    }
+    if (subscription && !editingSubscription) {
+      return { 
+        icon: '✓', 
+        message: t('subscription.activeSubscription'), 
+        subtitle: `${subscription.quantity} ${t('common.eggs')} × ${subscription.weeksRemaining || subscription.period} ${t('common.weeks')}` 
+      };
+    }
+    return { icon: '📅', message: t('subscription.title'), subtitle: t('subscription.subtitle') };
+  };
+
+  const stateInfo = getStateInfo();
+  const showForm = (!subscription || editingSubscription) && !weeklyStock.isLowSeason;
+
   return (
     <View style={styles.container}>
       <ScrollView 
-        contentContainerStyle={styles.content} 
+        style={styles.scrollView} 
+        contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
-        onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => setScrollY(e.nativeEvent.contentOffset.y)}
-        scrollEventThrottle={16}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={['#ff6b35']}
-            tintColor="#ff6b35"
-          />
-        }
       >
-        {/* Header with Gradient */}
-        <LinearGradient
-          colors={[theme.colors.tertiary, theme.colors.tertiaryContainer]}
-          style={styles.header}
-        >
-          <Text style={styles.headerIcon}>📅</Text>
-          <Text style={styles.headerTitle}>{t('subscription.title')}</Text>
-          <Text style={styles.headerSubtitle}>{t('subscription.subtitle')}</Text>
-        </LinearGradient>
+        {/* Hero Section */}
+        <RNView style={styles.heroSection}>
+          <RNView style={[styles.heroIconCircle, subscription && !editingSubscription && styles.heroIconActive]}>
+            <Text style={styles.heroIcon}>{stateInfo.icon}</Text>
+          </RNView>
+          <Text style={styles.heroTitle}>{stateInfo.message}</Text>
+          <Text style={styles.heroSubtitle}>{stateInfo.subtitle}</Text>
+        </RNView>
 
-        {/* Current Subscription Status */}
+        {/* Active Subscription Card */}
         {subscription && !editingSubscription && (
-          <Card style={styles.card} mode="elevated">
-            <LinearGradient
-              colors={[theme.colors.primaryContainer, theme.colors.surfaceVariant]}
-              style={styles.cardGradient}
-            >
-              <RNView style={styles.cardContent}>
-                <RNView style={styles.activeHeader}>
-                  <RNView style={styles.activeIconCircle}>
-                    <Text style={styles.activeIcon}>✓</Text>
-                  </RNView>
-                  <Text variant="headlineSmall" style={styles.activeTitle}>
-                    {t('subscription.activeSubscription')}
-                  </Text>
-                </RNView>
+          <Surface style={styles.subscriptionCard} elevation={2}>
+            <RNView style={styles.detailRow}>
+              <Text style={styles.detailLabel}>{t('subscription.weeklyDelivery')}</Text>
+              <Text style={styles.detailValue}>{subscription.quantity} {t('common.eggs')}</Text>
+            </RNView>
+            <RNView style={styles.detailRow}>
+              <Text style={styles.detailLabel}>{t('subscription.duration')}</Text>
+              <Text style={styles.detailValue}>{subscription.weeksRemaining || subscription.period} {t('common.weeks')}</Text>
+            </RNView>
+            <RNView style={styles.detailRow}>
+              <Text style={styles.detailLabel}>{t('subscription.weeklyPrice')}</Text>
+              <Text style={styles.detailValue}>{calculateWeeklyPrice().toFixed(0)} {t('common.rsd')}</Text>
+            </RNView>
 
-                <Surface style={styles.detailsCard} elevation={2}>
-                  <RNView style={styles.detailRow}>
-                    <Text variant="bodyLarge" style={styles.detailLabel}>{t('subscription.weeklyDelivery')}</Text>
-                    <Text variant="headlineSmall" style={styles.detailValue}>
-                      {subscription.quantity} {t('common.eggs')}
-                    </Text>
-                  </RNView>
-                  <RNView style={styles.detailRow}>
-                    <Text variant="bodyLarge" style={styles.detailLabel}>{t('subscription.duration')}</Text>
-                    <Text variant="headlineSmall" style={styles.detailValue}>
-                      {subscription.period} {t('common.weeks')}
-                    </Text>
-                  </RNView>
-                  <RNView style={styles.detailRow}>
-                    <Text variant="bodyLarge" style={styles.detailLabel}>{t('subscription.weeklyPrice')}</Text>
-                    <Text variant="headlineSmall" style={styles.detailValue}>
-                      {calculateWeeklyPrice().toFixed(0)} {t('common.rsd')}
-                    </Text>
-                  </RNView>
-                  <RNView style={[styles.detailRow, styles.totalRow]}>
-                    <Text variant="titleMedium" style={styles.totalLabel}>{t('subscription.total')}</Text>
-                    <Text variant="headlineMedium" style={styles.totalValue}>
-                      {calculateTotalPrice().toFixed(0)} {t('common.rsd')}
-                    </Text>
-                  </RNView>
-                </Surface>
-
-                {/* Low Season Notice for existing subscribers */}
-                {weeklyStock?.isLowSeason && (
-                  <Surface style={[styles.detailsCard, { backgroundColor: '#fff3e0', marginBottom: 12 }]} elevation={1}>
-                    <RNView style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-                      <Text style={{ fontSize: 20, marginRight: 8 }}>🐔</Text>
-                      <Text variant="bodyMedium" style={{ color: '#e65100', textAlign: 'center', flex: 1 }}>
-                        {t('subscription.modificationsPaused')}
-                      </Text>
-                    </RNView>
-                  </Surface>
-                )}
-
-                <Button
-                  mode="outlined"
-                  onPress={() => setEditingSubscription(true)}
-                  style={[styles.button, weeklyStock?.isLowSeason && { opacity: 0.5 }]}
-                  icon="pencil"
-                  disabled={weeklyStock?.isLowSeason}
-                >
-                  {t('subscription.modifySubscription')}
-                </Button>
-                <Button
-                  mode="text"
-                  onPress={handleCancelSubscription}
-                  disabled={processing}
-                  loading={processing}
-                  style={styles.button}
-                  textColor={theme.colors.error}
-                  icon="close-circle-outline"
-                >
-                  {t('subscription.cancelSubscription')}
-                </Button>
+            {/* Low Season Notice */}
+            {weeklyStock.isLowSeason && (
+              <RNView style={styles.lowSeasonNotice}>
+                <Text style={styles.lowSeasonText}>🐔 {t('subscription.modificationsPaused')}</Text>
               </RNView>
-            </LinearGradient>
-          </Card>
+            )}
+
+            {/* Action Buttons */}
+            <RNView style={styles.actionRow}>
+              <Button
+                mode="outlined"
+                onPress={() => setEditingSubscription(true)}
+                disabled={weeklyStock.isLowSeason}
+                icon="pencil"
+                compact
+                style={[styles.actionButton, weeklyStock.isLowSeason && { opacity: 0.5 }]}
+              >
+                {t('common.edit')}
+              </Button>
+              <Button
+                mode="text"
+                onPress={handleCancelSubscription}
+                disabled={processing}
+                loading={processing}
+                textColor={theme.colors.error}
+                icon="close-circle-outline"
+                compact
+              >
+                {t('common.cancel')}
+              </Button>
+            </RNView>
+          </Surface>
         )}
 
-        {/* Low Season Notice */}
-        {weeklyStock?.isLowSeason && !subscription && (
-          <Card style={[styles.card, { borderColor: '#ff9800', borderWidth: 2 }]} mode="elevated">
-            <LinearGradient
-              colors={['#fff3e0', '#ffffff']}
-              style={styles.cardGradient}
+        {/* Low Season - No Subscription */}
+        {weeklyStock.isLowSeason && !subscription && (
+          <Surface style={styles.lowSeasonCard} elevation={2}>
+            <Text style={styles.lowSeasonCardText}>{t('subscription.canStillOrder', { cap: weeklyStock.lowSeasonOrderCap || 20 })}</Text>
+            <Button
+              mode="contained"
+              disabled={true}
+              style={{ opacity: 0.5, marginTop: 12 }}
+              icon="calendar-remove"
             >
-              <RNView style={styles.cardContent}>
-                <RNView style={[styles.activeHeader, { justifyContent: 'center' }]}>
-                  <RNView style={[styles.activeIconCircle, { backgroundColor: '#fff3e0' }]}>
-                    <Text style={styles.activeIcon}>🐔</Text>
-                  </RNView>
-                  <Text variant="headlineSmall" style={[styles.activeTitle, { color: '#e65100' }]}>
-                    {t('subscription.subscriptionsPaused')}
-                  </Text>
-                </RNView>
-                
-                <Surface style={styles.detailsCard} elevation={2}>
-                  <Text variant="bodyLarge" style={{ textAlign: 'center', color: '#666', marginBottom: 12 }}>
-                    {t('subscription.lowSeasonMessage')}
-                  </Text>
-                  <Text variant="bodyMedium" style={{ textAlign: 'center', color: '#888' }}>
-                    {t('subscription.canStillOrder', { cap: weeklyStock?.lowSeasonOrderCap || 20 })}
-                  </Text>
-                </Surface>
-                
-                <Button
-                  mode="contained"
-                  onPress={() => {}}
-                  disabled={true}
-                  style={[styles.button, { opacity: 0.5 }]}
-                  icon="calendar-remove"
-                >
-                  {t('subscription.subscriptionsUnavailable')}
-                </Button>
-              </RNView>
-            </LinearGradient>
-          </Card>
+              {t('subscription.subscriptionsUnavailable')}
+            </Button>
+          </Surface>
         )}
 
         {/* Subscription Form */}
-        {(!subscription || editingSubscription) && !weeklyStock?.isLowSeason && (
-          <>
-            <Card style={styles.card} mode="elevated">
-              <Card.Content>
-                <Text variant="titleLarge" style={styles.cardTitle}>
-                  {subscription ? t('subscription.editSubscription') : t('subscription.createSubscription')}
-                </Text>
-                
-                {/* Quantity Selector */}
-                <Text variant="titleMedium" style={styles.sectionLabel}>{t('subscription.weeklyQuantity')}</Text>
-                <RNView style={styles.quantityContainer}>
-                  <IconButton
-                    icon="minus-circle"
-                    size={48}
-                    iconColor={subscriptionQuantity <= 10 ? theme.colors.outlineVariant : theme.colors.tertiary}
-                    onPress={decrementSubscriptionQuantity}
-                    disabled={subscriptionQuantity <= 10 || processing}
-                  />
-                  
-                  <Surface style={styles.quantityDisplay} elevation={2}>
-                    <Text variant="displayMedium" style={styles.quantityNumber}>
-                      {subscriptionQuantity}
-                    </Text>
-                    <Text variant="bodyLarge" style={styles.quantityLabel}>
-                      {t('subscription.eggsPerWeek')}
-                    </Text>
-                    <Chip icon="egg" mode="outlined" style={styles.dozenChip}>
-                      {subscriptionQuantity / 10} dozen
-                    </Chip>
-                  </Surface>
-                  
-                  <IconButton
-                    icon="plus-circle"
-                    size={48}
-                    iconColor={subscriptionQuantity >= 30 ? theme.colors.outlineVariant : theme.colors.tertiary}
-                    onPress={incrementSubscriptionQuantity}
-                    disabled={subscriptionQuantity >= 30 || processing}
-                  />
-                </RNView>
+        {showForm && (
+          <Surface style={styles.formCard} elevation={2}>
+            <Text style={styles.formTitle}>
+              {subscription ? t('subscription.editSubscription') : t('subscription.createSubscription')}
+            </Text>
 
-                <Text variant="bodySmall" style={styles.maxText}>
-                  {t('subscription.maxPerWeek')}
-                </Text>
+            {/* Quantity Selector */}
+            <Text style={styles.sectionLabel}>{t('subscription.weeklyQuantity')}</Text>
+            <RNView style={styles.quantityRow}>
+              <IconButton
+                icon="minus-circle"
+                size={36}
+                iconColor={subscriptionQuantity <= 10 ? theme.colors.outlineVariant : theme.colors.tertiary}
+                onPress={decrementSubscriptionQuantity}
+                disabled={subscriptionQuantity <= 10 || processing}
+              />
+              <RNView style={styles.quantityDisplay}>
+                <Text style={styles.quantityNumber}>{subscriptionQuantity}</Text>
+                <Text style={styles.quantityLabel}>{t('common.eggs')}</Text>
+              </RNView>
+              <IconButton
+                icon="plus-circle"
+                size={36}
+                iconColor={subscriptionQuantity >= 30 ? theme.colors.outlineVariant : theme.colors.tertiary}
+                onPress={incrementSubscriptionQuantity}
+                disabled={subscriptionQuantity >= 30 || processing}
+              />
+            </RNView>
 
-                {/* Period Selector */}
-                <Text variant="titleMedium" style={styles.sectionLabel}>{t('subscription.subscriptionDuration')}</Text>
-                <Surface style={styles.periodContainer} elevation={1}>
-                  <RNView style={styles.periodHeader}>
-                    <Text variant="bodyMedium" style={styles.periodHeaderText}>{t('subscription.selected')}</Text>
-                    <Chip mode="flat" style={styles.periodChip}>
-                      {subscriptionPeriod} {subscriptionPeriod === 1 ? 'week' : 'weeks'}
-                    </Chip>
-                  </RNView>
-                  <RNView style={styles.periodGrid}>
-                    {[2, 3, 4].map((weeks) => (
-                      <Button
-                        key={weeks}
-                        mode={subscriptionPeriod === weeks ? 'contained' : 'outlined'}
-                        onPress={() => setSubscriptionPeriod(weeks)}
-                        style={styles.periodButton}
-                        buttonColor={subscriptionPeriod === weeks ? theme.colors.primary : 'transparent'}
-                        textColor={subscriptionPeriod === weeks ? '#fff' : theme.colors.primary}
-                        compact
-                      >
-                        {weeks} {weeks === 1 ? 'week' : 'weeks'}
-                      </Button>
-                    ))}
-                  </RNView>
-                </Surface>
-                
-                <Text variant="bodySmall" style={styles.periodNote}>
-                  {t('subscription.periodNote')}
-                </Text>
-              </Card.Content>
-            </Card>
+            {/* Period Selector */}
+            <Text style={styles.sectionLabel}>{t('subscription.subscriptionDuration')}</Text>
+            <RNView style={styles.periodGrid}>
+              {[2, 3, 4].map((weeks) => (
+                <Button
+                  key={weeks}
+                  mode={subscriptionPeriod === weeks ? 'contained' : 'outlined'}
+                  onPress={() => setSubscriptionPeriod(weeks)}
+                  style={styles.periodButton}
+                  buttonColor={subscriptionPeriod === weeks ? theme.colors.tertiary : 'transparent'}
+                  textColor={subscriptionPeriod === weeks ? '#fff' : theme.colors.tertiary}
+                  compact
+                >
+                  {weeks} {t('common.weeks')}
+                </Button>
+              ))}
+            </RNView>
 
-            {/* Price Card */}
-            <Card style={styles.priceCard} mode="elevated">
-              <LinearGradient
-                colors={[theme.colors.tertiary, theme.colors.tertiaryContainer]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.priceGradient}
-              >
-                <RNView style={styles.priceContent}>
-                  <Text style={styles.priceLabel}>{t('subscription.subscriptionSummary')}</Text>
-                  
-                  <RNView style={styles.priceSummary}>
-                    <RNView style={styles.summaryRow}>
-                      <Text style={styles.summaryLabel}>{t('subscription.weeklyPrice')}</Text>
-                      <Text style={styles.summaryValue}>{calculateWeeklyPrice().toFixed(0)} {t('common.rsd')}</Text>
-                    </RNView>
-                    <RNView style={styles.summaryRow}>
-                      <Text style={styles.summaryLabel}>{t('subscription.duration')}</Text>
-                      <Text style={styles.summaryValue}>{subscriptionPeriod} {t('common.weeks')}</Text>
-                    </RNView>
-                  </RNView>
-                  
-                  <Text style={styles.priceTotalLabel}>{t('subscription.totalPrice')}</Text>
-                  <Text style={styles.priceAmount}>{calculateTotalPrice().toFixed(0)} {t('common.rsd')}</Text>
-                  <Text style={styles.priceDetails}>
-                    {subscriptionQuantity} eggs × {subscriptionPeriod} weeks
-                  </Text>
-                </RNView>
-              </LinearGradient>
-            </Card>
+            {/* Price Summary */}
+            <RNView style={styles.priceSummary}>
+              <RNView style={styles.priceRow}>
+                <Text style={styles.priceLabel}>{t('subscription.totalPrice')}</Text>
+                <Text style={styles.priceAmount}>{calculateTotalPrice().toFixed(0)} {t('common.rsd')}</Text>
+              </RNView>
+              <Text style={styles.priceDetails}>
+                {subscriptionQuantity} {t('common.eggs')} × {subscriptionPeriod} {t('common.weeks')}
+              </Text>
+            </RNView>
 
             {/* Action Buttons */}
-            {subscription ? (
-              <>
-                <Button
-                  mode="contained"
-                  onPress={() => handleUpdateSubscription()}
-                  loading={processing}
-                  disabled={processing}
-                  style={styles.subscribeButton}
-                  contentStyle={styles.subscribeButtonContent}
-                  labelStyle={styles.subscribeButtonLabel}
-                  buttonColor={theme.colors.tertiary}
-                  icon="check"
-                >
-                  {t('subscription.updateSubscription')}
-                </Button>
-                <Button
-                  mode="outlined"
-                  onPress={() => {
-                    setEditingSubscription(false);
-                    setSubscriptionQuantity(subscription.quantity);
-                    setSubscriptionPeriod(subscription.period || 4);
-                  }}
-                  disabled={processing}
-                  style={styles.button}
-                  icon="close"
-                >
-                  {t('subscription.cancelChanges')}
-                </Button>
-              </>
-            ) : (
+            <Button
+              mode="contained"
+              onPress={() => subscription ? handleUpdateSubscription() : handleSubscribe()}
+              loading={processing}
+              disabled={processing}
+              style={styles.subscribeButton}
+              buttonColor={theme.colors.tertiary}
+              icon={subscription ? "check" : "calendar-check"}
+            >
+              {subscription ? t('subscription.updateSubscription') : t('subscription.subscribeNow')}
+            </Button>
+
+            {subscription && (
               <Button
-                mode="contained"
-                onPress={() => handleSubscribe()}
-                loading={processing}
+                mode="text"
+                onPress={() => {
+                  setEditingSubscription(false);
+                  setSubscriptionQuantity(subscription.quantity);
+                  setSubscriptionPeriod(subscription.period || 4);
+                }}
                 disabled={processing}
-                style={styles.subscribeButton}
-                contentStyle={styles.subscribeButtonContent}
-                labelStyle={styles.subscribeButtonLabel}
-                buttonColor={theme.colors.tertiary}
-                icon="calendar-check"
               >
-                {processing ? t('order.processing') : t('subscription.subscribeNow')}
+                {t('subscription.cancelChanges')}
               </Button>
             )}
-          </>
+          </Surface>
         )}
 
-        {/* Benefits Card */}
-        <Card style={styles.benefitsCard} mode="outlined">
-          <Card.Content>
-            <Text variant="titleLarge" style={styles.benefitsTitle}>{t('subscription.whySubscribe')}</Text>
-            
-            {[
-              { icon: '🎯', text: t('subscription.benefit1') },
-              { icon: '📦', text: t('subscription.benefit2') },
-              { icon: '🔄', text: t('subscription.benefit4') },
-            ].map((benefit, index) => (
-              <RNView key={index} style={styles.benefitRow}>
-                <Text style={styles.benefitIcon}>{benefit.icon}</Text>
-                <Text variant="bodyMedium" style={styles.benefitText}>
-                  {benefit.text}
-                </Text>
-              </RNView>
-            ))}
-          </Card.Content>
-        </Card>
+        {/* Benefits */}
+        <Surface style={styles.benefitsCard} elevation={1}>
+          <Text style={styles.benefitsTitle}>{t('subscription.whySubscribe')}</Text>
+          {[
+            { icon: '🎯', text: t('subscription.benefit1') },
+            { icon: '📦', text: t('subscription.benefit2') },
+            { icon: '🔄', text: t('subscription.benefit4') },
+          ].map((benefit, index) => (
+            <RNView key={index} style={styles.benefitRow}>
+              <Text style={styles.benefitIcon}>{benefit.icon}</Text>
+              <Text style={styles.benefitText}>{benefit.text}</Text>
+            </RNView>
+          ))}
+        </Surface>
       </ScrollView>
 
       <Snackbar
@@ -555,82 +411,43 @@ export default function SubscriptionScreen() {
         visible={!!errorMessage}
         onDismiss={() => setErrorMessage(null)}
         duration={3000}
-        action={{
-          label: 'Dismiss',
-          onPress: () => setErrorMessage(null),
-        }}
         style={{ backgroundColor: theme.colors.error }}
       >
         {errorMessage}
       </Snackbar>
 
-      {/* Confirmation Dialog for Next Week Start */}
+      {/* Next Week Confirmation Dialog */}
       <Portal>
         <Dialog
           visible={!!nextWeekConfirmation?.show}
           onDismiss={() => setNextWeekConfirmation(null)}
         >
-          <Dialog.Icon icon="calendar-alert" size={60} />
-          <Dialog.Title style={{ textAlign: 'center', fontSize: 20 }}>
-            No Stock Available This Week
+          <Dialog.Icon icon="calendar-alert" size={48} />
+          <Dialog.Title style={{ textAlign: 'center', fontSize: 18 }}>
+            {t('subscription.noStockThisWeek')}
           </Dialog.Title>
           <Dialog.Content>
-            <Paragraph style={{ textAlign: 'center', marginBottom: 16, fontSize: 16 }}>
-              Unfortunately, there are no eggs left for this week.
-            </Paragraph>
-            <Paragraph style={{ textAlign: 'center', marginBottom: 12, fontSize: 16, fontWeight: 'bold' }}>
-              Would you like to start your subscription from next week instead?
+            <Paragraph style={{ textAlign: 'center', marginBottom: 12 }}>
+              {t('subscription.startNextWeek')}
             </Paragraph>
             {nextWeekConfirmation && (
-              <Surface style={{ 
-                padding: 12, 
-                borderRadius: 8, 
-                backgroundColor: theme.colors.primaryContainer,
-                marginTop: 8 
-              }}>
-                <Text style={{ 
-                  textAlign: 'center', 
-                  fontWeight: 'bold', 
-                  color: theme.colors.primary,
-                  fontSize: 16 
-                }}>
-                  📅 Next Week
-                </Text>
-                <Text style={{ 
-                  textAlign: 'center', 
-                  fontWeight: '600',
-                  color: theme.colors.onPrimaryContainer,
-                  marginTop: 4,
-                  fontSize: 15
-                }}>
-                  {new Date(nextWeekConfirmation.nextWeekStart).toLocaleDateString('en-US', { 
-                    month: 'short', 
-                    day: 'numeric',
-                    year: 'numeric'
-                  })} - {new Date(nextWeekConfirmation.nextWeekEnd).toLocaleDateString('en-US', { 
-                    month: 'short', 
-                    day: 'numeric',
-                    year: 'numeric'
-                  })}
+              <Surface style={styles.nextWeekBadge}>
+                <Text style={styles.nextWeekText}>
+                  📅 {new Date(nextWeekConfirmation.nextWeekStart).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(nextWeekConfirmation.nextWeekEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                 </Text>
               </Surface>
             )}
           </Dialog.Content>
-          <Dialog.Actions style={{ justifyContent: 'space-between', paddingHorizontal: 40 }}>
-            <Button 
-              onPress={() => setNextWeekConfirmation(null)}
-              mode="outlined"
-              style={{ minWidth: 100, marginLeft: 16 }}
-            >
-              No
+          <Dialog.Actions style={{ justifyContent: 'space-around' }}>
+            <Button onPress={() => setNextWeekConfirmation(null)} mode="outlined">
+              {t('common.no')}
             </Button>
             <Button 
               onPress={() => subscription ? handleUpdateSubscription(true) : handleSubscribe(true)} 
               mode="contained"
-              style={{ minWidth: 100, marginRight: 16 }}
               icon="check"
             >
-              Yes
+              {t('common.yes')}
             </Button>
           </Dialog.Actions>
         </Dialog>
@@ -642,309 +459,227 @@ export default function SubscriptionScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#fef5f1',
+  },
+  scrollView: {
+    flex: 1,
   },
   content: {
+    padding: HORIZONTAL_PADDING,
+    paddingTop: 16,
     paddingBottom: 24,
   },
-  centerContainer: {
-    flex: 1,
+
+  // Hero Section
+  heroSection: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  heroIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
-  },
-  loadingText: {
-    marginTop: 12,
-  },
-  header: {
-    padding: 32,
-    paddingTop: 70,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  headerIcon: {
-    fontSize: 56,
     marginBottom: 12,
   },
-  headerTitle: {
-    fontSize: 32,
+  heroIconActive: {
+    backgroundColor: '#d4f4f1',
+  },
+  heroIcon: {
+    fontSize: 36,
+  },
+  heroTitle: {
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#2d3748',
-    marginBottom: 8,
-    textShadowColor: 'rgba(255, 255, 255, 0.6)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 1,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  heroSubtitle: {
+    fontSize: 15,
+    color: '#666',
     textAlign: 'center',
   },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#2d3748',
-    opacity: 0.85,
-    textShadowColor: 'rgba(255, 255, 255, 0.6)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 1,
-  },
-  card: {
-    marginHorizontal: 16,
-    marginBottom: 16,
+
+  // Subscription Card
+  subscriptionCard: {
+    backgroundColor: '#ffffff',
     borderRadius: 20,
-    overflow: 'hidden',
-  },
-  cardGradient: {
     padding: 20,
-  },
-  cardContent: {
-    gap: 16,
-  },
-  activeHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 8,
-  },
-  activeIconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  activeIcon: {
-    fontSize: 28,
-    color: '#4ecdc4',
-  },
-  activeTitle: {
-    fontWeight: 'bold',
-    color: '#2d3748',
-  },
-  detailsCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
+    marginBottom: 16,
   },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
-    flexWrap: 'wrap',
-    gap: 4,
   },
   detailLabel: {
+    fontSize: 15,
     color: '#666',
-    flexShrink: 0,
   },
   detailValue: {
+    fontSize: 17,
     fontWeight: 'bold',
     color: '#2d3748',
-    flexShrink: 1,
-    textAlign: 'right',
   },
-  totalRow: {
-    marginTop: 8,
-    paddingTop: 16,
-    borderTopWidth: 2,
-    borderTopColor: '#e0e0e0',
+  lowSeasonNotice: {
+    backgroundColor: '#fff3e0',
+    borderRadius: 8,
+    padding: 10,
+    marginVertical: 8,
   },
-  totalLabel: {
-    color: '#4ecdc4',
-    fontWeight: 'bold',
-  },
-  totalValue: {
-    color: '#4ecdc4',
-    fontWeight: 'bold',
-  },
-  button: {
-    borderRadius: 12,
-  },
-  cardTitle: {
-    fontWeight: 'bold',
-    marginBottom: 24,
+  lowSeasonText: {
+    color: '#e65100',
+    fontSize: 13,
     textAlign: 'center',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  actionButton: {
+    flex: 1,
+    marginRight: 8,
+  },
+
+  // Low Season Card
+  lowSeasonCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  lowSeasonCardText: {
+    fontSize: 15,
+    color: '#666',
+    textAlign: 'center',
+  },
+
+  // Form Card
+  formCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+  },
+  formTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2d3748',
+    textAlign: 'center',
+    marginBottom: 16,
   },
   sectionLabel: {
-    fontWeight: 'bold',
-    marginBottom: 12,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 8,
     textAlign: 'center',
   },
-  quantityContainer: {
+  quantityRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   quantityDisplay: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 24,
     alignItems: 'center',
-    minWidth: 160,
-    marginHorizontal: 8,
+    paddingHorizontal: 20,
   },
   quantityNumber: {
+    fontSize: 40,
     fontWeight: 'bold',
     color: '#2d3748',
   },
   quantityLabel: {
+    fontSize: 13,
     color: '#666',
-    marginTop: 4,
-    marginBottom: 8,
-  },
-  dozenChip: {
-    marginTop: 4,
-  },
-  maxText: {
-    textAlign: 'center',
-    color: '#666',
-    marginBottom: 24,
-  },
-  periodContainer: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
-  },
-  periodHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  periodHeaderText: {
-    fontWeight: '600',
-    color: '#2d3748',
-  },
-  periodChip: {
-    backgroundColor: '#4ecdc4',
-    minWidth: 80,
+    marginTop: -2,
   },
   periodGrid: {
     flexDirection: 'row',
-    gap: 12,
     justifyContent: 'center',
+    gap: 8,
+    marginBottom: 16,
   },
   periodButton: {
-    flex: 1,
+    minWidth: 80,
   },
-  periodNote: {
-    textAlign: 'center',
-    color: '#666',
+  priceSummary: {
+    backgroundColor: '#f8f4f2',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
   },
-  priceCard: {
-    marginHorizontal: 16,
-    marginBottom: 20,
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  priceGradient: {
-    padding: 28,
-  },
-  priceContent: {
+  priceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
   priceLabel: {
-    fontSize: 18,
-    color: '#2d3748',
-    opacity: 0.85,
-    marginBottom: 16,
-    fontWeight: '600',
-    textShadowColor: 'rgba(255, 255, 255, 0.6)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 1,
-  },
-  priceSummary: {
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    borderRadius: 12,
-    padding: 16,
-    width: '100%',
-    marginBottom: 16,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-    flexWrap: 'wrap',
-    gap: 4,
-  },
-  summaryLabel: {
-    fontSize: 16,
-    color: '#2d3748',
-    opacity: 0.85,
-    flexShrink: 0,
-  },
-  summaryValue: {
-    fontSize: 16,
-    color: '#2d3748',
-    fontWeight: 'bold',
-    flexShrink: 1,
-    textAlign: 'right',
-  },
-  priceTotalLabel: {
-    fontSize: 16,
-    color: '#2d3748',
-    opacity: 0.85,
-    marginBottom: 8,
-    textShadowColor: 'rgba(255, 255, 255, 0.6)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 1,
+    fontSize: 15,
+    color: '#666',
   },
   priceAmount: {
-    fontSize: 48,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#2d3748',
-    marginBottom: 8,
-    textShadowColor: 'rgba(255, 255, 255, 0.6)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 1,
+    color: '#4ecdc4',
   },
   priceDetails: {
-    fontSize: 16,
-    color: '#2d3748',
-    opacity: 0.8,
-    textShadowColor: 'rgba(255, 255, 255, 0.6)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 1,
+    fontSize: 13,
+    color: '#888',
+    textAlign: 'right',
+    marginTop: 4,
   },
   subscribeButton: {
-    marginHorizontal: 16,
-    marginBottom: 12,
-    borderRadius: 16,
-    shadowColor: '#95e1d3',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    borderRadius: 12,
+    marginBottom: 8,
   },
-  subscribeButtonContent: {
-    paddingVertical: 12,
-  },
-  subscribeButtonLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
+
+  // Benefits Card
   benefitsCard: {
-    marginHorizontal: 16,
-    marginTop: 8,
-    borderRadius: 20,
-    borderColor: '#e0d4d0',
-    borderWidth: 2,
+    backgroundColor: '#fff0eb',
+    borderRadius: 16,
+    padding: 16,
   },
   benefitsTitle: {
+    fontSize: 15,
     fontWeight: 'bold',
-    marginBottom: 16,
+    color: '#524541',
+    marginBottom: 12,
     textAlign: 'center',
   },
   benefitRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
+    gap: 10,
+    marginBottom: 8,
   },
   benefitIcon: {
-    fontSize: 24,
+    fontSize: 18,
   },
   benefitText: {
     flex: 1,
     color: '#524541',
+    fontSize: 13,
+  },
+
+  // Next Week Badge
+  nextWeekBadge: {
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#e3f2fd',
+    marginTop: 8,
+  },
+  nextWeekText: {
+    textAlign: 'center',
+    fontWeight: '600',
+    color: '#1976d2',
   },
 });
