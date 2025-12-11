@@ -129,15 +129,18 @@ export function ConfirmPaymentDialog({
 
 const styles = StyleSheet.create({
   dialog: {
-    maxWidth: 360,
+    maxWidth: 340,
     alignSelf: 'center',
   },
   dialogTitle: {
     textAlign: 'center',
     fontWeight: 'bold',
+    fontSize: 18,
+    paddingHorizontal: 16,
   },
   dialogContent: {
     alignItems: 'center',
+    paddingHorizontal: 16,
   },
   dialogSubtitle: {
     fontSize: 14,
@@ -146,10 +149,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   qrCodeContainer: {
-    padding: 12,
+    padding: 16,
     backgroundColor: 'white',
     borderRadius: 12,
-    marginBottom: 12,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -157,36 +160,35 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   paymentDialogAmount: {
+    fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 16,
-    fontSize: 18,
     color: '#2d3748',
   },
   bankDetails: {
     width: '100%',
-    backgroundColor: '#f8f4f2',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
   },
   bankDetailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 4,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
   bankDetailLabel: {
-    color: '#666',
     fontSize: 13,
+    color: '#666',
   },
   bankDetailValue: {
+    fontSize: 13,
     fontWeight: '600',
     color: '#2d3748',
-    fontSize: 13,
   },
   dialogNote: {
     fontSize: 12,
-    color: '#888',
+    color: '#999',
     textAlign: 'center',
+    marginTop: 16,
     lineHeight: 18,
   },
   dialogActions: {
