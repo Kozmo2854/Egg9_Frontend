@@ -201,10 +201,11 @@ export default function DashboardScreen() {
   const isDelivered = ['delivered', 'completed'].includes(currentWeekOrder?.status || '') || 
                       ['delivered', 'completed'].includes(currentWeekSubscriptionOrder?.status || '') ||
                       weeklyStock?.allOrdersDelivered;
-  const isPickedUp = OrderHelpers.areAllOrdersPickedUp(currentWeekOrder, currentWeekSubscriptionOrder);
   const isPaid = OrderHelpers.areAllOrdersPaid(currentWeekOrder, currentWeekSubscriptionOrder);
   const isWaitingConfirmation = OrderHelpers.areOrdersWaitingForConfirmation(currentWeekOrder, currentWeekSubscriptionOrder);
-  const isComplete = isPickedUp && isPaid;
+  // Only check pickup status if orders are delivered
+  const isPickedUp = isDelivered && OrderHelpers.areAllOrdersPickedUp(currentWeekOrder, currentWeekSubscriptionOrder);
+  const isComplete = isDelivered && isPickedUp && isPaid;
   const hasDeliveryScheduled = weeklyStock?.deliveryDate && weeklyStock?.deliveryTime;
   const getTotalEggs = () => (currentWeekOrder?.quantity || 0) + (currentWeekSubscriptionOrder?.quantity || 0);
   const needsPayment = hasCurrentOrders && !isPaid;
@@ -416,7 +417,19 @@ export default function DashboardScreen() {
           <Text style={styles.heroEmoji}>{heroContent.emoji}</Text>
         )}
         <Text style={styles.heroTitle}>{heroContent.title}</Text>
-        <Text style={styles.heroSubtitle}>{heroContent.subtitle}</Text>
+        
+        {/* Available Eggs Badge - only for NO_ORDERS state */}
+        {state === 'NO_ORDERS' && weeklyStock.isOrderingOpen && (
+          <Surface style={styles.availableBadge} elevation={3}>
+            <Text style={styles.availableNumber}>{availableEggs}</Text>
+            <Text style={styles.availableLabel}>{t('dashboard.eggsAvailable')}</Text>
+          </Surface>
+        )}
+        
+        {/* Subtitle for other states or closed ordering */}
+        {(state !== 'NO_ORDERS' || !weeklyStock.isOrderingOpen) && (
+          <Text style={styles.heroSubtitle}>{heroContent.subtitle}</Text>
+        )}
       </View>
 
       {/* Payment Card - shown when payment needed (except in PICKED_UP_NOT_PAID where it's the only thing) */}
@@ -609,6 +622,29 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
+  },
+  availableBadge: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  availableNumber: {
+    fontSize: 48,
+    fontWeight: 'bold',
+    color: '#ff6b35',
+  },
+  availableLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
   },
   
   // Payment Card
