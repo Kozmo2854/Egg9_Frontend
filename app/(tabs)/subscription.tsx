@@ -19,6 +19,7 @@ import { WeeklyStock } from '@/types/models';
 import { useFocusEffect } from '@react-navigation/native';
 import { LoadingView, ErrorView } from '@/components/common';
 import { parseError } from '@/utils/errorHandling';
+import { useWeekContext } from '@/contexts/WeekContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const HORIZONTAL_PADDING = 16;
@@ -26,6 +27,7 @@ const HORIZONTAL_PADDING = 16;
 export default function SubscriptionScreen() {
   const theme = useTheme();
   const { t } = useTranslation();
+  const { setWeekDates } = useWeekContext();
   const [weeklyStock, setWeeklyStock] = useState<WeeklyStock | null>(null);
   const [subscription, setSubscription] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -58,6 +60,11 @@ export default function SubscriptionScreen() {
       ]);
       setWeeklyStock(stockData);
       setSubscription(subData);
+      
+      // Set week dates for header display
+      if (stockData) {
+        setWeekDates(stockData.weekStart, stockData.weekEnd);
+      }
       
       if (subData) {
         setSubscriptionQuantity(subData.quantity);

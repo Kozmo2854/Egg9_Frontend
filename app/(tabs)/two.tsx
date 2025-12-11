@@ -17,6 +17,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { LoadingView, ErrorView } from '@/components/common';
 import { parseError } from '@/utils/errorHandling';
 import { PaymentDialog, ConfirmPaymentDialog } from '@/components/PaymentDialog';
+import { useWeekContext } from '@/contexts/WeekContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const HORIZONTAL_PADDING = 16;
@@ -24,6 +25,7 @@ const HORIZONTAL_PADDING = 16;
 export default function OrderScreen() {
   const theme = useTheme();
   const { t } = useTranslation();
+  const { setWeekDates } = useWeekContext();
   const [weeklyStock, setWeeklyStock] = useState<WeeklyStock | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -72,6 +74,11 @@ export default function OrderScreen() {
       setCurrentWeekOrder(oneTimeOrder);
       setAvailableEggs(available);
       setPaymentSettings(settings.paymentSettings);
+      
+      // Set week dates for header display
+      if (stockData) {
+        setWeekDates(stockData.weekStart, stockData.weekEnd);
+      }
       
       if (oneTimeOrder) {
         setQuantity(oneTimeOrder.quantity);
