@@ -341,12 +341,28 @@ export default function DashboardScreen() {
   const getHeroContent = () => {
     switch (state) {
       case 'NO_ORDERS':
+        // Determine why ordering might be closed
+        const stockNotSetup = !weeklyStock.isOrderingOpen && !weeklyStock.allOrdersDelivered;
+        const ordersDelivered = weeklyStock.allOrdersDelivered;
+        
+        if (stockNotSetup) {
+          return {
+            emoji: '📦',
+            title: t('order.stockNotSetUp'),
+            subtitle: t('order.stockNotSetUpDesc'),
+          };
+        }
+        if (ordersDelivered) {
+          return {
+            emoji: '✅',
+            title: t('order.ordersDelivered'),
+            subtitle: t('order.ordersDeliveredDesc'),
+          };
+        }
         return {
           emoji: '🐣',
           title: t('dashboard.noOrdersYet'),
-          subtitle: weeklyStock.isOrderingOpen 
-            ? `${availableEggs} ${t('dashboard.eggsAvailable')}`
-            : t('dashboard.orderingClosed'),
+          subtitle: `${availableEggs} ${t('dashboard.eggsAvailable')}`,
         };
       case 'ORDER_PLACED':
         return {
