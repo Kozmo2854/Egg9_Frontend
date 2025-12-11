@@ -199,6 +199,8 @@ const styles = StyleSheet.create({
     maxWidth: 280,
     alignSelf: 'center',
     borderRadius: 16,
+    zIndex: 9999,
+    elevation: 24,
   },
   confirmDialogContent: {
     padding: 20,

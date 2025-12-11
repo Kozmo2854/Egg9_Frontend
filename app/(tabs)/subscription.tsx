@@ -452,9 +452,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
+    flexGrow: 1,
     padding: HORIZONTAL_PADDING,
     paddingTop: 16,
     paddingBottom: 24,
+    justifyContent: 'center',
   },
 
   // Card Header

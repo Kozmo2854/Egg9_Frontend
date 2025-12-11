@@ -433,6 +433,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: HORIZONTAL_PADDING,
     paddingTop: 16,
+    justifyContent: 'center',
   },
   
   // Warning Section (only shown when can't order)
