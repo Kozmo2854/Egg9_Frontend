@@ -277,7 +277,6 @@ export default function TabLayout() {
               name="admin"
               options={{
                 title: t('tabs.adminPanel'),
-                headerTitle: '',
                 tabBarIcon: ({ color }) => <TabBarIcon name="dashboard" color={color} />,
               }}
             />
@@ -285,7 +284,6 @@ export default function TabLayout() {
               name="users"
               options={{
                 title: t('tabs.users'),
-                headerTitle: '',
                 tabBarIcon: ({ color }) => <TabBarIcon name="users" color={color} />,
               }}
             />
@@ -293,7 +291,6 @@ export default function TabLayout() {
               name="payment-settings"
               options={{
                 title: t('tabs.payment'),
-                headerTitle: '',
                 tabBarIcon: ({ color }) => <TabBarIcon name="credit-card" color={color} />,
               }}
             />
@@ -302,7 +299,6 @@ export default function TabLayout() {
               options={{
                 href: null, // Hide from tabs
                 title: t('admin.userDetails'),
-                headerTitle: '',
               }}
             />
             <Tabs.Screen
@@ -357,7 +353,6 @@ export default function TabLayout() {
             name="index"
             options={{
               title: t('tabs.home'),
-              headerTitle: '',
               tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
             }}
           />
@@ -365,7 +360,6 @@ export default function TabLayout() {
             name="two"
             options={{
               title: t('tabs.order'),
-              headerTitle: '',
               tabBarIcon: ({ color }) => <TabBarIcon name="shopping-basket" color={color} />,
             }}
           />
@@ -373,7 +367,6 @@ export default function TabLayout() {
             name="subscription"
             options={{
               title: t('tabs.subscription'),
-              headerTitle: '',
               tabBarIcon: ({ color }) => <TabBarIcon name="refresh" color={color} />,
             }}
           />
