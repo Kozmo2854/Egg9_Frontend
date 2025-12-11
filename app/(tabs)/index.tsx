@@ -55,6 +55,7 @@ export default function DashboardScreen() {
   const [confirmingPickup, setConfirmingPickup] = useState(false);
   const [snackbar, setSnackbar] = useState<{ visible: boolean; message: string }>({ visible: false, message: '' });
   const [paymentOrderContext, setPaymentOrderContext] = useState<{ type: 'current' | 'outstanding', order?: any } | null>(null);
+  const [confirmPaymentVisible, setConfirmPaymentVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -141,7 +142,16 @@ export default function DashboardScreen() {
            OrderHelpers.getUnpaidSubmittedAmount(currentWeekOrder, currentWeekSubscriptionOrder);
   };
 
+  const showConfirmPayment = () => {
+    setConfirmPaymentVisible(true);
+  };
+
+  const hideConfirmPayment = () => {
+    setConfirmPaymentVisible(false);
+  };
+
   const handleMarkPaymentSubmitted = async () => {
+    hideConfirmPayment();
     try {
       setMarkingPayment(true);
       
@@ -239,7 +249,7 @@ export default function DashboardScreen() {
           <View style={styles.qrCodeContainer}>
             <QRCode
               value={generateNBSIPSQRCode(paymentOrderContext?.type === 'outstanding' ? paymentOrderContext.order?.total : undefined)}
-              size={180}
+              size={160}
               backgroundColor="white"
             />
           </View>
@@ -262,9 +272,8 @@ export default function DashboardScreen() {
           {((paymentOrderContext?.type === 'outstanding' && !paymentOrderContext.order?.paymentSubmitted) ||
             (paymentOrderContext?.type === 'current' && !OrderHelpers.areAllOrdersPaymentSubmitted(currentWeekOrder, currentWeekSubscriptionOrder))) && (
             <Button 
-              onPress={handleMarkPaymentSubmitted} 
+              onPress={showConfirmPayment} 
               mode="contained"
-              loading={markingPayment}
               disabled={markingPayment}
               buttonColor={theme.colors.tertiary}
               style={{ marginRight: 8 }}
@@ -273,6 +282,30 @@ export default function DashboardScreen() {
             </Button>
           )}
           <Button onPress={hidePaymentDialog} mode="outlined">{t('common.close')}</Button>
+        </Dialog.Actions>
+      </Dialog>
+    </Portal>
+  );
+
+  // Render confirm payment dialog
+  const renderConfirmPaymentDialog = () => (
+    <Portal>
+      <Dialog visible={confirmPaymentVisible} onDismiss={hideConfirmPayment} style={styles.confirmDialog}>
+        <Dialog.Title style={styles.confirmDialogTitle}>{t('dashboard.confirmPaymentTitle')}</Dialog.Title>
+        <Dialog.Content>
+          <Text style={styles.confirmDialogText}>{t('dashboard.confirmPaymentMessage')}</Text>
+        </Dialog.Content>
+        <Dialog.Actions>
+          <Button onPress={hideConfirmPayment} mode="outlined" style={{ marginRight: 8 }}>{t('common.cancel')}</Button>
+          <Button 
+            onPress={handleMarkPaymentSubmitted} 
+            mode="contained"
+            loading={markingPayment}
+            disabled={markingPayment}
+            buttonColor={theme.colors.tertiary}
+          >
+            {t('common.confirm')}
+          </Button>
         </Dialog.Actions>
       </Dialog>
     </Portal>
@@ -452,8 +485,7 @@ export default function DashboardScreen() {
                   <Button 
                     mode="contained" 
                     compact 
-                    onPress={handleMarkPaymentSubmitted}
-                    loading={markingPayment}
+                    onPress={showConfirmPayment}
                     disabled={markingPayment}
                     buttonColor={theme.colors.tertiary}
                     labelStyle={styles.smallButtonLabel}
@@ -488,8 +520,7 @@ export default function DashboardScreen() {
                   </Button>
                   <Button 
                     mode="contained" 
-                    onPress={handleMarkPaymentSubmitted}
-                    loading={markingPayment}
+                    onPress={showConfirmPayment}
                     disabled={markingPayment}
                     buttonColor={theme.colors.tertiary}
                     style={styles.paymentLargeButton}
@@ -539,7 +570,7 @@ export default function DashboardScreen() {
                 </>
               ) : (
                 <>
-                  <Text style={styles.bottomCardTitle}>{t('dashboard.seeOrder')}</Text>
+                  <Text style={styles.bottomCardTitle}>{t('tabs.order')}</Text>
                   <Text style={styles.bottomCardQuantity}>{currentWeekOrder.quantity} {t('common.eggs')}</Text>
                 </>
               )}
@@ -561,8 +592,9 @@ export default function DashboardScreen() {
                 </>
               ) : (
                 <>
-                  <Text style={styles.bottomCardTitle}>{t('dashboard.seeSub')}</Text>
+                  <Text style={styles.bottomCardTitle}>{t('tabs.subscription')}</Text>
                   <Text style={styles.bottomCardQuantity}>{subscription.quantity} {t('common.eggs')}</Text>
+                  <Text style={styles.bottomCardWeeks}>{subscription.weeksRemaining} {t('dashboard.weeksLeft')}</Text>
                 </>
               )}
             </Surface>
@@ -571,6 +603,7 @@ export default function DashboardScreen() {
       )}
 
       {renderPaymentDialog()}
+      {renderConfirmPaymentDialog()}
       {renderSnackbar()}
     </ScrollView>
   );
@@ -789,6 +822,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 4,
   },
+  bottomCardWeeks: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
+  },
   
   // Outstanding Orders
   outstandingList: {
@@ -835,15 +873,31 @@ const styles = StyleSheet.create({
   
   // Payment Dialog
   paymentDialog: {
-    maxWidth: 360,
+    maxWidth: 340,
     alignSelf: 'center',
   },
   dialogTitle: {
     textAlign: 'center',
     fontWeight: 'bold',
+    fontSize: 18,
+    paddingHorizontal: 16,
   },
   dialogContent: {
     alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  // Confirm Payment Dialog
+  confirmDialog: {
+    maxWidth: 320,
+    alignSelf: 'center',
+  },
+  confirmDialogTitle: {
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
+  confirmDialogText: {
+    textAlign: 'center',
+    color: '#666',
   },
   dialogSubtitle: {
     fontSize: 14,

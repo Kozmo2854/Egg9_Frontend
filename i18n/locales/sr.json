@@ -338,7 +338,9 @@
     "markPaid": "Označi plaćeno",
     "showQR": "Prikaži QR",
     "seeOrder": "Vidi narudžbinu",
-    "seeSub": "Vidi pretplatu"
+    "seeSub": "Vidi pretplatu",
+    "confirmPaymentTitle": "Potvrda plaćanja",
+    "confirmPaymentMessage": "Da li ste sigurni da želite označiti ovu narudžbinu kao plaćenu?"
   },
   "settings": {
     "title": "Podešavanja",

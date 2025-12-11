@@ -338,7 +338,9 @@
     "markPaid": "Mark Paid",
     "showQR": "Show QR",
     "seeOrder": "See Order",
-    "seeSub": "See Sub"
+    "seeSub": "See Sub",
+    "confirmPaymentTitle": "Confirm Payment",
+    "confirmPaymentMessage": "Are you sure you want to mark this order as paid?"
   },
   "settings": {
     "title": "Settings",
