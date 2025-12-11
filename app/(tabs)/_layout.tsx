@@ -9,6 +9,7 @@ import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { apiService } from '@/services/api';
 import { useFocusEffect } from '@react-navigation/native';
 import { ScrollProvider, useScrollContext } from '@/contexts/ScrollContext';
+import { WeekProvider, useWeekContext } from '@/contexts/WeekContext';
 import { unregisterPushNotifications } from '@/utils/pushNotifications';
 import { DrawerMenu } from '@/components/DrawerMenu';
 
@@ -130,16 +131,38 @@ function HamburgerButton({ onPress }: { onPress: () => void }) {
   );
 }
 
-// Left side: Hamburger menu + User name
+// Format date helper
+function formatWeekDate(isoDate: string | null) {
+  if (!isoDate) return '';
+  const date = new Date(isoDate);
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// Left side: Hamburger menu
 function HeaderLeft({ onMenuPress }: { onMenuPress: () => void }) {
-  const { isLoggedIn, userName } = useAuthState();
+  const { isLoggedIn } = useAuthState();
 
   if (!isLoggedIn) return null;
 
   return (
     <View style={headerStyles.leftContainer}>
       <HamburgerButton onPress={onMenuPress} />
-      <Text style={headerStyles.userName}>{userName}</Text>
+    </View>
+  );
+}
+
+// Center: Week dates display
+function HeaderCenter() {
+  const { weekStart, weekEnd } = useWeekContext();
+  
+  if (!weekStart || !weekEnd) return null;
+  
+  return (
+    <View style={headerStyles.centerContainer}>
+      <Text style={headerStyles.weekIcon}>🥚</Text>
+      <Text style={headerStyles.weekDates}>
+        {formatWeekDate(weekStart)} - {formatWeekDate(weekEnd)}
+      </Text>
     </View>
   );
 }
@@ -169,14 +192,21 @@ const headerStyles = StyleSheet.create({
     marginLeft: 15,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
   },
   hamburgerButton: {
     padding: 8,
   },
-  userName: {
+  centerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  weekIcon: {
+    fontSize: 18,
+  },
+  weekDates: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#2d3748',
   },
   loginButton: {
@@ -229,19 +259,20 @@ export default function TabLayout() {
   if (isAdmin) {
     // Admin sees Admin Panel and User Management
     return (
-      <ScrollProvider>
-        <View style={{ flex: 1 }}>
-          <Tabs
-            screenOptions={{
-              tabBarActiveTintColor: Colors.light.tint,
-              headerShown: useClientOnlyValue(false, true),
-              headerLeft: () => <HeaderLeft onMenuPress={openDrawer} />,
-              headerRight: () => <HeaderRight />,
-              headerTransparent: Platform.OS === 'web',
-              headerBackground: () => <HeaderBackground />,
-              headerTitle: '',
-              headerStyle: { backgroundColor: Platform.OS === 'web' ? 'transparent' : '#fef5f1' },
-            }}>
+      <WeekProvider>
+        <ScrollProvider>
+          <View style={{ flex: 1 }}>
+            <Tabs
+              screenOptions={{
+                tabBarActiveTintColor: Colors.light.tint,
+                headerShown: useClientOnlyValue(false, true),
+                headerLeft: () => <HeaderLeft onMenuPress={openDrawer} />,
+                headerTitle: () => <HeaderCenter />,
+                headerRight: () => <HeaderRight />,
+                headerTransparent: Platform.OS === 'web',
+                headerBackground: () => <HeaderBackground />,
+                headerStyle: { backgroundColor: Platform.OS === 'web' ? 'transparent' : '#fef5f1' },
+              }}>
             <Tabs.Screen
               name="admin"
               options={{
@@ -293,33 +324,35 @@ export default function TabLayout() {
               }}
             />
           </Tabs>
-          <DrawerMenu
-            isOpen={drawerOpen}
-            onClose={closeDrawer}
-            userName={userName}
-            userEmail={userEmail}
-            onLogout={handleDrawerLogout}
-          />
-        </View>
-      </ScrollProvider>
+            <DrawerMenu
+              isOpen={drawerOpen}
+              onClose={closeDrawer}
+              userName={userName}
+              userEmail={userEmail}
+              onLogout={handleDrawerLogout}
+            />
+          </View>
+        </ScrollProvider>
+      </WeekProvider>
     );
   }
 
   // Regular users see Home, Order, Subscription
   return (
-    <ScrollProvider>
-      <View style={{ flex: 1 }}>
-        <Tabs
-          screenOptions={{
-            tabBarActiveTintColor: Colors.light.tint,
-            headerShown: useClientOnlyValue(false, true),
-            headerLeft: () => <HeaderLeft onMenuPress={openDrawer} />,
-            headerRight: () => <HeaderRight />,
-            headerTransparent: Platform.OS === 'web',
-            headerBackground: () => <HeaderBackground />,
-            headerTitle: '',
-            headerStyle: { backgroundColor: Platform.OS === 'web' ? 'transparent' : '#fef5f1' },
-          }}>
+    <WeekProvider>
+      <ScrollProvider>
+        <View style={{ flex: 1 }}>
+          <Tabs
+            screenOptions={{
+              tabBarActiveTintColor: Colors.light.tint,
+              headerShown: useClientOnlyValue(false, true),
+              headerLeft: () => <HeaderLeft onMenuPress={openDrawer} />,
+              headerTitle: () => <HeaderCenter />,
+              headerRight: () => <HeaderRight />,
+              headerTransparent: Platform.OS === 'web',
+              headerBackground: () => <HeaderBackground />,
+              headerStyle: { backgroundColor: Platform.OS === 'web' ? 'transparent' : '#fef5f1' },
+            }}>
           <Tabs.Screen
             name="index"
             options={{
@@ -369,14 +402,15 @@ export default function TabLayout() {
             }}
           />
         </Tabs>
-        <DrawerMenu
-          isOpen={drawerOpen}
-          onClose={closeDrawer}
-          userName={userName}
-          userEmail={userEmail}
-          onLogout={handleDrawerLogout}
-        />
-      </View>
-    </ScrollProvider>
+          <DrawerMenu
+            isOpen={drawerOpen}
+            onClose={closeDrawer}
+            userName={userName}
+            userEmail={userEmail}
+            onLogout={handleDrawerLogout}
+          />
+        </View>
+      </ScrollProvider>
+    </WeekProvider>
   );
 }

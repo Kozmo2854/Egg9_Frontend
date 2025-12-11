@@ -69,6 +69,30 @@ eas update --channel production --message "Description"
 - **i18next** - Translations in `i18n/locales/`
 - **API Service** - `services/api.ts`
 
+## Dashboard States
+
+The home screen (Dashboard) has three main states:
+
+| State | Condition | Display |
+|-------|-----------|---------|
+| **Outstanding** | User has unpaid orders from previous weeks | Takeover - only shows outstanding orders, blocks other actions |
+| **Empty** | No orders and no subscription | CTA with Subscribe/Order buttons |
+| **Active** | Has current week orders | 4 compact cards: Delivery, Payment, Order, Subscription |
+
+### Sub-states for Active Orders:
+- **Pending** - Delivery not scheduled yet
+- **Scheduled** - Delivery date/time set
+- **Delivered** - Orders delivered, needs pickup confirmation
+- **Complete** - All picked up, "See you next week"
+
+### Icon Consistency:
+| Element | Icon |
+|---------|------|
+| Orders (One-time) | 🛒 / `shopping-basket` |
+| Subscription | 🔄 / `refresh` |
+| Delivery | 🚚 |
+| Payment | 💳 |
+
 ## Environment Variables
 
 - `EXPO_PUBLIC_API_URL` - Backend API URL
