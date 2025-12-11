@@ -6,8 +6,6 @@ import {
   useTheme,
   Surface,
   Button,
-  Dialog,
-  Portal,
   Snackbar,
   IconButton,
 } from 'react-native-paper';
@@ -15,12 +13,12 @@ import { useTranslation } from 'react-i18next';
 import { apiService } from '@/services/api';
 import { WeeklyStock } from '@/types/models';
 import { useFocusEffect } from '@react-navigation/native';
-import QRCode from 'react-native-qrcode-svg';
 import * as OrderHelpers from '@/utils/orderHelpers';
 import { useWeekContext } from '@/contexts/WeekContext';
 import { LoadingView, ErrorView } from '@/components/common';
 import { parseError } from '@/utils/errorHandling';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { PaymentDialog, ConfirmPaymentDialog } from '@/components/PaymentDialog';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_GAP = 12;
@@ -234,83 +232,24 @@ export default function DashboardScreen() {
   }
 
   // Render payment dialog
-  const renderPaymentDialog = () => (
-    <Portal>
-      <Dialog visible={paymentDialogVisible} onDismiss={hidePaymentDialog} style={styles.paymentDialog}>
-        <Dialog.Title style={styles.dialogTitle}>
-          {paymentOrderContext?.type === 'outstanding' ? t('home.outstandingPayment') : t('payment.title')}
-        </Dialog.Title>
-        <Dialog.Content style={styles.dialogContent}>
-          {paymentOrderContext?.type === 'outstanding' && paymentOrderContext.order && (
-            <Text style={styles.dialogSubtitle}>
-              {t('home.weekOf', { date: new Date(paymentOrderContext.order.weekStart).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) })}
-            </Text>
-          )}
-          <View style={styles.qrCodeContainer}>
-            <QRCode
-              value={generateNBSIPSQRCode(paymentOrderContext?.type === 'outstanding' ? paymentOrderContext.order?.total : undefined)}
-              size={160}
-              backgroundColor="white"
-            />
-          </View>
-          <Text style={styles.paymentDialogAmount}>
-            {getPaymentQuantity()} {t('common.eggs')} • {getPaymentAmount().toFixed(0)} {t('common.rsd')}
-          </Text>
-          <View style={styles.bankDetails}>
-            <View style={styles.bankDetailRow}>
-              <Text style={styles.bankDetailLabel}>{t('payment.account')}</Text>
-              <Text style={styles.bankDetailValue}>{paymentSettings?.bankAccountNumber}</Text>
-            </View>
-            <View style={styles.bankDetailRow}>
-              <Text style={styles.bankDetailLabel}>{t('payment.recipient')}</Text>
-              <Text style={styles.bankDetailValue}>{paymentSettings?.recipientName}</Text>
-            </View>
-          </View>
-          <Text style={styles.dialogNote}>{t('payment.scanQR')}</Text>
-        </Dialog.Content>
-        <Dialog.Actions style={styles.dialogActions}>
-          {((paymentOrderContext?.type === 'outstanding' && !paymentOrderContext.order?.paymentSubmitted) ||
-            (paymentOrderContext?.type === 'current' && !OrderHelpers.areAllOrdersPaymentSubmitted(currentWeekOrder, currentWeekSubscriptionOrder))) && (
-            <Button 
-              onPress={showConfirmPayment} 
-              mode="contained"
-              disabled={markingPayment}
-              buttonColor={theme.colors.tertiary}
-              style={{ marginRight: 8 }}
-            >
-              {t('payment.markPaid')}
-            </Button>
-          )}
-          <Button onPress={hidePaymentDialog} mode="outlined">{t('common.close')}</Button>
-        </Dialog.Actions>
-      </Dialog>
-    </Portal>
-  );
+  // Get payment dialog props based on context
+  const getPaymentDialogProps = () => {
+    const isOutstanding = paymentOrderContext?.type === 'outstanding';
+    const isPaymentSubmitted = isOutstanding 
+      ? paymentOrderContext.order?.paymentSubmitted 
+      : OrderHelpers.areAllOrdersPaymentSubmitted(currentWeekOrder, currentWeekSubscriptionOrder);
+    const weekLabel = isOutstanding && paymentOrderContext.order
+      ? t('home.weekOf', { date: new Date(paymentOrderContext.order.weekStart).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) })
+      : undefined;
 
-  // Render confirm payment dialog
-  const renderConfirmPaymentDialog = () => (
-    <Portal>
-      <Dialog visible={confirmPaymentVisible} onDismiss={hideConfirmPayment} style={styles.confirmDialog}>
-        <View style={styles.confirmDialogContent}>
-          <Text style={styles.confirmDialogTitle}>{t('dashboard.confirmPaymentTitle')}</Text>
-          <Text style={styles.confirmDialogText}>{t('dashboard.confirmPaymentMessage')}</Text>
-          <View style={styles.confirmDialogActions}>
-            <Button onPress={hideConfirmPayment} mode="outlined" compact style={{ marginRight: 8 }}>{t('common.cancel')}</Button>
-            <Button 
-              onPress={handleMarkPaymentSubmitted} 
-              mode="contained"
-              compact
-              loading={markingPayment}
-              disabled={markingPayment}
-              buttonColor={theme.colors.tertiary}
-            >
-              {t('common.confirm')}
-            </Button>
-          </View>
-        </View>
-      </Dialog>
-    </Portal>
-  );
+    return {
+      quantity: getPaymentQuantity(),
+      amount: getPaymentAmount(),
+      qrCodeValue: generateNBSIPSQRCode(isOutstanding ? paymentOrderContext?.order?.total : undefined),
+      isPaymentSubmitted,
+      weekLabel,
+    };
+  };
 
   const renderSnackbar = () => (
     <Snackbar
@@ -365,7 +304,21 @@ export default function DashboardScreen() {
         
         <Text style={styles.outstandingNote}>{t('dashboard.settleBalance')}</Text>
 
-        {renderPaymentDialog()}
+        <PaymentDialog
+          visible={paymentDialogVisible}
+          onDismiss={hidePaymentDialog}
+          onMarkPaid={showConfirmPayment}
+          {...getPaymentDialogProps()}
+          bankAccountNumber={paymentSettings?.bankAccountNumber}
+          recipientName={paymentSettings?.recipientName}
+          isMarkingPayment={markingPayment}
+        />
+        <ConfirmPaymentDialog
+          visible={confirmPaymentVisible}
+          onDismiss={hideConfirmPayment}
+          onConfirm={handleMarkPaymentSubmitted}
+          isLoading={markingPayment}
+        />
         {renderSnackbar()}
       </ScrollView>
     );
@@ -603,8 +556,21 @@ export default function DashboardScreen() {
         </View>
       )}
 
-      {renderPaymentDialog()}
-      {renderConfirmPaymentDialog()}
+      <PaymentDialog
+        visible={paymentDialogVisible}
+        onDismiss={hidePaymentDialog}
+        onMarkPaid={showConfirmPayment}
+        {...getPaymentDialogProps()}
+        bankAccountNumber={paymentSettings?.bankAccountNumber}
+        recipientName={paymentSettings?.recipientName}
+        isMarkingPayment={markingPayment}
+      />
+      <ConfirmPaymentDialog
+        visible={confirmPaymentVisible}
+        onDismiss={hideConfirmPayment}
+        onConfirm={handleMarkPaymentSubmitted}
+        isLoading={markingPayment}
+      />
       {renderSnackbar()}
     </ScrollView>
   );

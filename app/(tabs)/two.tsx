@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { StyleSheet, View as RNView, RefreshControl, Dimensions } from 'react-native';
+import { StyleSheet, View as RNView, Dimensions } from 'react-native';
 import { View } from '@/components/Themed';
 import {
   Text,
@@ -9,16 +9,14 @@ import {
   Chip,
   useTheme,
   Surface,
-  Dialog,
-  Portal,
 } from 'react-native-paper';
-import QRCode from 'react-native-qrcode-svg';
 import { useTranslation } from 'react-i18next';
 import { apiService } from '@/services/api';
 import { WeeklyStock } from '@/types/models';
 import { useFocusEffect } from '@react-navigation/native';
 import { LoadingView, ErrorView } from '@/components/common';
 import { parseError } from '@/utils/errorHandling';
+import { PaymentDialog, ConfirmPaymentDialog } from '@/components/PaymentDialog';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const HORIZONTAL_PADDING = 16;
@@ -274,6 +272,14 @@ export default function OrderScreen() {
           </Surface>
         )}
 
+        {/* Eggs Available Badge - show when can order and no order yet */}
+        {canOrder && !currentWeekOrder && (
+          <Surface style={styles.availableBadge} elevation={2}>
+            <Text style={styles.availableNumber}>{availableEggs}</Text>
+            <Text style={styles.availableLabel}>{t('dashboard.eggsAvailable')}</Text>
+          </Surface>
+        )}
+
         {/* Order Form - Only show if can order and not locked */}
         {canOrder && !isLocked && (
           <Surface style={styles.orderCard} elevation={2}>
@@ -365,79 +371,30 @@ export default function OrderScreen() {
             {currentWeekOrder.paymentSubmitted ? t('order.viewPayment') : t('order.payNow')}
           </Button>
         )}
-
-        {/* Eggs Available Badge - show when can order and no order yet */}
-        {canOrder && !currentWeekOrder && (
-          <Surface style={styles.availableBadge} elevation={2}>
-            <Text style={styles.availableNumber}>{availableEggs}</Text>
-            <Text style={styles.availableLabel}>{t('dashboard.eggsAvailable')}</Text>
-          </Surface>
-        )}
       </RNView>
 
       {/* Payment Dialog */}
-      <Portal>
-        <Dialog visible={paymentDialogVisible} onDismiss={() => setPaymentDialogVisible(false)} style={styles.paymentDialog}>
-          <Dialog.Title style={styles.dialogTitle}>{t('payment.title')}</Dialog.Title>
-          <Dialog.Content style={styles.dialogContent}>
-            {currentWeekOrder && (
-              <>
-                <RNView style={styles.qrCodeContainer}>
-                  <QRCode value={generateNBSIPSQRCode()} size={160} backgroundColor="white" />
-                </RNView>
-                <Text style={styles.paymentDialogAmount}>
-                  {currentWeekOrder.quantity} {t('common.eggs')} • {currentWeekOrder.total.toFixed(0)} {t('common.rsd')}
-                </Text>
-                <RNView style={styles.bankDetails}>
-                  <RNView style={styles.bankDetailRow}>
-                    <Text style={styles.bankDetailLabel}>{t('payment.account')}</Text>
-                    <Text style={styles.bankDetailValue}>{paymentSettings?.bankAccountNumber}</Text>
-                  </RNView>
-                  <RNView style={styles.bankDetailRow}>
-                    <Text style={styles.bankDetailLabel}>{t('payment.recipient')}</Text>
-                    <Text style={styles.bankDetailValue}>{paymentSettings?.recipientName}</Text>
-                  </RNView>
-                </RNView>
-                <Text style={styles.dialogNote}>{t('payment.scanQR')}</Text>
-              </>
-            )}
-          </Dialog.Content>
-          <Dialog.Actions style={styles.dialogActions}>
-            {!currentWeekOrder?.paymentSubmitted && (
-              <Button 
-                onPress={() => setConfirmPaymentVisible(true)} 
-                mode="contained"
-                buttonColor={theme.colors.tertiary}
-                style={{ marginRight: 8 }}
-              >
-                {t('payment.markPaid')}
-              </Button>
-            )}
-            <Button onPress={() => setPaymentDialogVisible(false)} mode="outlined">{t('common.close')}</Button>
-          </Dialog.Actions>
-        </Dialog>
+      {currentWeekOrder && (
+        <PaymentDialog
+          visible={paymentDialogVisible}
+          onDismiss={() => setPaymentDialogVisible(false)}
+          onMarkPaid={() => setConfirmPaymentVisible(true)}
+          quantity={currentWeekOrder.quantity}
+          amount={currentWeekOrder.total}
+          bankAccountNumber={paymentSettings?.bankAccountNumber}
+          recipientName={paymentSettings?.recipientName}
+          qrCodeValue={generateNBSIPSQRCode()}
+          isPaymentSubmitted={currentWeekOrder.paymentSubmitted}
+        />
+      )}
 
-        {/* Confirm Payment Dialog */}
-        <Dialog visible={confirmPaymentVisible} onDismiss={() => setConfirmPaymentVisible(false)} style={styles.confirmDialog}>
-          <RNView style={styles.confirmDialogContent}>
-            <Text style={styles.confirmDialogTitle}>{t('dashboard.confirmPaymentTitle')}</Text>
-            <Text style={styles.confirmDialogText}>{t('dashboard.confirmPaymentMessage')}</Text>
-            <RNView style={styles.confirmDialogActions}>
-              <Button onPress={() => setConfirmPaymentVisible(false)} mode="outlined" compact style={{ marginRight: 8 }}>{t('common.cancel')}</Button>
-              <Button 
-                onPress={handleMarkPaymentSubmitted} 
-                mode="contained"
-                compact
-                loading={markingPayment}
-                disabled={markingPayment}
-                buttonColor={theme.colors.tertiary}
-              >
-                {t('common.confirm')}
-              </Button>
-            </RNView>
-          </RNView>
-        </Dialog>
-      </Portal>
+      {/* Confirm Payment Dialog */}
+      <ConfirmPaymentDialog
+        visible={confirmPaymentVisible}
+        onDismiss={() => setConfirmPaymentVisible(false)}
+        onConfirm={handleMarkPaymentSubmitted}
+        isLoading={markingPayment}
+      />
 
       <Snackbar
         visible={!!successMessage}
@@ -603,109 +560,19 @@ const styles = StyleSheet.create({
   // Available Badge
   availableBadge: {
     backgroundColor: '#fff',
-    borderRadius: 16,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    borderRadius: 20,
+    padding: 20,
     alignItems: 'center',
-    alignSelf: 'center',
+    marginBottom: 16,
   },
   availableNumber: {
-    fontSize: 32,
+    fontSize: 40,
     fontWeight: 'bold',
     color: '#ff6b35',
   },
   availableLabel: {
-    fontSize: 13,
-    color: '#666',
-  },
-
-  // Payment Dialog
-  paymentDialog: {
-    maxWidth: 360,
-    alignSelf: 'center',
-  },
-  dialogTitle: {
-    textAlign: 'center',
-    fontWeight: 'bold',
-  },
-  dialogContent: {
-    alignItems: 'center',
-  },
-  dialogActions: {
-    justifyContent: 'center',
-    paddingBottom: 16,
-  },
-  qrCodeContainer: {
-    padding: 12,
-    backgroundColor: 'white',
-    borderRadius: 12,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  paymentDialogAmount: {
-    fontWeight: 'bold',
-    marginBottom: 16,
-    fontSize: 18,
-    color: '#2d3748',
-  },
-  bankDetails: {
-    width: '100%',
-    backgroundColor: '#f8f4f2',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
-  },
-  bankDetailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 4,
-  },
-  bankDetailLabel: {
-    color: '#666',
-    fontSize: 13,
-  },
-  bankDetailValue: {
-    fontWeight: '600',
-    color: '#2d3748',
-    fontSize: 13,
-  },
-  dialogNote: {
-    fontSize: 12,
-    color: '#888',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-
-  // Confirm Payment Dialog
-  confirmDialog: {
-    maxWidth: 280,
-    alignSelf: 'center',
-    borderRadius: 16,
-  },
-  confirmDialogContent: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  confirmDialogTitle: {
-    textAlign: 'center',
-    fontWeight: 'bold',
-    fontSize: 16,
-    color: '#2d3748',
-    marginBottom: 8,
-  },
-  confirmDialogText: {
-    textAlign: 'center',
-    color: '#666',
     fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 16,
+    color: '#666',
   },
-  confirmDialogActions: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
+
 });
