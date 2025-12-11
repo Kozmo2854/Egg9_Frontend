@@ -291,22 +291,23 @@ export default function DashboardScreen() {
   const renderConfirmPaymentDialog = () => (
     <Portal>
       <Dialog visible={confirmPaymentVisible} onDismiss={hideConfirmPayment} style={styles.confirmDialog}>
-        <Dialog.Title style={styles.confirmDialogTitle}>{t('dashboard.confirmPaymentTitle')}</Dialog.Title>
-        <Dialog.Content>
+        <View style={styles.confirmDialogContent}>
+          <Text style={styles.confirmDialogTitle}>{t('dashboard.confirmPaymentTitle')}</Text>
           <Text style={styles.confirmDialogText}>{t('dashboard.confirmPaymentMessage')}</Text>
-        </Dialog.Content>
-        <Dialog.Actions>
-          <Button onPress={hideConfirmPayment} mode="outlined" style={{ marginRight: 8 }}>{t('common.cancel')}</Button>
-          <Button 
-            onPress={handleMarkPaymentSubmitted} 
-            mode="contained"
-            loading={markingPayment}
-            disabled={markingPayment}
-            buttonColor={theme.colors.tertiary}
-          >
-            {t('common.confirm')}
-          </Button>
-        </Dialog.Actions>
+          <View style={styles.confirmDialogActions}>
+            <Button onPress={hideConfirmPayment} mode="outlined" compact style={{ marginRight: 8 }}>{t('common.cancel')}</Button>
+            <Button 
+              onPress={handleMarkPaymentSubmitted} 
+              mode="contained"
+              compact
+              loading={markingPayment}
+              disabled={markingPayment}
+              buttonColor={theme.colors.tertiary}
+            >
+              {t('common.confirm')}
+            </Button>
+          </View>
+        </View>
       </Dialog>
     </Portal>
   );
@@ -892,17 +893,27 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     borderRadius: 16,
   },
+  confirmDialogContent: {
+    padding: 20,
+    alignItems: 'center',
+  },
   confirmDialogTitle: {
     textAlign: 'center',
     fontWeight: 'bold',
     fontSize: 16,
-    paddingBottom: 0,
+    color: '#2d3748',
+    marginBottom: 8,
   },
   confirmDialogText: {
     textAlign: 'center',
     color: '#666',
     fontSize: 14,
     lineHeight: 20,
+    marginBottom: 16,
+  },
+  confirmDialogActions: {
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
   dialogSubtitle: {
     fontSize: 14,
