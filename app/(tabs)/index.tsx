@@ -436,16 +436,16 @@ export default function DashboardScreen() {
       {needsPayment && state !== 'PICKED_UP_NOT_PAID' && (
         <Pressable onPress={() => showPaymentDialog('current')}>
           <Surface style={styles.paymentCard} elevation={3}>
-            <View style={styles.paymentCardContent}>
-              <View style={styles.paymentCardLeft}>
-                <Text style={styles.paymentCardIcon}>💳</Text>
-                <View>
-                  <Text style={styles.paymentCardTitle}>
-                    {isWaitingConfirmation ? t('dashboard.waitingConfirmation') : t('dashboard.pleasePayOrder')}
-                  </Text>
-                  <Text style={styles.paymentCardAmount}>{getCurrentUnpaidAmount().toFixed(0)} {t('common.rsd')}</Text>
-                </View>
-              </View>
+            {/* Top row: Icon + Title */}
+            <View style={styles.paymentCardHeader}>
+              <Text style={styles.paymentCardIcon}>💳</Text>
+              <Text style={styles.paymentCardTitle}>
+                {isWaitingConfirmation ? t('dashboard.waitingConfirmation') : t('dashboard.pleasePayOrder')}
+              </Text>
+            </View>
+            {/* Bottom row: Amount + Buttons */}
+            <View style={styles.paymentCardRow}>
+              <Text style={styles.paymentCardAmount}>{getCurrentUnpaidAmount().toFixed(0)} {t('common.rsd')}</Text>
               {!isWaitingConfirmation && (
                 <View style={styles.paymentCardButtons}>
                   <IconButton icon="qrcode" size={24} onPress={() => showPaymentDialog('current')} style={styles.qrButton} />
@@ -654,29 +654,29 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: '#ffb088',
-  },
-  paymentCardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     padding: 16,
   },
-  paymentCardLeft: {
+  paymentCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    flex: 1,
+    gap: 8,
+    marginBottom: 12,
   },
   paymentCardIcon: {
-    fontSize: 28,
+    fontSize: 24,
   },
   paymentCardTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     color: '#2d3748',
   },
+  paymentCardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   paymentCardAmount: {
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#ff6b35',
   },
