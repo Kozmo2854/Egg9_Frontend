@@ -786,9 +786,9 @@ const styles = StyleSheet.create({
   bottomCard: {
     backgroundColor: '#fff',
     borderRadius: 16,
-    padding: 20,
+    padding: 16,
     alignItems: 'center',
-    minHeight: 130,
+    height: 140,
     justifyContent: 'center',
   },
   bottomCardActive: {
@@ -888,16 +888,21 @@ const styles = StyleSheet.create({
   },
   // Confirm Payment Dialog
   confirmDialog: {
-    maxWidth: 320,
+    maxWidth: 280,
     alignSelf: 'center',
+    borderRadius: 16,
   },
   confirmDialogTitle: {
     textAlign: 'center',
     fontWeight: 'bold',
+    fontSize: 16,
+    paddingBottom: 0,
   },
   confirmDialogText: {
     textAlign: 'center',
     color: '#666',
+    fontSize: 14,
+    lineHeight: 20,
   },
   dialogSubtitle: {
     fontSize: 14,
