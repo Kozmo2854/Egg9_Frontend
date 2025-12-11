@@ -1,9 +1,8 @@
-import { useState, useCallback, useEffect } from 'react';
-import { StyleSheet, View, RefreshControl, ScrollView, Dimensions } from 'react-native';
+import { useState, useCallback } from 'react';
+import { StyleSheet, View, RefreshControl, ScrollView, Dimensions, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { 
   Text, 
-  Chip, 
   useTheme,
   Surface,
   Button,
@@ -12,7 +11,6 @@ import {
   Snackbar,
   IconButton,
 } from 'react-native-paper';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { apiService } from '@/services/api';
 import { WeeklyStock } from '@/types/models';
@@ -22,11 +20,11 @@ import * as OrderHelpers from '@/utils/orderHelpers';
 import { useWeekContext } from '@/contexts/WeekContext';
 import { LoadingView, ErrorView } from '@/components/common';
 import { parseError } from '@/utils/errorHandling';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_GAP = 12;
 const HORIZONTAL_PADDING = 16;
-const CARD_WIDTH = (SCREEN_WIDTH - HORIZONTAL_PADDING * 2 - CARD_GAP) / 2;
 
 export default function DashboardScreen() {
   const theme = useTheme();
@@ -90,12 +88,10 @@ export default function DashboardScreen() {
       setAvailableEggs(available);
       setPaymentSettings(settings.paymentSettings);
       
-      // Update week context for header
       if (stockData) {
         setWeekDates(stockData.weekStart, stockData.weekEnd);
       }
       
-      // Filter outstanding orders (from previous weeks only)
       const previousWeekUnpaid = unpaidOrders.filter((o: any) => o.weekId !== stockData?.id);
       setOutstandingOrders(previousWeekUnpaid);
     } catch (err) {
@@ -122,7 +118,7 @@ export default function DashboardScreen() {
     setPaymentOrderContext(null);
   };
 
-  const getPaymentDialogAmount = () => {
+  const getPaymentAmount = () => {
     if (paymentOrderContext?.type === 'outstanding' && paymentOrderContext.order) {
       return paymentOrderContext.order.total;
     }
@@ -131,13 +127,18 @@ export default function DashboardScreen() {
       : OrderHelpers.getUnpaidNotSubmittedAmount(currentWeekOrder, currentWeekSubscriptionOrder);
   };
 
-  const getPaymentDialogQuantity = () => {
+  const getPaymentQuantity = () => {
     if (paymentOrderContext?.type === 'outstanding' && paymentOrderContext.order) {
       return paymentOrderContext.order.quantity;
     }
     return OrderHelpers.areOrdersWaitingForConfirmation(currentWeekOrder, currentWeekSubscriptionOrder)
       ? OrderHelpers.getUnpaidSubmittedQuantity(currentWeekOrder, currentWeekSubscriptionOrder)
       : OrderHelpers.getUnpaidNotSubmittedQuantity(currentWeekOrder, currentWeekSubscriptionOrder);
+  };
+
+  const getCurrentUnpaidAmount = () => {
+    return OrderHelpers.getUnpaidNotSubmittedAmount(currentWeekOrder, currentWeekSubscriptionOrder) +
+           OrderHelpers.getUnpaidSubmittedAmount(currentWeekOrder, currentWeekSubscriptionOrder);
   };
 
   const handleMarkPaymentSubmitted = async () => {
@@ -188,11 +189,9 @@ export default function DashboardScreen() {
 
   const generateNBSIPSQRCode = (customAmount?: number) => {
     if (!paymentSettings) return '';
-    
-    const amount = customAmount ?? getPaymentDialogAmount();
+    const amount = customAmount ?? getPaymentAmount();
     const amountFormatted = `RSD${amount.toFixed(2).replace('.', ',')}`;
     const bankAccountFormatted = paymentSettings.bankAccountNumber.replace(/-/g, '');
-    
     return `K:PR|V:01|C:1|R:${bankAccountFormatted}|N:${paymentSettings.recipientName}|I:${amountFormatted}|SF:${paymentSettings.paymentCode}|S:${paymentSettings.paymentPurpose}`;
   };
 
@@ -202,7 +201,13 @@ export default function DashboardScreen() {
   const isDelivered = ['delivered', 'completed'].includes(currentWeekOrder?.status || '') || 
                       ['delivered', 'completed'].includes(currentWeekSubscriptionOrder?.status || '') ||
                       weeklyStock?.allOrdersDelivered;
-  const isComplete = OrderHelpers.areAllOrdersComplete(currentWeekOrder, currentWeekSubscriptionOrder);
+  const isPickedUp = OrderHelpers.areAllOrdersPickedUp(currentWeekOrder, currentWeekSubscriptionOrder);
+  const isPaid = OrderHelpers.areAllOrdersPaid(currentWeekOrder, currentWeekSubscriptionOrder);
+  const isWaitingConfirmation = OrderHelpers.areOrdersWaitingForConfirmation(currentWeekOrder, currentWeekSubscriptionOrder);
+  const isComplete = isPickedUp && isPaid;
+  const hasDeliveryScheduled = weeklyStock?.deliveryDate && weeklyStock?.deliveryTime;
+  const getTotalEggs = () => (currentWeekOrder?.quantity || 0) + (currentWeekSubscriptionOrder?.quantity || 0);
+  const needsPayment = hasCurrentOrders && !isPaid;
 
   if (loading) {
     return <LoadingView message={t('common.loading')} />;
@@ -217,54 +222,113 @@ export default function DashboardScreen() {
     );
   }
 
-  // STATE 1: Outstanding Orders Takeover
+  // Render payment dialog
+  const renderPaymentDialog = () => (
+    <Portal>
+      <Dialog visible={paymentDialogVisible} onDismiss={hidePaymentDialog} style={styles.paymentDialog}>
+        <Dialog.Title style={styles.dialogTitle}>
+          {paymentOrderContext?.type === 'outstanding' ? t('home.outstandingPayment') : t('payment.title')}
+        </Dialog.Title>
+        <Dialog.Content style={styles.dialogContent}>
+          {paymentOrderContext?.type === 'outstanding' && paymentOrderContext.order && (
+            <Text style={styles.dialogSubtitle}>
+              {t('home.weekOf', { date: new Date(paymentOrderContext.order.weekStart).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) })}
+            </Text>
+          )}
+          <View style={styles.qrCodeContainer}>
+            <QRCode
+              value={generateNBSIPSQRCode(paymentOrderContext?.type === 'outstanding' ? paymentOrderContext.order?.total : undefined)}
+              size={180}
+              backgroundColor="white"
+            />
+          </View>
+          <Text style={styles.paymentDialogAmount}>
+            {getPaymentQuantity()} {t('common.eggs')} • {getPaymentAmount().toFixed(0)} {t('common.rsd')}
+          </Text>
+          <View style={styles.bankDetails}>
+            <View style={styles.bankDetailRow}>
+              <Text style={styles.bankDetailLabel}>{t('payment.account')}</Text>
+              <Text style={styles.bankDetailValue}>{paymentSettings?.bankAccountNumber}</Text>
+            </View>
+            <View style={styles.bankDetailRow}>
+              <Text style={styles.bankDetailLabel}>{t('payment.recipient')}</Text>
+              <Text style={styles.bankDetailValue}>{paymentSettings?.recipientName}</Text>
+            </View>
+          </View>
+          <Text style={styles.dialogNote}>{t('payment.scanQR')}</Text>
+        </Dialog.Content>
+        <Dialog.Actions style={styles.dialogActions}>
+          {((paymentOrderContext?.type === 'outstanding' && !paymentOrderContext.order?.paymentSubmitted) ||
+            (paymentOrderContext?.type === 'current' && !OrderHelpers.areAllOrdersPaymentSubmitted(currentWeekOrder, currentWeekSubscriptionOrder))) && (
+            <Button 
+              onPress={handleMarkPaymentSubmitted} 
+              mode="contained"
+              loading={markingPayment}
+              disabled={markingPayment}
+              buttonColor={theme.colors.tertiary}
+              style={{ marginRight: 8 }}
+            >
+              {t('payment.markPaid')}
+            </Button>
+          )}
+          <Button onPress={hidePaymentDialog} mode="outlined">{t('common.close')}</Button>
+        </Dialog.Actions>
+      </Dialog>
+    </Portal>
+  );
+
+  const renderSnackbar = () => (
+    <Snackbar
+      visible={snackbar.visible}
+      onDismiss={() => setSnackbar({ visible: false, message: '' })}
+      duration={3000}
+      action={{ label: 'OK', onPress: () => setSnackbar({ visible: false, message: '' }) }}
+    >
+      {snackbar.message}
+    </Snackbar>
+  );
+
+  // STATE 0: Outstanding Orders Takeover
   if (hasOutstanding) {
     return (
       <ScrollView 
         style={styles.container}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#ff6b35']} tintColor="#ff6b35" />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#ff6b35']} tintColor="#ff6b35" />}
       >
-        <View style={styles.outstandingContainer}>
-          <Text style={styles.outstandingEmoji}>🐔</Text>
-          <Text style={styles.outstandingTitle}>{t('dashboard.oops')}</Text>
-          <Text style={styles.outstandingSubtitle}>{t('dashboard.unpaidOrders')}</Text>
-          
-          <View style={styles.outstandingList}>
-            {outstandingOrders.map((order) => (
-              <Surface key={order.id} style={styles.outstandingItem} elevation={2}>
-                <View style={styles.outstandingItemContent}>
-                  <View>
-                    <Text style={styles.outstandingWeek}>
-                      {t('home.weekOf', { date: new Date(order.weekStart).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) })}
-                    </Text>
-                    <Text style={styles.outstandingDetails}>
-                      {order.quantity} {t('common.eggs')} • {order.total.toFixed(0)} {t('common.rsd')}
-                    </Text>
-                  </View>
-                  {order.paymentSubmitted ? (
-                    <Chip icon="clock-outline" mode="flat" style={styles.waitingChip} compact>
-                      {t('home.waiting')}
-                    </Chip>
-                  ) : (
-                    <Button 
-                      mode="contained" 
-                      compact 
-                      onPress={() => showPaymentDialog('outstanding', order)}
-                      buttonColor={theme.colors.primary}
-                    >
-                      {t('home.pay')}
-                    </Button>
-                  )}
-                </View>
-              </Surface>
-            ))}
-          </View>
-          
-          <Text style={styles.outstandingNote}>{t('dashboard.settleBalance')}</Text>
+        <View style={styles.heroSection}>
+          <Text style={styles.heroEmoji}>🐔</Text>
+          <Text style={styles.heroTitle}>{t('dashboard.oops')}</Text>
+          <Text style={styles.heroSubtitle}>{t('dashboard.unpaidOrders')}</Text>
         </View>
+        
+        <View style={styles.outstandingList}>
+          {outstandingOrders.map((order) => (
+            <Surface key={order.id} style={styles.outstandingItem} elevation={2}>
+              <Pressable style={styles.outstandingItemContent} onPress={() => showPaymentDialog('outstanding', order)}>
+                <View>
+                  <Text style={styles.outstandingWeek}>
+                    {t('home.weekOf', { date: new Date(order.weekStart).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) })}
+                  </Text>
+                  <Text style={styles.outstandingDetails}>
+                    {order.quantity} {t('common.eggs')} • {order.total.toFixed(0)} {t('common.rsd')}
+                  </Text>
+                </View>
+                {order.paymentSubmitted ? (
+                  <View style={styles.waitingBadge}>
+                    <Text style={styles.waitingBadgeText}>⏳</Text>
+                  </View>
+                ) : (
+                  <Button mode="contained" compact buttonColor={theme.colors.primary}>
+                    {t('home.pay')}
+                  </Button>
+                )}
+              </Pressable>
+            </Surface>
+          ))}
+        </View>
+        
+        <Text style={styles.outstandingNote}>{t('dashboard.settleBalance')}</Text>
 
         {renderPaymentDialog()}
         {renderSnackbar()}
@@ -272,299 +336,226 @@ export default function DashboardScreen() {
     );
   }
 
-  // STATE 2: No Orders - Empty State with CTA
-  if (!hasCurrentOrders && !subscription) {
-    return (
-      <ScrollView 
-        style={styles.container}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#ff6b35']} tintColor="#ff6b35" />
-        }
-      >
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyEmoji}>🐣</Text>
-          <Text style={styles.emptyTitle}>{t('dashboard.noOrdersYet')}</Text>
-          
-          {weeklyStock.isOrderingOpen ? (
-            <>
-              <View style={styles.availableBadge}>
-                <Text style={styles.availableNumber}>{availableEggs}</Text>
-                <Text style={styles.availableLabel}>{t('dashboard.eggsAvailable')}</Text>
-              </View>
-              <Text style={styles.emptySubtitle}>{t('dashboard.beQuick')}</Text>
-            </>
-          ) : (
-            <Text style={styles.emptySubtitle}>{t('dashboard.orderingClosed')}</Text>
-          )}
-          
-          <View style={styles.ctaRow}>
-            <Surface style={styles.ctaCard} elevation={3}>
-              <Button
-                mode="contained"
-                icon="shopping"
-                onPress={() => router.push('/(tabs)/two')}
-                style={styles.ctaButton}
-                contentStyle={styles.ctaButtonContent}
-                labelStyle={styles.ctaButtonLabel}
-                buttonColor={theme.colors.secondary}
-              >
-                {t('dashboard.orderNow')}
-              </Button>
-            </Surface>
-            <Surface style={styles.ctaCard} elevation={3}>
-              <Button
-                mode="contained"
-                icon="refresh"
-                onPress={() => router.push('/(tabs)/subscription')}
-                style={styles.ctaButton}
-                contentStyle={styles.ctaButtonContent}
-                labelStyle={styles.ctaButtonLabel}
-                buttonColor={theme.colors.primary}
-              >
-                {t('dashboard.subscribe')}
-              </Button>
-            </Surface>
-          </View>
-        </View>
+  // Determine which state we're in
+  const getState = () => {
+    if (!hasCurrentOrders && !subscription) return 'NO_ORDERS';
+    if (isComplete) return 'COMPLETE';
+    if (isPickedUp && !isPaid) return 'PICKED_UP_NOT_PAID';
+    if (isDelivered && !isPickedUp) return 'DELIVERED';
+    if (hasDeliveryScheduled) return 'DELIVERY_SCHEDULED';
+    if (hasCurrentOrders) return 'ORDER_PLACED';
+    return 'NO_ORDERS';
+  };
 
-        {renderSnackbar()}
-      </ScrollView>
-    );
-  }
+  const state = getState();
 
-  // STATE 3: Active Orders - Dashboard Layout
-  const getTotalEggs = () => (currentWeekOrder?.quantity || 0) + (currentWeekSubscriptionOrder?.quantity || 0);
-  const getTotalAmount = () => (currentWeekOrder?.total || 0) + (currentWeekSubscriptionOrder?.total || 0);
+  // Hero content based on state
+  const getHeroContent = () => {
+    switch (state) {
+      case 'NO_ORDERS':
+        return {
+          emoji: '🐣',
+          title: t('dashboard.noOrdersYet'),
+          subtitle: weeklyStock.isOrderingOpen 
+            ? `${availableEggs} ${t('dashboard.eggsAvailable')}`
+            : t('dashboard.orderingClosed'),
+        };
+      case 'ORDER_PLACED':
+        return {
+          emoji: '🚚',
+          title: t('dashboard.thankYouOrder'),
+          subtitle: t('dashboard.waitingDeliveryTime'),
+        };
+      case 'DELIVERY_SCHEDULED':
+        const deliveryDate = new Date(weeklyStock.deliveryDate!);
+        const dayName = deliveryDate.toLocaleDateString(undefined, { weekday: 'short' });
+        const dateStr = deliveryDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        return {
+          icon: 'calendar',
+          title: t('dashboard.deliveryScheduled'),
+          subtitle: `${dayName} ${dateStr}, ${weeklyStock.deliveryTime}`,
+        };
+      case 'DELIVERED':
+        return {
+          emoji: '📦',
+          title: t('dashboard.eggsAreHere'),
+          subtitle: t('dashboard.dontForgetPickup'),
+        };
+      case 'PICKED_UP_NOT_PAID':
+        return {
+          emoji: '💳',
+          title: t('dashboard.almostDone'),
+          subtitle: t('dashboard.completePayment'),
+        };
+      case 'COMPLETE':
+        return {
+          emoji: '✅',
+          title: t('dashboard.allDone'),
+          subtitle: t('dashboard.seeYouNext'),
+        };
+      default:
+        return { emoji: '🥚', title: '', subtitle: '' };
+    }
+  };
 
-  // Determine payment status
-  const isPaid = OrderHelpers.areAllOrdersPaid(currentWeekOrder, currentWeekSubscriptionOrder);
-  const isWaitingConfirmation = OrderHelpers.areOrdersWaitingForConfirmation(currentWeekOrder, currentWeekSubscriptionOrder);
-  const unpaidAmount = isWaitingConfirmation 
-    ? OrderHelpers.getUnpaidSubmittedAmount(currentWeekOrder, currentWeekSubscriptionOrder)
-    : OrderHelpers.getUnpaidNotSubmittedAmount(currentWeekOrder, currentWeekSubscriptionOrder);
-
-  function renderPaymentDialog() {
-    return (
-      <Portal>
-        <Dialog visible={paymentDialogVisible} onDismiss={hidePaymentDialog} style={styles.paymentDialog}>
-          <Dialog.Title style={styles.dialogTitle}>
-            {paymentOrderContext?.type === 'outstanding' ? t('home.outstandingPayment') : t('payment.title')}
-          </Dialog.Title>
-          <Dialog.Content style={styles.dialogContent}>
-            {paymentOrderContext?.type === 'outstanding' && paymentOrderContext.order && (
-              <Text style={styles.dialogSubtitle}>
-                {t('home.weekOf', { date: new Date(paymentOrderContext.order.weekStart).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) })}
-              </Text>
-            )}
-            <View style={styles.qrCodeContainer}>
-              <QRCode
-                value={generateNBSIPSQRCode(paymentOrderContext?.type === 'outstanding' ? paymentOrderContext.order?.total : undefined)}
-                size={180}
-                backgroundColor="white"
-              />
-            </View>
-            <Text style={styles.paymentDialogAmount}>
-              {getPaymentDialogQuantity()} {t('common.eggs')} • {getPaymentDialogAmount().toFixed(0)} {t('common.rsd')}
-            </Text>
-            <View style={styles.bankDetails}>
-              <View style={styles.bankDetailRow}>
-                <Text style={styles.bankDetailLabel}>{t('payment.account')}</Text>
-                <Text style={styles.bankDetailValue}>{paymentSettings?.bankAccountNumber}</Text>
-              </View>
-              <View style={styles.bankDetailRow}>
-                <Text style={styles.bankDetailLabel}>{t('payment.recipient')}</Text>
-                <Text style={styles.bankDetailValue}>{paymentSettings?.recipientName}</Text>
-              </View>
-            </View>
-            <Text style={styles.dialogNote}>{t('payment.scanQR')}</Text>
-          </Dialog.Content>
-          <Dialog.Actions style={styles.dialogActions}>
-            {((paymentOrderContext?.type === 'outstanding' && !paymentOrderContext.order?.paymentSubmitted) ||
-              (paymentOrderContext?.type === 'current' && !OrderHelpers.areAllOrdersPaymentSubmitted(currentWeekOrder, currentWeekSubscriptionOrder))) && (
-              <Button 
-                onPress={handleMarkPaymentSubmitted} 
-                mode="contained"
-                loading={markingPayment}
-                disabled={markingPayment}
-                buttonColor={theme.colors.tertiary}
-                style={{ marginRight: 8 }}
-              >
-                {t('payment.markPaid')}
-              </Button>
-            )}
-            <Button onPress={hidePaymentDialog} mode="outlined">{t('common.close')}</Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
-    );
-  }
-
-  function renderSnackbar() {
-    return (
-      <Snackbar
-        visible={snackbar.visible}
-        onDismiss={() => setSnackbar({ visible: false, message: '' })}
-        duration={3000}
-        action={{ label: 'OK', onPress: () => setSnackbar({ visible: false, message: '' }) }}
-      >
-        {snackbar.message}
-      </Snackbar>
-    );
-  }
+  const heroContent = getHeroContent();
 
   return (
     <ScrollView 
       style={styles.container}
       contentContainerStyle={styles.scrollContent}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#ff6b35']} tintColor="#ff6b35" />
-      }
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#ff6b35']} tintColor="#ff6b35" />}
     >
-      {/* Available Eggs Badge */}
-      {weeklyStock.isOrderingOpen && !isComplete && (
-        <Surface style={styles.availableSurface} elevation={2}>
-          <Text style={styles.badgeEmoji}>🥚</Text>
-          <Text style={styles.badgeText}>{availableEggs} {t('dashboard.available')}</Text>
+      {/* Hero Section */}
+      <View style={styles.heroSection}>
+        {heroContent.icon ? (
+          <View style={styles.heroIconContainer}>
+            <FontAwesome name={heroContent.icon as any} size={48} color="#ff6b35" />
+          </View>
+        ) : (
+          <Text style={styles.heroEmoji}>{heroContent.emoji}</Text>
+        )}
+        <Text style={styles.heroTitle}>{heroContent.title}</Text>
+        <Text style={styles.heroSubtitle}>{heroContent.subtitle}</Text>
+      </View>
+
+      {/* Payment Card - shown when payment needed (except in PICKED_UP_NOT_PAID where it's the only thing) */}
+      {needsPayment && state !== 'PICKED_UP_NOT_PAID' && (
+        <Pressable onPress={() => showPaymentDialog('current')}>
+          <Surface style={styles.paymentCard} elevation={3}>
+            <View style={styles.paymentCardContent}>
+              <View style={styles.paymentCardLeft}>
+                <Text style={styles.paymentCardIcon}>💳</Text>
+                <View>
+                  <Text style={styles.paymentCardTitle}>
+                    {isWaitingConfirmation ? t('dashboard.waitingConfirmation') : t('dashboard.pleasePayOrder')}
+                  </Text>
+                  <Text style={styles.paymentCardAmount}>{getCurrentUnpaidAmount().toFixed(0)} {t('common.rsd')}</Text>
+                </View>
+              </View>
+              {!isWaitingConfirmation && (
+                <View style={styles.paymentCardButtons}>
+                  <IconButton icon="qrcode" size={24} onPress={() => showPaymentDialog('current')} style={styles.qrButton} />
+                  <Button 
+                    mode="contained" 
+                    compact 
+                    onPress={handleMarkPaymentSubmitted}
+                    loading={markingPayment}
+                    disabled={markingPayment}
+                    buttonColor={theme.colors.tertiary}
+                    labelStyle={styles.smallButtonLabel}
+                  >
+                    {t('dashboard.markPaid')}
+                  </Button>
+                </View>
+              )}
+            </View>
+          </Surface>
+        </Pressable>
+      )}
+
+      {/* PICKED_UP_NOT_PAID: Only show payment card */}
+      {state === 'PICKED_UP_NOT_PAID' && (
+        <Pressable onPress={() => showPaymentDialog('current')}>
+          <Surface style={styles.paymentCardLarge} elevation={3}>
+            <View style={styles.paymentCardLargeContent}>
+              <Text style={styles.paymentCardLargeTitle}>
+                {isWaitingConfirmation ? t('dashboard.waitingConfirmation') : t('dashboard.pleasePayOrder')}
+              </Text>
+              <Text style={styles.paymentCardLargeAmount}>{getCurrentUnpaidAmount().toFixed(0)} {t('common.rsd')}</Text>
+              {!isWaitingConfirmation && (
+                <View style={styles.paymentCardLargeButtons}>
+                  <Button 
+                    mode="outlined" 
+                    icon="qrcode"
+                    onPress={() => showPaymentDialog('current')}
+                    style={styles.paymentLargeButton}
+                  >
+                    {t('dashboard.showQR')}
+                  </Button>
+                  <Button 
+                    mode="contained" 
+                    onPress={handleMarkPaymentSubmitted}
+                    loading={markingPayment}
+                    disabled={markingPayment}
+                    buttonColor={theme.colors.tertiary}
+                    style={styles.paymentLargeButton}
+                  >
+                    {t('dashboard.markPaid')}
+                  </Button>
+                </View>
+              )}
+            </View>
+          </Surface>
+        </Pressable>
+      )}
+
+      {/* DELIVERED: Single Confirm Pickup button */}
+      {state === 'DELIVERED' && !isPickedUp && (
+        <Surface style={styles.pickupCard} elevation={2}>
+          <Button
+            mode="contained"
+            icon="package-variant"
+            onPress={handleConfirmPickup}
+            loading={confirmingPickup}
+            disabled={confirmingPickup}
+            style={styles.pickupButton}
+            contentStyle={styles.pickupButtonContent}
+            buttonColor={theme.colors.primary}
+          >
+            {t('dashboard.confirmPickup')} • {getTotalEggs()} {t('common.eggs')}
+          </Button>
         </Surface>
       )}
 
-      {/* Status Row: Delivery + Payment */}
-      <View style={styles.statusRow}>
-        {/* Delivery Card */}
-        <Surface style={[styles.statusCard, styles.deliveryCard]} elevation={2}>
-          {isComplete ? (
-            <View style={styles.statusCardContent}>
-              <Text style={styles.statusIcon}>✅</Text>
-              <Text style={styles.statusTitle}>{t('dashboard.allDone')}</Text>
-              <Text style={styles.statusSubtitle}>{t('dashboard.seeYouNext')}</Text>
-            </View>
-          ) : isDelivered ? (
-            <View style={styles.statusCardContent}>
-              <Text style={styles.statusIcon}>📦</Text>
-              <Text style={styles.statusTitle}>{t('dashboard.delivered')}</Text>
-              <Text style={styles.statusSubtitle}>{getTotalEggs()} {t('common.eggs')}</Text>
-              {!OrderHelpers.areAllOrdersPickedUp(currentWeekOrder, currentWeekSubscriptionOrder) && (
-                <Button
-                  mode="contained"
-                  compact
-                  onPress={handleConfirmPickup}
-                  loading={confirmingPickup}
-                  disabled={confirmingPickup}
-                  style={styles.pickupButton}
-                  buttonColor={theme.colors.tertiary}
-                  labelStyle={styles.smallButtonLabel}
-                >
-                  {t('dashboard.confirmPickup')}
-                </Button>
+      {/* Bottom Cards: Order + Subscription (not shown in PICKED_UP_NOT_PAID or DELIVERED states) */}
+      {state !== 'PICKED_UP_NOT_PAID' && state !== 'DELIVERED' && (
+        <View style={styles.bottomRow}>
+          {/* Order Card */}
+          <Pressable style={styles.bottomCardWrapper} onPress={() => router.push('/(tabs)/two')}>
+            <Surface style={[styles.bottomCard, hasCurrentOrders && currentWeekOrder && styles.bottomCardActive]} elevation={2}>
+              <Text style={styles.bottomCardIcon}>🛒</Text>
+              {state === 'NO_ORDERS' || !currentWeekOrder ? (
+                <>
+                  <Text style={styles.bottomCardTitle}>{t('dashboard.orderNow')}</Text>
+                </>
+              ) : state === 'COMPLETE' ? (
+                <>
+                  <Text style={styles.bottomCardQuantity}>{currentWeekOrder.quantity} {t('common.eggs')}</Text>
+                  <Text style={styles.bottomCardCheck}>✓</Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.bottomCardTitle}>{t('dashboard.seeOrder')}</Text>
+                  <Text style={styles.bottomCardQuantity}>{currentWeekOrder.quantity} {t('common.eggs')}</Text>
+                </>
               )}
-            </View>
-          ) : weeklyStock.deliveryDate && weeklyStock.deliveryTime ? (
-            <View style={styles.statusCardContent}>
-              <Text style={styles.statusIcon}>🚚</Text>
-              <Text style={styles.statusTitle}>{t('dashboard.delivery')}</Text>
-              <Text style={styles.statusSubtitle}>
-                {new Date(weeklyStock.deliveryDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-              </Text>
-              <Chip mode="flat" compact style={styles.timeChip}>{weeklyStock.deliveryTime}</Chip>
-            </View>
-          ) : (
-            <View style={styles.statusCardContent}>
-              <Text style={styles.statusIcon}>🚚</Text>
-              <Text style={styles.statusTitle}>{t('dashboard.delivery')}</Text>
-              <Text style={styles.statusSubtitle}>{t('dashboard.pending')}</Text>
-            </View>
-          )}
-        </Surface>
+            </Surface>
+          </Pressable>
 
-        {/* Payment Card */}
-        <Surface style={[styles.statusCard, styles.paymentCard]} elevation={2}>
-          {isPaid ? (
-            <View style={styles.statusCardContent}>
-              <Text style={styles.statusIcon}>✅</Text>
-              <Text style={styles.statusTitle}>{t('dashboard.paid')}</Text>
-              <Text style={styles.statusSubtitle}>{getTotalAmount().toFixed(0)} {t('common.rsd')}</Text>
-            </View>
-          ) : isWaitingConfirmation ? (
-            <View style={styles.statusCardContent}>
-              <Text style={styles.statusIcon}>⏳</Text>
-              <Text style={styles.statusTitle}>{t('dashboard.waiting')}</Text>
-              <Text style={styles.statusSubtitle}>{unpaidAmount.toFixed(0)} {t('common.rsd')}</Text>
-            </View>
-          ) : (
-            <View style={styles.statusCardContent}>
-              <Text style={styles.statusIcon}>💳</Text>
-              <Text style={styles.statusTitle}>{t('dashboard.payment')}</Text>
-              <Text style={styles.statusAmount}>{unpaidAmount.toFixed(0)} {t('common.rsd')}</Text>
-              <View style={styles.paymentActions}>
-                <IconButton
-                  icon="qrcode"
-                  size={20}
-                  onPress={() => showPaymentDialog('current')}
-                  style={styles.paymentIconButton}
-                />
-                <Button
-                  mode="contained"
-                  compact
-                  onPress={handleMarkPaymentSubmitted}
-                  loading={markingPayment}
-                  disabled={markingPayment}
-                  style={styles.payButton}
-                  buttonColor={theme.colors.tertiary}
-                  labelStyle={styles.smallButtonLabel}
-                >
-                  {t('dashboard.pay')}
-                </Button>
-              </View>
-            </View>
-          )}
-        </Surface>
-      </View>
-
-      {/* Orders Row: Order + Subscription */}
-      <View style={styles.ordersRow}>
-        {/* One-Time Order Card */}
-        <Surface 
-          style={[styles.orderCard, currentWeekOrder && styles.orderCardActive]} 
-          elevation={2}
-          onTouchEnd={() => router.push('/(tabs)/two')}
-        >
-          <View style={styles.orderCardContent}>
-            <Text style={styles.orderIcon}>🛒</Text>
-            <Text style={styles.orderTitle}>{t('dashboard.order')}</Text>
-            {currentWeekOrder ? (
-              <>
-                <Chip mode="flat" compact style={styles.activeChip}>{t('dashboard.ordered')}</Chip>
-                <Text style={styles.orderQuantity}>{currentWeekOrder.quantity} {t('common.eggs')}</Text>
-                <Text style={styles.orderPrice}>{currentWeekOrder.total.toFixed(0)} {t('common.rsd')}</Text>
-              </>
-            ) : (
-              <Text style={styles.orderInactive}>{t('dashboard.noOrder')}</Text>
-            )}
-          </View>
-        </Surface>
-
-        {/* Subscription Card */}
-        <Surface 
-          style={[styles.orderCard, subscription && styles.orderCardActive]} 
-          elevation={2}
-          onTouchEnd={() => router.push('/(tabs)/subscription')}
-        >
-          <View style={styles.orderCardContent}>
-            <Text style={styles.orderIcon}>🔄</Text>
-            <Text style={styles.orderTitle}>{t('dashboard.subscription')}</Text>
-            {subscription ? (
-              <>
-                <Chip mode="flat" compact style={styles.activeChip}>{t('dashboard.active')}</Chip>
-                <Text style={styles.orderQuantity}>{subscription.quantity} {t('common.eggs')}</Text>
-                <Text style={styles.orderPrice}>{subscription.weeksRemaining} {t('dashboard.weeksLeft')}</Text>
-              </>
-            ) : (
-              <Text style={styles.orderInactive}>{t('dashboard.noSubscription')}</Text>
-            )}
-          </View>
-        </Surface>
-      </View>
+          {/* Subscription Card */}
+          <Pressable style={styles.bottomCardWrapper} onPress={() => router.push('/(tabs)/subscription')}>
+            <Surface style={[styles.bottomCard, subscription && styles.bottomCardActive]} elevation={2}>
+              <Text style={styles.bottomCardIcon}>🔄</Text>
+              {!subscription ? (
+                <>
+                  <Text style={styles.bottomCardTitle}>{t('dashboard.subscribe')}</Text>
+                </>
+              ) : state === 'COMPLETE' ? (
+                <>
+                  <Text style={styles.bottomCardQuantity}>{subscription.quantity} {t('common.eggs')}</Text>
+                  <Text style={styles.bottomCardStatus}>{t('dashboard.active')}</Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.bottomCardTitle}>{t('dashboard.seeSub')}</Text>
+                  <Text style={styles.bottomCardQuantity}>{subscription.quantity} {t('common.eggs')}</Text>
+                </>
+              )}
+            </Surface>
+          </Pressable>
+        </View>
+      )}
 
       {renderPaymentDialog()}
       {renderSnackbar()}
@@ -580,177 +571,193 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     padding: HORIZONTAL_PADDING,
-    paddingTop: 8,
+    paddingTop: 16,
   },
   
-  // Available Badge
-  availableSurface: {
-    flexDirection: 'row',
+  // Hero Section
+  heroSection: {
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
+    paddingVertical: 24,
+    marginBottom: 16,
+  },
+  heroEmoji: {
+    fontSize: 64,
     marginBottom: 12,
-    gap: 8,
   },
-  badgeEmoji: {
-    fontSize: 20,
+  heroIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  badgeText: {
+  heroTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#2d3748',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  heroSubtitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#2d3748',
-  },
-  
-  // Status Row
-  statusRow: {
-    flexDirection: 'row',
-    gap: CARD_GAP,
-    marginBottom: 12,
-  },
-  statusCard: {
-    flex: 1,
-    borderRadius: 16,
-    backgroundColor: '#fff',
-    minHeight: 140,
-  },
-  deliveryCard: {},
-  paymentCard: {},
-  statusCardContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 12,
-  },
-  statusIcon: {
-    fontSize: 32,
-    marginBottom: 6,
-  },
-  statusTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#2d3748',
-    marginBottom: 2,
-  },
-  statusSubtitle: {
-    fontSize: 12,
     color: '#666',
     textAlign: 'center',
   },
-  statusAmount: {
+  
+  // Payment Card
+  paymentCard: {
+    backgroundColor: '#fff5f0',
+    borderRadius: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#ffb088',
+  },
+  paymentCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+  },
+  paymentCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  paymentCardIcon: {
+    fontSize: 28,
+  },
+  paymentCardTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2d3748',
+  },
+  paymentCardAmount: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: 'bold',
     color: '#ff6b35',
-    marginBottom: 4,
   },
-  timeChip: {
-    marginTop: 6,
-    height: 24,
-  },
-  pickupButton: {
-    marginTop: 8,
-    borderRadius: 8,
-  },
-  paymentActions: {
+  paymentCardButtons: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginTop: 4,
   },
-  paymentIconButton: {
+  qrButton: {
     margin: 0,
-    backgroundColor: '#f0f0f0',
-  },
-  payButton: {
-    borderRadius: 8,
+    backgroundColor: '#fff',
   },
   smallButtonLabel: {
-    fontSize: 11,
+    fontSize: 12,
     marginVertical: 2,
     marginHorizontal: 8,
   },
   
-  // Orders Row
-  ordersRow: {
+  // Payment Card Large (for PICKED_UP_NOT_PAID state)
+  paymentCardLarge: {
+    backgroundColor: '#fff5f0',
+    borderRadius: 20,
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: '#ff6b35',
+  },
+  paymentCardLargeContent: {
+    alignItems: 'center',
+    padding: 24,
+  },
+  paymentCardLargeTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2d3748',
+    marginBottom: 8,
+  },
+  paymentCardLargeAmount: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: '#ff6b35',
+    marginBottom: 20,
+  },
+  paymentCardLargeButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  paymentLargeButton: {
+    flex: 1,
+  },
+  
+  // Pickup Card
+  pickupCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  pickupButton: {
+    borderRadius: 16,
+    margin: 0,
+  },
+  pickupButtonContent: {
+    paddingVertical: 16,
+  },
+  
+  // Bottom Row
+  bottomRow: {
     flexDirection: 'row',
     gap: CARD_GAP,
+  },
+  bottomCardWrapper: {
     flex: 1,
   },
-  orderCard: {
-    flex: 1,
-    borderRadius: 16,
+  bottomCard: {
     backgroundColor: '#fff',
-    minHeight: 160,
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    minHeight: 130,
+    justifyContent: 'center',
   },
-  orderCardActive: {
+  bottomCardActive: {
     backgroundColor: '#fff5f0',
     borderWidth: 1,
     borderColor: '#ffb088',
   },
-  orderCardContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 12,
-  },
-  orderIcon: {
+  bottomCardIcon: {
     fontSize: 32,
-    marginBottom: 6,
+    marginBottom: 8,
   },
-  orderTitle: {
+  bottomCardTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#2d3748',
+  },
+  bottomCardQuantity: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#2d3748',
-    marginBottom: 8,
-  },
-  activeChip: {
-    marginBottom: 8,
-    backgroundColor: '#d4edda',
-  },
-  orderQuantity: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#2d3748',
-  },
-  orderPrice: {
-    fontSize: 13,
+    fontWeight: '600',
     color: '#666',
-    marginTop: 2,
+    marginTop: 4,
   },
-  orderInactive: {
+  bottomCardCheck: {
+    fontSize: 18,
+    color: '#28a745',
+    marginTop: 4,
+  },
+  bottomCardStatus: {
     fontSize: 12,
-    color: '#999',
-    textAlign: 'center',
+    color: '#28a745',
+    fontWeight: '600',
+    marginTop: 4,
   },
   
-  // Outstanding State
-  outstandingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 24,
-  },
-  outstandingEmoji: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  outstandingTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#c53030',
-    marginBottom: 8,
-  },
-  outstandingSubtitle: {
-    fontSize: 16,
-    color: '#742a2a',
-    marginBottom: 24,
-    textAlign: 'center',
-  },
+  // Outstanding Orders
   outstandingList: {
-    width: '100%',
     gap: 12,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   outstandingItem: {
     borderRadius: 12,
@@ -774,81 +781,20 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 2,
   },
-  waitingChip: {
+  waitingBadge: {
     backgroundColor: '#e3f2fd',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  waitingBadgeText: {
+    fontSize: 16,
   },
   outstandingNote: {
     fontSize: 14,
     color: '#742a2a',
     textAlign: 'center',
     fontStyle: 'italic',
-  },
-  
-  // Empty State
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 24,
-  },
-  emptyEmoji: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#2d3748',
-    marginBottom: 16,
-  },
-  availableBadge: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  availableNumber: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#ff6b35',
-  },
-  availableLabel: {
-    fontSize: 14,
-    color: '#666',
-  },
-  emptySubtitle: {
-    fontSize: 15,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 24,
-    paddingHorizontal: 20,
-  },
-  ctaRow: {
-    flexDirection: 'row',
-    gap: CARD_GAP,
-    width: '100%',
-  },
-  ctaCard: {
-    flex: 1,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  ctaButton: {
-    borderRadius: 16,
-  },
-  ctaButtonContent: {
-    paddingVertical: 20,
-  },
-  ctaButtonLabel: {
-    fontSize: 14,
-    fontWeight: '700',
   },
   
   // Payment Dialog
