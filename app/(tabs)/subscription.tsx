@@ -220,7 +220,7 @@ export default function SubscriptionScreen() {
             </RNView>
             <RNView style={styles.detailRow}>
               <Text style={styles.detailLabel}>{t('subscription.duration')}</Text>
-              <Text style={styles.detailValue}>{subscription.weeksRemaining || subscription.period} {t('common.weeks')}</Text>
+              <Text style={styles.detailValue}>{subscription.weeksRemaining || subscription.period} {t('dashboard.weeksLeft')}</Text>
             </RNView>
             <RNView style={styles.detailRow}>
               <Text style={styles.detailLabel}>{t('subscription.weeklyPrice')}</Text>
@@ -235,16 +235,15 @@ export default function SubscriptionScreen() {
             )}
 
             {/* Action Buttons */}
-            <RNView style={styles.actionRow}>
+            <RNView style={styles.actionColumn}>
               <Button
                 mode="outlined"
                 onPress={() => setEditingSubscription(true)}
                 disabled={weeklyStock.isLowSeason}
                 icon="pencil"
-                compact
-                style={[styles.actionButton, weeklyStock.isLowSeason && { opacity: 0.5 }]}
+                style={[styles.editButton, weeklyStock.isLowSeason && { opacity: 0.5 }]}
               >
-                {t('common.edit')}
+                {t('subscription.modifySubscription')}
               </Button>
               <Button
                 mode="text"
@@ -255,7 +254,7 @@ export default function SubscriptionScreen() {
                 icon="close-circle-outline"
                 compact
               >
-                {t('common.cancel')}
+                {t('subscription.cancelSubscription')}
               </Button>
             </RNView>
           </Surface>
@@ -361,20 +360,22 @@ export default function SubscriptionScreen() {
           </Surface>
         )}
 
-        {/* Benefits */}
-        <Surface style={styles.benefitsCard} elevation={1}>
-          <Text style={styles.benefitsTitle}>{t('subscription.whySubscribe')}</Text>
-          {[
-            { icon: '🎯', text: t('subscription.benefit1') },
-            { icon: '📦', text: t('subscription.benefit2') },
-            { icon: '🔄', text: t('subscription.benefit4') },
-          ].map((benefit, index) => (
-            <RNView key={index} style={styles.benefitRow}>
-              <Text style={styles.benefitIcon}>{benefit.icon}</Text>
-              <Text style={styles.benefitText}>{benefit.text}</Text>
-            </RNView>
-          ))}
-        </Surface>
+        {/* Benefits - only show when no subscription */}
+        {!subscription && !weeklyStock.isLowSeason && (
+          <Surface style={styles.benefitsCard} elevation={1}>
+            <Text style={styles.benefitsTitle}>{t('subscription.whySubscribe')}</Text>
+            {[
+              { icon: '🎯', text: t('subscription.benefit1') },
+              { icon: '📦', text: t('subscription.benefit2') },
+              { icon: '🔄', text: t('subscription.benefit4') },
+            ].map((benefit, index) => (
+              <RNView key={index} style={styles.benefitRow}>
+                <Text style={styles.benefitIcon}>{benefit.icon}</Text>
+                <Text style={styles.benefitText}>{benefit.text}</Text>
+              </RNView>
+            ))}
+          </Surface>
+        )}
       </ScrollView>
 
       <Snackbar
@@ -508,15 +509,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: 'center',
   },
-  actionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  actionColumn: {
     marginTop: 8,
   },
-  actionButton: {
-    flex: 1,
-    marginRight: 8,
+  editButton: {
+    marginBottom: 4,
   },
 
   // Low Season Card
@@ -545,40 +542,40 @@ const styles = StyleSheet.create({
   formCard: {
     backgroundColor: '#ffffff',
     borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
+    padding: 16,
+    marginBottom: 12,
   },
   formTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#2d3748',
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   sectionLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: '#666',
-    marginBottom: 8,
+    marginBottom: 6,
     textAlign: 'center',
   },
   quantityRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   quantityDisplay: {
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
   },
   quantityNumber: {
-    fontSize: 40,
+    fontSize: 36,
     fontWeight: 'bold',
     color: '#2d3748',
   },
   quantityLabel: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#666',
     marginTop: -2,
   },
@@ -586,7 +583,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 8,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   periodButton: {
     minWidth: 80,
@@ -594,8 +591,8 @@ const styles = StyleSheet.create({
   priceSummary: {
     backgroundColor: '#f8f4f2',
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    padding: 12,
+    marginBottom: 12,
   },
   priceRow: {
     flexDirection: 'row',
@@ -603,23 +600,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   priceLabel: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#666',
   },
   priceAmount: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#4ecdc4',
   },
   priceDetails: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#888',
     textAlign: 'right',
-    marginTop: 4,
+    marginTop: 2,
   },
   subscribeButton: {
     borderRadius: 12,
-    marginBottom: 8,
+    marginBottom: 4,
   },
 
   // Benefits Card

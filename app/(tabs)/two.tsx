@@ -366,11 +366,11 @@ export default function OrderScreen() {
           </Button>
         )}
 
-        {/* Info Note */}
-        {canOrder && (
-          <Surface style={styles.infoCard} elevation={1}>
-            <Text style={styles.infoIcon}>ℹ️</Text>
-            <Text style={styles.infoText}>{t('order.infoNote')}</Text>
+        {/* Eggs Available Badge - show when can order and no order yet */}
+        {canOrder && !currentWeekOrder && (
+          <Surface style={styles.availableBadge} elevation={2}>
+            <Text style={styles.availableNumber}>{availableEggs}</Text>
+            <Text style={styles.availableLabel}>{t('dashboard.eggsAvailable')}</Text>
           </Surface>
         )}
       </RNView>
@@ -383,19 +383,22 @@ export default function OrderScreen() {
             {currentWeekOrder && (
               <>
                 <RNView style={styles.qrCodeContainer}>
-                  <QRCode value={generateNBSIPSQRCode()} size={180} backgroundColor="white" />
+                  <QRCode value={generateNBSIPSQRCode()} size={160} backgroundColor="white" />
                 </RNView>
                 <Text style={styles.paymentDialogAmount}>
                   {currentWeekOrder.quantity} {t('common.eggs')} • {currentWeekOrder.total.toFixed(0)} {t('common.rsd')}
                 </Text>
-                <RNView style={styles.bankDetailsContainer}>
-                  <Text style={styles.bankDetailLabel}>{t('payment.account')}</Text>
-                  <Text style={styles.bankDetailValue}>{paymentSettings?.bankAccountNumber}</Text>
+                <RNView style={styles.bankDetails}>
+                  <RNView style={styles.bankDetailRow}>
+                    <Text style={styles.bankDetailLabel}>{t('payment.account')}</Text>
+                    <Text style={styles.bankDetailValue}>{paymentSettings?.bankAccountNumber}</Text>
+                  </RNView>
+                  <RNView style={styles.bankDetailRow}>
+                    <Text style={styles.bankDetailLabel}>{t('payment.recipient')}</Text>
+                    <Text style={styles.bankDetailValue}>{paymentSettings?.recipientName}</Text>
+                  </RNView>
                 </RNView>
-                <RNView style={styles.bankDetailsContainer}>
-                  <Text style={styles.bankDetailLabel}>{t('payment.recipient')}</Text>
-                  <Text style={styles.bankDetailValue}>{paymentSettings?.recipientName}</Text>
-                </RNView>
+                <Text style={styles.dialogNote}>{t('payment.scanQR')}</Text>
               </>
             )}
           </Dialog.Content>
@@ -410,7 +413,7 @@ export default function OrderScreen() {
                 {t('payment.markPaid')}
               </Button>
             )}
-            <Button onPress={() => setPaymentDialogVisible(false)} mode="contained">{t('common.close')}</Button>
+            <Button onPress={() => setPaymentDialogVisible(false)} mode="outlined">{t('common.close')}</Button>
           </Dialog.Actions>
         </Dialog>
 
@@ -597,23 +600,23 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
 
-  // Info Card
-  infoCard: {
-    backgroundColor: '#fff0eb',
-    borderRadius: 12,
-    padding: 12,
-    flexDirection: 'row',
+  // Available Badge
+  availableBadge: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
     alignItems: 'center',
-    gap: 10,
-    marginTop: 'auto',
+    alignSelf: 'center',
   },
-  infoIcon: {
-    fontSize: 20,
+  availableNumber: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#ff6b35',
   },
-  infoText: {
-    flex: 1,
-    color: '#524541',
+  availableLabel: {
     fontSize: 13,
+    color: '#666',
   },
 
   // Payment Dialog
@@ -645,27 +648,36 @@ const styles = StyleSheet.create({
   },
   paymentDialogAmount: {
     fontWeight: 'bold',
-    marginBottom: 12,
+    marginBottom: 16,
     fontSize: 18,
     color: '#2d3748',
   },
-  bankDetailsContainer: {
+  bankDetails: {
+    width: '100%',
+    backgroundColor: '#f8f4f2',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  bankDetailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '100%',
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    paddingVertical: 4,
   },
   bankDetailLabel: {
-    fontWeight: '600',
     color: '#666',
-    fontSize: 14,
+    fontSize: 13,
   },
   bankDetailValue: {
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: '#2d3748',
-    fontSize: 14,
+    fontSize: 13,
+  },
+  dialogNote: {
+    fontSize: 12,
+    color: '#888',
+    textAlign: 'center',
+    lineHeight: 18,
   },
 
   // Confirm Payment Dialog
