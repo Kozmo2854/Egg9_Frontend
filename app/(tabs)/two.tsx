@@ -239,8 +239,8 @@ export default function OrderScreen() {
   const ordersDelivered = weeklyStock.allOrdersDelivered;
   const isLocked = currentWeekOrder?.isPaid || currentWeekOrder?.paymentSubmitted;
 
-  // Determine the state message
-  const getStateInfo = () => {
+  // Determine the state for warning messages only
+  const getWarningInfo = () => {
     if (!canOrder) {
       if (stockNotSetup) {
         return { icon: '📦', message: t('order.stockNotSetUp'), subtitle: t('order.stockNotSetUpDesc') };
@@ -250,32 +250,25 @@ export default function OrderScreen() {
       }
       return { icon: '⚠️', message: t('order.notEnoughStock'), subtitle: t('order.notEnoughStockDesc') };
     }
-    if (currentWeekOrder) {
-      if (currentWeekOrder.isPaid) {
-        return { icon: '✅', message: t('order.paymentConfirmed'), subtitle: `${currentWeekOrder.quantity} ${t('common.eggs')} • ${currentWeekOrder.total.toFixed(0)} ${t('common.rsd')}` };
-      }
-      if (currentWeekOrder.paymentSubmitted) {
-        return { icon: '⏳', message: t('order.awaitingConfirmation'), subtitle: `${currentWeekOrder.quantity} ${t('common.eggs')} • ${currentWeekOrder.total.toFixed(0)} ${t('common.rsd')}` };
-      }
-      return { icon: '🛒', message: t('order.pendingPayment'), subtitle: `${currentWeekOrder.quantity} ${t('common.eggs')} • ${currentWeekOrder.total.toFixed(0)} ${t('common.rsd')}` };
-    }
-    return { icon: '🛒', message: t('order.title'), subtitle: `${availableEggs} ${t('common.eggs')} ${t('common.available').toLowerCase()}` };
+    return null;
   };
 
-  const stateInfo = getStateInfo();
+  const warningInfo = getWarningInfo();
 
   return (
     <View style={styles.container}>
       <RNView style={styles.content}>
-        {/* Hero Section */}
-        <RNView style={styles.heroSection}>
-          <Text style={styles.heroIcon}>{stateInfo.icon}</Text>
-          <Text style={styles.heroTitle}>{stateInfo.message}</Text>
-          <Text style={styles.heroSubtitle}>{stateInfo.subtitle}</Text>
-        </RNView>
+        {/* Warning Section - Only show when can't order */}
+        {warningInfo && (
+          <RNView style={styles.warningSection}>
+            <Text style={styles.warningIcon}>{warningInfo.icon}</Text>
+            <Text style={styles.warningTitle}>{warningInfo.message}</Text>
+            <Text style={styles.warningSubtitle}>{warningInfo.subtitle}</Text>
+          </RNView>
+        )}
 
         {/* Low Season Notice */}
-        {weeklyStock.isLowSeason && (
+        {weeklyStock.isLowSeason && canOrder && (
           <Surface style={styles.lowSeasonBadge} elevation={1}>
             <Text style={styles.lowSeasonText}>🐔 {t('order.lowSeasonNotice', { cap: weeklyStock.lowSeasonOrderCap })}</Text>
           </Surface>
@@ -475,26 +468,30 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   
-  // Hero Section
-  heroSection: {
+  // Warning Section (only shown when can't order)
+  warningSection: {
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: 24,
+    backgroundColor: '#fff0eb',
+    borderRadius: 20,
+    marginBottom: 16,
   },
-  heroIcon: {
-    fontSize: 56,
+  warningIcon: {
+    fontSize: 48,
     marginBottom: 8,
   },
-  heroTitle: {
-    fontSize: 22,
+  warningTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#2d3748',
     textAlign: 'center',
     marginBottom: 4,
   },
-  heroSubtitle: {
-    fontSize: 15,
+  warningSubtitle: {
+    fontSize: 14,
     color: '#666',
     textAlign: 'center',
+    paddingHorizontal: 16,
   },
 
   // Low Season Badge

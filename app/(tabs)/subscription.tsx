@@ -195,22 +195,6 @@ export default function SubscriptionScreen() {
     );
   }
 
-  // Determine state for hero section
-  const getStateInfo = () => {
-    if (weeklyStock.isLowSeason && !subscription) {
-      return { icon: '🐔', message: t('subscription.subscriptionsPaused'), subtitle: t('subscription.lowSeasonMessage') };
-    }
-    if (subscription && !editingSubscription) {
-      return { 
-        icon: '✓', 
-        message: t('subscription.activeSubscription'), 
-        subtitle: `${subscription.quantity} ${t('common.eggs')} × ${subscription.weeksRemaining || subscription.period} ${t('common.weeks')}` 
-      };
-    }
-    return { icon: '📅', message: t('subscription.title'), subtitle: t('subscription.subtitle') };
-  };
-
-  const stateInfo = getStateInfo();
   const showForm = (!subscription || editingSubscription) && !weeklyStock.isLowSeason;
 
   return (
@@ -220,18 +204,16 @@ export default function SubscriptionScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero Section */}
-        <RNView style={styles.heroSection}>
-          <RNView style={[styles.heroIconCircle, subscription && !editingSubscription && styles.heroIconActive]}>
-            <Text style={styles.heroIcon}>{stateInfo.icon}</Text>
-          </RNView>
-          <Text style={styles.heroTitle}>{stateInfo.message}</Text>
-          <Text style={styles.heroSubtitle}>{stateInfo.subtitle}</Text>
-        </RNView>
-
         {/* Active Subscription Card */}
         {subscription && !editingSubscription && (
           <Surface style={styles.subscriptionCard} elevation={2}>
+            <RNView style={styles.cardHeader}>
+              <RNView style={styles.cardHeaderIcon}>
+                <Text style={styles.cardHeaderIconText}>✓</Text>
+              </RNView>
+              <Text style={styles.cardHeaderTitle}>{t('subscription.activeSubscription')}</Text>
+            </RNView>
+            
             <RNView style={styles.detailRow}>
               <Text style={styles.detailLabel}>{t('subscription.weeklyDelivery')}</Text>
               <Text style={styles.detailValue}>{subscription.quantity} {t('common.eggs')}</Text>
@@ -282,15 +264,12 @@ export default function SubscriptionScreen() {
         {/* Low Season - No Subscription */}
         {weeklyStock.isLowSeason && !subscription && (
           <Surface style={styles.lowSeasonCard} elevation={2}>
-            <Text style={styles.lowSeasonCardText}>{t('subscription.canStillOrder', { cap: weeklyStock.lowSeasonOrderCap || 20 })}</Text>
-            <Button
-              mode="contained"
-              disabled={true}
-              style={{ opacity: 0.5, marginTop: 12 }}
-              icon="calendar-remove"
-            >
-              {t('subscription.subscriptionsUnavailable')}
-            </Button>
+            <RNView style={styles.cardHeader}>
+              <Text style={styles.lowSeasonIcon}>🐔</Text>
+              <Text style={styles.lowSeasonTitle}>{t('subscription.subscriptionsPaused')}</Text>
+            </RNView>
+            <Text style={styles.lowSeasonCardText}>{t('subscription.lowSeasonMessage')}</Text>
+            <Text style={[styles.lowSeasonCardText, { marginTop: 8, fontWeight: '500' }]}>{t('subscription.canStillOrder', { cap: weeklyStock.lowSeasonOrderCap || 20 })}</Text>
           </Surface>
         )}
 
@@ -470,37 +449,30 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
 
-  // Hero Section
-  heroSection: {
+  // Card Header
+  cardHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
+    marginBottom: 16,
+    gap: 10,
   },
-  heroIconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#f0f0f0',
+  cardHeaderIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#d4f4f1',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
   },
-  heroIconActive: {
-    backgroundColor: '#d4f4f1',
+  cardHeaderIconText: {
+    fontSize: 18,
+    color: '#4ecdc4',
+    fontWeight: 'bold',
   },
-  heroIcon: {
-    fontSize: 36,
-  },
-  heroTitle: {
-    fontSize: 22,
+  cardHeaderTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#2d3748',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  heroSubtitle: {
-    fontSize: 15,
-    color: '#666',
-    textAlign: 'center',
   },
 
   // Subscription Card
@@ -549,16 +521,24 @@ const styles = StyleSheet.create({
 
   // Low Season Card
   lowSeasonCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#fff3e0',
     borderRadius: 20,
     padding: 20,
     marginBottom: 16,
-    alignItems: 'center',
+  },
+  lowSeasonIcon: {
+    fontSize: 24,
+  },
+  lowSeasonTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#e65100',
   },
   lowSeasonCardText: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#666',
     textAlign: 'center',
+    lineHeight: 20,
   },
 
   // Form Card
