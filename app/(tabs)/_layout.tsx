@@ -348,6 +348,7 @@ export default function TabLayout() {
               headerTransparent: Platform.OS === 'web',
               headerBackground: () => <HeaderBackground />,
               headerStyle: { backgroundColor: Platform.OS === 'web' ? 'transparent' : '#fef5f1' },
+              animation: 'shift', // Smooth slide animation between tabs
             }}>
           <Tabs.Screen
             name="index"
