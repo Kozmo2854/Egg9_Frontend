@@ -10,7 +10,6 @@ import {
   IconButton,
 } from 'react-native-paper';
 import { useTranslation } from 'react-i18next';
-import PagerView from 'react-native-pager-view';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { apiService } from '@/services/api';
@@ -26,6 +25,12 @@ import DashboardContent from '@/components/screens/DashboardContent';
 import OrderContent from '@/components/screens/OrderContent';
 import SubscriptionContent from '@/components/screens/SubscriptionContent';
 
+// Conditionally import PagerView (native only)
+let PagerView: any = null;
+if (Platform.OS !== 'web') {
+  PagerView = require('react-native-pager-view').default;
+}
+
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function GalleryTabsScreen() {
@@ -34,7 +39,7 @@ export default function GalleryTabsScreen() {
   const insets = useSafeAreaInsets();
   const { setWeekDates } = useWeekContext();
   const router = useRouter();
-  const pagerRef = useRef<PagerView>(null);
+  const pagerRef = useRef<any>(null);
   
   // Tab state
   const [currentPage, setCurrentPage] = useState(0);
@@ -126,7 +131,10 @@ export default function GalleryTabsScreen() {
   };
 
   const goToPage = (index: number) => {
-    pagerRef.current?.setPage(index);
+    setCurrentPage(index);
+    if (Platform.OS !== 'web') {
+      pagerRef.current?.setPage(index);
+    }
   };
 
   // Payment helpers
@@ -261,9 +269,118 @@ export default function GalleryTabsScreen() {
   const tabLabels = [t('tabs.home'), t('tabs.order'), t('tabs.subscription')];
   const tabIcons = ['home', 'shopping-basket', 'refresh'];
 
+  // Shared content props
+  const dashboardProps = {
+    weeklyStock,
+    subscription,
+    currentWeekOrder,
+    currentWeekSubscriptionOrder,
+    availableEggs,
+    outstandingOrders,
+    refreshing,
+    onRefresh,
+    showPaymentDialog,
+    showConfirmPayment,
+    handleConfirmPickup,
+    confirmingPickup,
+    markingPayment,
+    getCurrentUnpaidAmount,
+    goToPage,
+  };
+
+  const orderProps = {
+    weeklyStock,
+    subscription,
+    currentWeekOrder,
+    availableEggs,
+    refreshing,
+    onRefresh,
+    onDataChange: loadData,
+    showSnackbar,
+  };
+
+  const subscriptionProps = {
+    weeklyStock,
+    subscription,
+    currentWeekSubOrder: currentWeekSubscriptionOrder,
+    refreshing,
+    onRefresh,
+    onDataChange: loadData,
+    showSnackbar,
+  };
+
+  // Web: Simple tab-based view (no swipe)
+  if (Platform.OS === 'web') {
+    return (
+      <View style={styles.container}>
+        <View style={styles.pager}>
+          {currentPage === 0 && <DashboardContent {...dashboardProps} />}
+          {currentPage === 1 && <OrderContent {...orderProps} />}
+          {currentPage === 2 && <SubscriptionContent {...subscriptionProps} />}
+        </View>
+
+        {/* Custom Tab Bar */}
+        <View style={[styles.tabBar, { paddingBottom: insets.bottom || 8 }]}>
+          {tabLabels.map((label, index) => {
+            const isActive = currentPage === index;
+            return (
+              <Pressable
+                key={index}
+                style={styles.tab}
+                onPress={() => goToPage(index)}
+              >
+                <FontAwesome
+                  name={tabIcons[index] as any}
+                  size={24}
+                  color={isActive ? theme.colors.primary : '#999'}
+                />
+                <Text
+                  style={[
+                    styles.tabLabel,
+                    { color: isActive ? theme.colors.primary : '#999' },
+                  ]}
+                >
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {/* Payment Dialog */}
+        <PaymentDialog
+          visible={paymentDialogVisible}
+          onDismiss={hidePaymentDialog}
+          onMarkPaid={showConfirmPayment}
+          {...getPaymentDialogProps()}
+          bankAccountNumber={paymentSettings?.bankAccountNumber}
+          recipientName={paymentSettings?.recipientName}
+          isMarkingPayment={markingPayment}
+        />
+        <ConfirmPaymentDialog
+          visible={confirmPaymentVisible}
+          onDismiss={hideConfirmPayment}
+          onConfirm={handleMarkPaymentSubmitted}
+          isLoading={markingPayment}
+        />
+
+        {/* Snackbar */}
+        <Snackbar
+          visible={snackbar.visible}
+          onDismiss={() => setSnackbar({ visible: false, message: '' })}
+          duration={3000}
+          style={{ backgroundColor: snackbar.type === 'error' ? theme.colors.error : theme.colors.tertiary }}
+          action={{ label: 'OK', onPress: () => setSnackbar({ visible: false, message: '' }) }}
+        >
+          {snackbar.message}
+        </Snackbar>
+      </View>
+    );
+  }
+
+  // Native: PagerView for gallery-style swipe
   return (
     <View style={styles.container}>
-      {/* PagerView for gallery-style swipe */}
       <PagerView
         ref={pagerRef}
         style={styles.pager}
@@ -274,50 +391,17 @@ export default function GalleryTabsScreen() {
       >
         {/* Page 0: Dashboard */}
         <View key="0" style={styles.page} collapsable={false}>
-          <DashboardContent
-            weeklyStock={weeklyStock}
-            subscription={subscription}
-            currentWeekOrder={currentWeekOrder}
-            currentWeekSubscriptionOrder={currentWeekSubscriptionOrder}
-            availableEggs={availableEggs}
-            outstandingOrders={outstandingOrders}
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            showPaymentDialog={showPaymentDialog}
-            showConfirmPayment={showConfirmPayment}
-            handleConfirmPickup={handleConfirmPickup}
-            confirmingPickup={confirmingPickup}
-            markingPayment={markingPayment}
-            getCurrentUnpaidAmount={getCurrentUnpaidAmount}
-            goToPage={goToPage}
-          />
+          <DashboardContent {...dashboardProps} />
         </View>
 
         {/* Page 1: Order */}
         <View key="1" style={styles.page} collapsable={false}>
-          <OrderContent
-            weeklyStock={weeklyStock}
-            subscription={subscription}
-            currentWeekOrder={currentWeekOrder}
-            availableEggs={availableEggs}
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            onDataChange={loadData}
-            showSnackbar={showSnackbar}
-          />
+          <OrderContent {...orderProps} />
         </View>
 
         {/* Page 2: Subscription */}
         <View key="2" style={styles.page} collapsable={false}>
-          <SubscriptionContent
-            weeklyStock={weeklyStock}
-            subscription={subscription}
-            currentWeekSubOrder={currentWeekSubscriptionOrder}
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            onDataChange={loadData}
-            showSnackbar={showSnackbar}
-          />
+          <SubscriptionContent {...subscriptionProps} />
         </View>
       </PagerView>
 
