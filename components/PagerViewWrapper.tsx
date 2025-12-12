@@ -1,43 +1,25 @@
-// This file is for native (iOS/Android) - uses PagerView for gallery swipe
+// This file is for web - renders children without PagerView
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import PagerView from 'react-native-pager-view';
 
 interface PagerViewWrapperProps {
   children: React.ReactNode[];
   currentPage: number;
   onPageSelected: (index: number) => void;
-  pagerRef: React.RefObject<PagerView>;
+  pagerRef: React.RefObject<any>;
 }
 
-export function PagerViewWrapper({ children, currentPage, onPageSelected, pagerRef }: PagerViewWrapperProps) {
-  const handlePageSelected = (e: any) => {
-    onPageSelected(e.nativeEvent.position);
-  };
-
+export function PagerViewWrapper({ children, currentPage }: PagerViewWrapperProps) {
+  // Web: Just render the current page
   return (
-    <PagerView
-      ref={pagerRef}
-      style={styles.container}
-      initialPage={currentPage}
-      onPageSelected={handlePageSelected}
-      overdrag={true}
-      offscreenPageLimit={2}
-    >
-      {React.Children.map(children, (child, index) => (
-        <View key={index} style={styles.page} collapsable={false}>
-          {child}
-        </View>
-      ))}
-    </PagerView>
+    <View style={styles.container}>
+      {React.Children.toArray(children)[currentPage]}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-  },
-  page: {
     flex: 1,
   },
 });
