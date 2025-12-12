@@ -19,6 +19,7 @@ import { LoadingView, ErrorView } from '@/components/common';
 import { parseError } from '@/utils/errorHandling';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { PaymentDialog, ConfirmPaymentDialog } from '@/components/PaymentDialog';
+import { useSwipeNavigation } from '@/hooks/useSwipeNavigation';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_GAP = 12;
@@ -408,13 +409,15 @@ export default function DashboardScreen() {
   };
 
   const heroContent = getHeroContent();
+  const swipeHandlers = useSwipeNavigation();
 
   return (
-    <ScrollView 
-      style={styles.container}
-      contentContainerStyle={styles.scrollContent}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#ff6b35']} tintColor="#ff6b35" />}
-    >
+    <View style={styles.container} {...swipeHandlers}>
+      <ScrollView 
+        style={styles.scrollViewInner}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#ff6b35']} tintColor="#ff6b35" />}
+      >
       {/* Hero Section */}
       <View style={styles.heroSection}>
         {heroContent.icon ? (
@@ -613,7 +616,8 @@ export default function DashboardScreen() {
         isLoading={markingPayment}
       />
       {renderSnackbar()}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -621,6 +625,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fef5f1',
+  },
+  scrollViewInner: {
+    flex: 1,
   },
   scrollContent: {
     flexGrow: 1,

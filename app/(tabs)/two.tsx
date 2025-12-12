@@ -16,6 +16,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { LoadingView, ErrorView } from '@/components/common';
 import { parseError } from '@/utils/errorHandling';
 import { useWeekContext } from '@/contexts/WeekContext';
+import { useSwipeNavigation } from '@/hooks/useSwipeNavigation';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const HORIZONTAL_PADDING = 16;
@@ -221,9 +222,10 @@ export default function OrderScreen() {
   };
 
   const warningInfo = getWarningInfo();
+  const swipeHandlers = useSwipeNavigation();
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} {...swipeHandlers}>
       <RNView style={styles.content}>
         {/* Warning Section - Only show when can't order */}
         {warningInfo && (

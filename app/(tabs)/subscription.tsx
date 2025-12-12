@@ -20,6 +20,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { LoadingView, ErrorView } from '@/components/common';
 import { parseError } from '@/utils/errorHandling';
 import { useWeekContext } from '@/contexts/WeekContext';
+import { useSwipeNavigation } from '@/hooks/useSwipeNavigation';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const HORIZONTAL_PADDING = 16;
@@ -206,9 +207,10 @@ export default function SubscriptionScreen() {
   }
 
   const showForm = (!subscription || editingSubscription) && !weeklyStock.isLowSeason;
+  const swipeHandlers = useSwipeNavigation();
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} {...swipeHandlers}>
       <ScrollView 
         style={styles.scrollView} 
         contentContainerStyle={styles.content}
@@ -270,26 +272,28 @@ export default function SubscriptionScreen() {
             )}
 
             {/* Action Buttons */}
-            <RNView style={styles.actionColumn}>
+            <RNView style={styles.actionRow}>
               <Button
                 mode="outlined"
                 onPress={() => setEditingSubscription(true)}
                 disabled={weeklyStock.isLowSeason}
                 icon="pencil"
-                style={[styles.editButton, weeklyStock.isLowSeason && { opacity: 0.5 }]}
+                style={[styles.actionButton, weeklyStock.isLowSeason && { opacity: 0.5 }]}
+                compact
               >
-                {t('subscription.modifySubscription')}
+                {t('common.modify')}
               </Button>
               <Button
-                mode="text"
+                mode="outlined"
                 onPress={handleCancelSubscription}
                 disabled={processing}
                 loading={processing}
                 textColor={theme.colors.error}
                 icon="close-circle-outline"
+                style={styles.actionButton}
                 compact
               >
-                {t('subscription.cancelSubscription')}
+                {t('common.cancel')}
               </Button>
             </RNView>
           </Surface>
@@ -568,11 +572,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: 'center',
   },
-  actionColumn: {
+  actionRow: {
+    flexDirection: 'row',
+    gap: 8,
     marginTop: 8,
   },
-  editButton: {
-    marginBottom: 4,
+  actionButton: {
+    flex: 1,
   },
 
   // Low Season Card

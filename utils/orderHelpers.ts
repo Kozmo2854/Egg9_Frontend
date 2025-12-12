@@ -142,10 +142,12 @@ export const areAllOrdersPickedUp = (
   currentWeekOrder: Order | null,
   currentWeekSubscriptionOrder: Order | null
 ): boolean => {
-  const oneTimePickedUp = currentWeekOrder ? 
-    (!['delivered', 'completed'].includes(currentWeekOrder.status) || currentWeekOrder.pickedUp) : true;
-  const subscriptionPickedUp = currentWeekSubscriptionOrder ? 
-    (!['delivered', 'completed'].includes(currentWeekSubscriptionOrder.status) || currentWeekSubscriptionOrder.pickedUp) : true;
+  // If there are no orders, consider it as "picked up"
+  if (!currentWeekOrder && !currentWeekSubscriptionOrder) return true;
+  
+  // Check if each existing order is picked up
+  const oneTimePickedUp = currentWeekOrder ? currentWeekOrder.pickedUp : true;
+  const subscriptionPickedUp = currentWeekSubscriptionOrder ? currentWeekSubscriptionOrder.pickedUp : true;
   
   return oneTimePickedUp && subscriptionPickedUp;
 };
