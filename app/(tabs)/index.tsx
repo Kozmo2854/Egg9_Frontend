@@ -453,21 +453,23 @@ export default function DashboardScreen() {
             </View>
             {/* Bottom row: Amount + Buttons */}
             <View style={styles.paymentCardRow}>
-              <Text style={styles.paymentCardAmount}>{getCurrentUnpaidAmount().toFixed(0)} {t('common.rsd')}</Text>
               {!isWaitingConfirmation && (
-                <View style={styles.paymentCardButtons}>
-                  <IconButton icon="qrcode" size={24} onPress={() => showPaymentDialog('current')} style={styles.qrButton} />
-                  <Button 
-                    mode="contained" 
-                    compact 
-                    onPress={showConfirmPayment}
-                    disabled={markingPayment}
-                    buttonColor={theme.colors.tertiary}
-                    labelStyle={styles.smallButtonLabel}
-                  >
-                    {t('dashboard.markPaid')}
-                  </Button>
-                </View>
+                <>
+                  <Text style={styles.paymentCardAmount}>{getCurrentUnpaidAmount().toFixed(0)} {t('common.rsd')}</Text>
+                  <View style={styles.paymentCardButtons}>
+                    <IconButton icon="qrcode" size={24} onPress={() => showPaymentDialog('current')} style={styles.qrButton} />
+                    <Button 
+                      mode="contained" 
+                      compact 
+                      onPress={showConfirmPayment}
+                      disabled={markingPayment}
+                      buttonColor={theme.colors.tertiary}
+                      labelStyle={styles.smallButtonLabel}
+                    >
+                      {t('dashboard.markPaid')}
+                    </Button>
+                  </View>
+                </>
               )}
             </View>
           </Surface>
@@ -482,27 +484,29 @@ export default function DashboardScreen() {
               <Text style={styles.paymentCardLargeTitle}>
                 {isWaitingConfirmation ? t('dashboard.waitingConfirmation') : t('dashboard.pleasePayOrder')}
               </Text>
-              <Text style={styles.paymentCardLargeAmount}>{getCurrentUnpaidAmount().toFixed(0)} {t('common.rsd')}</Text>
               {!isWaitingConfirmation && (
-                <View style={styles.paymentCardLargeButtons}>
-                  <Button 
-                    mode="outlined" 
-                    icon="qrcode"
-                    onPress={() => showPaymentDialog('current')}
-                    style={styles.paymentLargeButton}
-                  >
-                    {t('dashboard.showQR')}
-                  </Button>
-                  <Button 
-                    mode="contained" 
-                    onPress={showConfirmPayment}
-                    disabled={markingPayment}
-                    buttonColor={theme.colors.tertiary}
-                    style={styles.paymentLargeButton}
-                  >
-                    {t('dashboard.markPaid')}
-                  </Button>
-                </View>
+                <>
+                  <Text style={styles.paymentCardLargeAmount}>{getCurrentUnpaidAmount().toFixed(0)} {t('common.rsd')}</Text>
+                  <View style={styles.paymentCardLargeButtons}>
+                    <Button 
+                      mode="outlined" 
+                      icon="qrcode"
+                      onPress={() => showPaymentDialog('current')}
+                      style={styles.paymentLargeButton}
+                    >
+                      {t('dashboard.showQR')}
+                    </Button>
+                    <Button 
+                      mode="contained" 
+                      onPress={showConfirmPayment}
+                      disabled={markingPayment}
+                      buttonColor={theme.colors.tertiary}
+                      style={styles.paymentLargeButton}
+                    >
+                      {t('dashboard.markPaid')}
+                    </Button>
+                  </View>
+                </>
               )}
             </View>
           </Surface>
