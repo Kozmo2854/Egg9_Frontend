@@ -273,9 +273,10 @@ export default function SettingsScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Button 
-            icon="arrow-left" 
+            icon={({ size, color }) => <FontAwesome name="arrow-left" size={20} color={color} />}
             onPress={() => router.back()}
             style={styles.backButton}
+            labelStyle={styles.backButtonLabel}
           >
             {t('common.back')}
           </Button>
@@ -298,11 +299,13 @@ export default function SettingsScreen() {
             onPress={() => { setEditPhone(user.phoneNumber); setEditPhoneDialog(true); }}
           />
           <Divider />
-          <SettingRow 
-            label={t('settings.email')} 
-            value={user.email}
-            onPress={() => { setEditEmail(user.email); setEditEmailDialog(true); }}
-          />
+          {/* Email - display only, not editable */}
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingLabel}>{t('settings.email')}</Text>
+              <Text style={styles.settingValue} numberOfLines={1}>{user.email}</Text>
+            </View>
+          </View>
           <Divider />
           <SettingRow 
             label={t('settings.password')} 
@@ -595,6 +598,10 @@ const styles = StyleSheet.create({
   backButton: {
     alignSelf: 'flex-start',
     marginLeft: -8,
+  },
+  backButtonLabel: {
+    fontSize: 16,
+    marginLeft: 4,
   },
   title: {
     fontSize: 28,
