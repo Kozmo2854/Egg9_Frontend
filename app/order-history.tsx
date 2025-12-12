@@ -131,11 +131,11 @@ export default function OrderHistoryScreen() {
                   <Chip 
                     style={[styles.typeChip, { 
                       backgroundColor: order.type === 'subscription' 
-                        ? 'rgba(78, 205, 196, 0.15)' 
+                        ? 'rgba(76, 175, 80, 0.15)' 
                         : 'rgba(255, 107, 53, 0.15)' 
                     }]}
                     textStyle={{ 
-                      color: order.type === 'subscription' ? '#4ecdc4' : '#ff6b35',
+                      color: order.type === 'subscription' ? '#4caf50' : '#ff6b35',
                       fontSize: 12,
                     }}
                   >
@@ -157,10 +157,10 @@ export default function OrderHistoryScreen() {
                   <Text style={styles.detailLabel}>{t('orderHistory.quantity')}</Text>
                   <Text style={styles.detailValue}>{order.quantity} {t('common.eggs')}</Text>
                 </View>
-                {order.paymentConfirmedAt && (
+                {order.paymentSubmittedAt && (
                   <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>{t('orderHistory.paidOn')}</Text>
-                    <Text style={styles.detailValue}>{formatFullDate(order.paymentConfirmedAt)}</Text>
+                    <Text style={styles.detailValue}>{formatFullDate(order.paymentSubmittedAt)}</Text>
                   </View>
                 )}
               </View>

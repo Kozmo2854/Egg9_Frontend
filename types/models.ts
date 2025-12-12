@@ -71,8 +71,8 @@ export interface Order {
   total: number; // Total price for the order
   status: 'pending' | 'completed';
   isPaid: boolean; // Payment confirmation status (by admin)
-  paymentConfirmedAt?: string | null; // ISO date when payment was confirmed by admin
   paymentSubmitted: boolean; // Payment marked as submitted by user
+  paymentSubmittedAt?: string | null; // ISO date when user marked payment as submitted
   pickedUp: boolean; // Pickup confirmed by user
   weekStart?: string; // ISO date string - which week this order is for (from week relation)
   weekEnd?: string; // ISO date string - week end date

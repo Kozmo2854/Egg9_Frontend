@@ -249,6 +249,25 @@ export default function OrderScreen() {
           </Surface>
         )}
 
+        {/* Hero Section - Show when order exists */}
+        {currentWeekOrder && (
+          <RNView style={styles.heroSection}>
+            <Text style={styles.heroEmoji}>
+              {currentWeekOrder.isPaid ? '✅' : '🛒'}
+            </Text>
+            <Text style={styles.heroTitle}>
+              {currentWeekOrder.isPaid ? t('order.paymentConfirmed') : t('dashboard.thankYouOrder')}
+            </Text>
+            <Text style={styles.heroSubtitle}>
+              {currentWeekOrder.isPaid 
+                ? t('dashboard.seeYouNext') 
+                : (currentWeekOrder.paymentSubmitted 
+                    ? t('dashboard.waitingPaymentConfirmation') 
+                    : t('order.payOnDashboard'))}
+            </Text>
+          </RNView>
+        )}
+
         {/* Order Form - Only show if can order and not locked */}
         {canOrder && !isLocked && (
           <Surface style={styles.orderCard} elevation={2}>
@@ -306,25 +325,6 @@ export default function OrderScreen() {
               </Button>
             )}
           </Surface>
-        )}
-
-        {/* Hero Section - Show when order exists */}
-        {currentWeekOrder && (
-          <RNView style={styles.heroSection}>
-            <Text style={styles.heroEmoji}>
-              {currentWeekOrder.isPaid ? '✅' : '🛒'}
-            </Text>
-            <Text style={styles.heroTitle}>
-              {currentWeekOrder.isPaid ? t('order.paymentConfirmed') : t('dashboard.thankYouOrder')}
-            </Text>
-            <Text style={styles.heroSubtitle}>
-              {currentWeekOrder.isPaid 
-                ? t('dashboard.seeYouNext') 
-                : (currentWeekOrder.paymentSubmitted 
-                    ? t('dashboard.waitingPaymentConfirmation') 
-                    : t('order.payOnDashboard'))}
-            </Text>
-          </RNView>
         )}
 
         {/* Order Summary - Show when order exists and locked */}
