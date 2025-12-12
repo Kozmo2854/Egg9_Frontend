@@ -540,7 +540,13 @@ export default function DashboardScreen() {
         <View style={styles.bottomRow}>
           {/* Order Card */}
           <Pressable style={styles.bottomCardWrapper} onPress={() => router.push('/(tabs)/two')}>
-            <Surface style={[styles.bottomCard, hasCurrentOrders && currentWeekOrder && styles.bottomCardActive]} elevation={2}>
+            <Surface style={[
+              styles.bottomCard, 
+              currentWeekOrder && styles.bottomCardActive,
+              currentWeekOrder && !currentWeekOrder.paymentSubmitted && !currentWeekOrder.isPaid && styles.bottomCardRed,
+              currentWeekOrder && currentWeekOrder.paymentSubmitted && !currentWeekOrder.isPaid && styles.bottomCardYellow,
+              currentWeekOrder && currentWeekOrder.isPaid && styles.bottomCardGreen,
+            ]} elevation={2}>
               <Text style={styles.bottomCardIcon}>🛒</Text>
               {state === 'NO_ORDERS' || !currentWeekOrder ? (
                 <>
@@ -562,7 +568,13 @@ export default function DashboardScreen() {
 
           {/* Subscription Card */}
           <Pressable style={styles.bottomCardWrapper} onPress={() => router.push('/(tabs)/subscription')}>
-            <Surface style={[styles.bottomCard, subscription && styles.bottomCardActive]} elevation={2}>
+            <Surface style={[
+              styles.bottomCard, 
+              currentWeekSubscriptionOrder && styles.bottomCardActive,
+              currentWeekSubscriptionOrder && !currentWeekSubscriptionOrder.paymentSubmitted && !currentWeekSubscriptionOrder.isPaid && styles.bottomCardRed,
+              currentWeekSubscriptionOrder && currentWeekSubscriptionOrder.paymentSubmitted && !currentWeekSubscriptionOrder.isPaid && styles.bottomCardYellow,
+              currentWeekSubscriptionOrder && currentWeekSubscriptionOrder.isPaid && styles.bottomCardGreen,
+            ]} elevation={2}>
               <Text style={styles.bottomCardIcon}>🔄</Text>
               {!subscription ? (
                 <>
@@ -690,23 +702,25 @@ const styles = StyleSheet.create({
     borderColor: '#a5d6a7',
   },
   paymentCardHeader: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
     marginBottom: 12,
   },
   paymentCardIcon: {
-    fontSize: 24,
+    fontSize: 28,
   },
   paymentCardTitle: {
     fontSize: 15,
     fontWeight: '600',
     color: '#2d3748',
+    textAlign: 'center',
   },
   paymentCardRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    gap: 12,
   },
   paymentCardAmount: {
     fontSize: 24,
@@ -793,8 +807,23 @@ const styles = StyleSheet.create({
   },
   bottomCardActive: {
     backgroundColor: '#fff5f0',
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#ffb088',
+  },
+  bottomCardRed: {
+    borderWidth: 2,
+    borderColor: '#f44336',
+    backgroundColor: '#ffebee',
+  },
+  bottomCardYellow: {
+    borderWidth: 2,
+    borderColor: '#ff9800',
+    backgroundColor: '#fff8e1',
+  },
+  bottomCardGreen: {
+    borderWidth: 2,
+    borderColor: '#4caf50',
+    backgroundColor: '#e8f5e9',
   },
   bottomCardIcon: {
     fontSize: 32,
