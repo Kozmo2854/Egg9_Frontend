@@ -124,6 +124,7 @@
     "infoNote": "Orders must be in increments of 1 dozen (10 eggs)",
     "payNow": "Pay Now",
     "viewPayment": "View Payment",
+    "payOnDashboard": "Pay from the Dashboard",
     "lowSeasonNotice": "Our chickens are resting – orders up to {{cap}} eggs"
   },
   "subscription": {
@@ -131,6 +132,9 @@
     "subtitle": "Fresh eggs delivered every week",
     "loadingSubscription": "Loading subscription...",
     "activeSubscription": "Active Subscription",
+    "activeThisWeek": "Subscription Active This Week",
+    "paymentConfirmed": "Payment Confirmed",
+    "nextDeliveryScheduled": "Your next delivery is scheduled",
     "weeklyDelivery": "Weekly Delivery:",
     "duration": "Duration:",
     "weeklyPrice": "Weekly Price:",
@@ -335,6 +339,8 @@
     "completePayment": "Complete your payment",
     "pleasePayOrder": "Please pay your order",
     "waitingConfirmation": "Waiting for confirmation",
+    "waitingPaymentConfirmation": "Waiting for payment confirmation",
+    "paymentCompleted": "Payment completed!",
     "markPaid": "Mark Paid",
     "showQR": "Show QR",
     "seeOrder": "See Order",
@@ -388,6 +394,7 @@
     "oneTime": "One-time",
     "quantity": "Quantity",
     "amount": "Amount",
+    "paidOn": "Paid on",
     "pickedUp": "Picked Up"
   }
 }

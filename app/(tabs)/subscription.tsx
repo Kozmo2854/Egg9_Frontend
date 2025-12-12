@@ -38,6 +38,7 @@ export default function SubscriptionScreen() {
   const [editingSubscription, setEditingSubscription] = useState(false);
   const [subscriptionQuantity, setSubscriptionQuantity] = useState(10);
   const [subscriptionPeriod, setSubscriptionPeriod] = useState(2);
+  const [currentWeekSubOrder, setCurrentWeekSubOrder] = useState<any>(null);
   const [nextWeekConfirmation, setNextWeekConfirmation] = useState<{
     show: boolean;
     nextWeekStart: string;
@@ -54,12 +55,14 @@ export default function SubscriptionScreen() {
     try {
       setLoading(true);
       setError(null);
-      const [stockData, subData] = await Promise.all([
+      const [stockData, subData, subOrder] = await Promise.all([
         apiService.getWeeklyStock(),
         apiService.getSubscription(),
+        apiService.getCurrentWeekSubscriptionOrder(),
       ]);
       setWeeklyStock(stockData);
       setSubscription(subData);
+      setCurrentWeekSubOrder(subOrder);
       
       // Set week dates for header display
       if (stockData) {
@@ -211,6 +214,31 @@ export default function SubscriptionScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        {/* Hero Section - Show subscription status */}
+        {subscription && !editingSubscription && (
+          <RNView style={styles.heroSection}>
+            <Text style={styles.heroEmoji}>
+              {currentWeekSubOrder?.isPaid ? '✅' : (currentWeekSubOrder ? '🔄' : '📅')}
+            </Text>
+            <Text style={styles.heroTitle}>
+              {currentWeekSubOrder?.isPaid 
+                ? t('subscription.paymentConfirmed')
+                : (currentWeekSubOrder 
+                    ? t('subscription.activeThisWeek')
+                    : t('subscription.activeSubscription'))}
+            </Text>
+            <Text style={styles.heroSubtitle}>
+              {currentWeekSubOrder?.isPaid 
+                ? t('dashboard.seeYouNext')
+                : (currentWeekSubOrder?.paymentSubmitted 
+                    ? t('dashboard.waitingPaymentConfirmation')
+                    : (currentWeekSubOrder 
+                        ? t('order.payOnDashboard')
+                        : t('subscription.nextDeliveryScheduled')))}
+            </Text>
+          </RNView>
+        )}
+
         {/* Active Subscription Card */}
         {subscription && !editingSubscription && (
           <Surface style={styles.subscriptionCard} elevation={2}>
@@ -457,6 +485,28 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 24,
     justifyContent: 'center',
+  },
+  
+  // Hero Section
+  heroSection: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  heroEmoji: {
+    fontSize: 56,
+    marginBottom: 8,
+  },
+  heroTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2d3748',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  heroSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
   },
 
   // Card Header

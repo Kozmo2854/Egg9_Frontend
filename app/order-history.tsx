@@ -66,6 +66,15 @@ export default function OrderHistoryScreen() {
     });
   };
   
+  const formatFullDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString(undefined, { 
+      month: 'short', 
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+  
   const formatWeekRange = (order: Order) => {
     if (order.weekStart && order.weekEnd) {
       return `${formatDate(order.weekStart)} - ${formatDate(order.weekEnd)}`;
@@ -114,8 +123,11 @@ export default function OrderHistoryScreen() {
           orders.map((order) => (
             <Surface key={order.id} style={styles.orderCard} elevation={1}>
               <View style={styles.orderHeader}>
-                <View>
+                <View style={styles.orderHeaderLeft}>
                   <Text style={styles.orderDate}>{formatWeekRange(order)}</Text>
+                  <Text style={styles.orderAmount}>{order.total} RSD</Text>
+                </View>
+                <View style={styles.chipColumn}>
                   <Chip 
                     style={[styles.typeChip, { 
                       backgroundColor: order.type === 'subscription' 
@@ -131,13 +143,13 @@ export default function OrderHistoryScreen() {
                       ? t('orderHistory.subscription') 
                       : t('orderHistory.oneTime')}
                   </Chip>
+                  <Chip 
+                    style={[styles.statusChip, { backgroundColor: getStatusColor(order.status, order.isPaid) + '22' }]}
+                    textStyle={{ color: getStatusColor(order.status, order.isPaid), fontSize: 12, lineHeight: 16 }}
+                  >
+                    {getStatusText(order)}
+                  </Chip>
                 </View>
-                <Chip 
-                  style={{ backgroundColor: getStatusColor(order.status, order.isPaid) + '22', height: 36 }}
-                  textStyle={{ color: getStatusColor(order.status, order.isPaid), fontSize: 12, lineHeight: 16 }}
-                >
-                  {getStatusText(order)}
-                </Chip>
               </View>
               
               <View style={styles.orderDetails}>
@@ -145,10 +157,12 @@ export default function OrderHistoryScreen() {
                   <Text style={styles.detailLabel}>{t('orderHistory.quantity')}</Text>
                   <Text style={styles.detailValue}>{order.quantity} {t('common.eggs')}</Text>
                 </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>{t('orderHistory.amount')}</Text>
-                  <Text style={styles.detailValue}>{order.total} RSD</Text>
-                </View>
+                {order.paymentConfirmedAt && (
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>{t('orderHistory.paidOn')}</Text>
+                    <Text style={styles.detailValue}>{formatFullDate(order.paymentConfirmedAt)}</Text>
+                  </View>
+                )}
               </View>
 
               {order.pickedUp && (
@@ -220,14 +234,30 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 12,
   },
+  orderHeaderLeft: {
+    flex: 1,
+  },
   orderDate: {
     fontSize: 16,
     fontWeight: '600',
     color: '#2d3748',
-    marginBottom: 6,
+    marginBottom: 4,
+  },
+  orderAmount: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#ff6b35',
+  },
+  chipColumn: {
+    alignItems: 'flex-end',
+    gap: 6,
   },
   typeChip: {
-    height: 36,
+    height: 28,
+    minWidth: 85,
+  },
+  statusChip: {
+    height: 28,
     minWidth: 85,
   },
   orderDetails: {

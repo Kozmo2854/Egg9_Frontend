@@ -6,7 +6,6 @@ import {
   Button,
   IconButton,
   Snackbar,
-  Chip,
   useTheme,
   Surface,
 } from 'react-native-paper';
@@ -16,7 +15,6 @@ import { WeeklyStock } from '@/types/models';
 import { useFocusEffect } from '@react-navigation/native';
 import { LoadingView, ErrorView } from '@/components/common';
 import { parseError } from '@/utils/errorHandling';
-import { PaymentDialog, ConfirmPaymentDialog } from '@/components/PaymentDialog';
 import { useWeekContext } from '@/contexts/WeekContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -37,15 +35,6 @@ export default function OrderScreen() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [availableEggs, setAvailableEggs] = useState(0);
-  const [paymentDialogVisible, setPaymentDialogVisible] = useState(false);
-  const [markingPayment, setMarkingPayment] = useState(false);
-  const [confirmPaymentVisible, setConfirmPaymentVisible] = useState(false);
-  const [paymentSettings, setPaymentSettings] = useState<{
-    bankAccountNumber: string;
-    recipientName: string;
-    paymentPurpose: string;
-    paymentCode: string;
-  } | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -61,19 +50,17 @@ export default function OrderScreen() {
         setLoading(true);
       }
       setError(null);
-      const [stockData, subData, currentOrder, available, settings] = await Promise.all([
+      const [stockData, subData, currentOrder, available] = await Promise.all([
         apiService.getWeeklyStock(),
         apiService.getSubscription(),
         apiService.getCurrentWeekOrder(),
         apiService.getAvailableEggsForUser(),
-        apiService.getAppSettings(),
       ]);
       setWeeklyStock(stockData);
       setSubscription(subData);
       const oneTimeOrder = currentOrder && !currentOrder.subscriptionId ? currentOrder : null;
       setCurrentWeekOrder(oneTimeOrder);
       setAvailableEggs(available);
-      setPaymentSettings(settings.paymentSettings);
       
       // Set week dates for header display
       if (stockData) {
@@ -200,31 +187,6 @@ export default function OrderScreen() {
     return maxAvailable;
   };
 
-  const generateNBSIPSQRCode = () => {
-    if (!paymentSettings || !currentWeekOrder) return '';
-    const amount = currentWeekOrder.total;
-    const amountFormatted = `RSD${amount.toFixed(2).replace('.', ',')}`;
-    const bankAccountFormatted = paymentSettings.bankAccountNumber.replace(/-/g, '');
-    return `K:PR|V:01|C:1|R:${bankAccountFormatted}|N:${paymentSettings.recipientName}|I:${amountFormatted}|SF:${paymentSettings.paymentCode}|S:${paymentSettings.paymentPurpose}`;
-  };
-
-  const handleMarkPaymentSubmitted = async () => {
-    if (!currentWeekOrder) return;
-    
-    try {
-      setMarkingPayment(true);
-      await apiService.markOrderPaymentSubmitted(currentWeekOrder.id);
-      await loadData();
-      setPaymentDialogVisible(false);
-      setConfirmPaymentVisible(false);
-      setSuccessMessage(t('payment.paymentMarked'));
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Failed to mark payment');
-    } finally {
-      setMarkingPayment(false);
-    }
-  };
-
   if (loading) {
     return <LoadingView message={t('order.loadingOrder')} />;
   }
@@ -346,8 +308,8 @@ export default function OrderScreen() {
           </Surface>
         )}
 
-        {/* Hero Section - Show when order exists and locked */}
-        {currentWeekOrder && isLocked && (
+        {/* Hero Section - Show when order exists */}
+        {currentWeekOrder && (
           <RNView style={styles.heroSection}>
             <Text style={styles.heroEmoji}>
               {currentWeekOrder.isPaid ? '✅' : '🛒'}
@@ -359,8 +321,8 @@ export default function OrderScreen() {
               {currentWeekOrder.isPaid 
                 ? t('dashboard.seeYouNext') 
                 : (currentWeekOrder.paymentSubmitted 
-                    ? t('dashboard.waitingConfirmation') 
-                    : t('dashboard.pleasePayOrder'))}
+                    ? t('dashboard.waitingPaymentConfirmation') 
+                    : t('order.payOnDashboard'))}
             </Text>
           </RNView>
         )}
@@ -383,43 +345,7 @@ export default function OrderScreen() {
             )}
           </Surface>
         )}
-
-        {/* Payment Button - only show when not paid and not submitted */}
-        {currentWeekOrder && !currentWeekOrder.isPaid && !currentWeekOrder.paymentSubmitted && (
-          <Button
-            mode="contained"
-            onPress={() => setPaymentDialogVisible(true)}
-            style={styles.paymentButton}
-            icon="qrcode"
-            buttonColor={theme.colors.tertiary}
-          >
-            {t('order.payNow')}
-          </Button>
-        )}
       </RNView>
-
-      {/* Payment Dialog */}
-      {currentWeekOrder && (
-        <PaymentDialog
-          visible={paymentDialogVisible}
-          onDismiss={() => setPaymentDialogVisible(false)}
-          onMarkPaid={() => setConfirmPaymentVisible(true)}
-          quantity={currentWeekOrder.quantity}
-          amount={currentWeekOrder.total}
-          bankAccountNumber={paymentSettings?.bankAccountNumber}
-          recipientName={paymentSettings?.recipientName}
-          qrCodeValue={generateNBSIPSQRCode()}
-          isPaymentSubmitted={currentWeekOrder.paymentSubmitted}
-        />
-      )}
-
-      {/* Confirm Payment Dialog */}
-      <ConfirmPaymentDialog
-        visible={confirmPaymentVisible}
-        onDismiss={() => setConfirmPaymentVisible(false)}
-        onConfirm={handleMarkPaymentSubmitted}
-        isLoading={markingPayment}
-      />
 
       <Snackbar
         visible={!!successMessage}
@@ -608,22 +534,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#ff6b35',
   },
-  statusChip: {
-    alignSelf: 'center',
-  },
-  statusPaid: {
-    backgroundColor: '#d4f4f1',
-  },
-  statusPending: {
-    backgroundColor: '#e3f2fd',
-  },
-
-  // Payment Button
-  paymentButton: {
-    borderRadius: 12,
-    marginBottom: 16,
-  },
-
   // Available Badge
   availableBadge: {
     backgroundColor: '#fff',

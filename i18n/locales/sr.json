@@ -124,13 +124,17 @@
     "infoNote": "Porudžbine se prodaju po kartonu (10 jaja)",
     "lowSeasonNotice": "Naše kokoške se odmaraju – porudžbine do {{cap}} jaja",
     "payNow": "Plati sada",
-    "viewPayment": "Pogledaj plaćanje"
+    "viewPayment": "Pogledaj plaćanje",
+    "payOnDashboard": "Platite sa početne stranice"
   },
   "subscription": {
     "title": "Nedeljna pretplata",
     "subtitle": "Sveža jaja isporučena svake nedelje",
     "loadingSubscription": "Učitavanje pretplate...",
     "activeSubscription": "Aktivna pretplata",
+    "activeThisWeek": "Pretplata aktivna ove nedelje",
+    "paymentConfirmed": "Plaćanje potvrđeno",
+    "nextDeliveryScheduled": "Vaša sledeća dostava je zakazana",
     "weeklyDelivery": "Nedeljna dostava:",
     "duration": "Trajanje:",
     "weeklyPrice": "Nedeljna cena:",
@@ -335,6 +339,8 @@
     "completePayment": "Završite plaćanje",
     "pleasePayOrder": "Molimo platite narudžbinu",
     "waitingConfirmation": "Čeka se potvrda",
+    "waitingPaymentConfirmation": "Čeka se potvrda plaćanja",
+    "paymentCompleted": "Plaćanje završeno!",
     "markPaid": "Označi plaćeno",
     "showQR": "Prikaži QR",
     "seeOrder": "Vidi narudžbinu",
@@ -389,6 +395,7 @@
     "oneTime": "Jednokratna",
     "quantity": "Količina",
     "amount": "Iznos",
+    "paidOn": "Plaćeno",
     "pickedUp": "Preuzeto"
   }
 }

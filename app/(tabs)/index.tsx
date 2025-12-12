@@ -380,7 +380,7 @@ export default function DashboardScreen() {
         const dayName = deliveryDate.toLocaleDateString(undefined, { weekday: 'short' });
         const dateStr = deliveryDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
         return {
-          icon: 'calendar',
+          emoji: '🐔',
           title: t('dashboard.deliveryScheduled'),
           subtitle: `${dayName} ${dateStr}, ${weeklyStock.deliveryTime}`,
         };
@@ -440,38 +440,42 @@ export default function DashboardScreen() {
         )}
       </View>
 
-      {/* Payment Card - shown when payment needed (except in PICKED_UP_NOT_PAID where it's the only thing) */}
-      {needsPayment && state !== 'PICKED_UP_NOT_PAID' && (
-        <Pressable onPress={() => showPaymentDialog('current')}>
-          <Surface style={styles.paymentCard} elevation={3}>
+      {/* Payment Card - shown when orders exist (not in NO_ORDERS, PICKED_UP_NOT_PAID, or COMPLETE states) */}
+      {hasCurrentOrders && state !== 'NO_ORDERS' && state !== 'PICKED_UP_NOT_PAID' && state !== 'COMPLETE' && (
+        <Pressable onPress={() => !isPaid && showPaymentDialog('current')} disabled={isPaid}>
+          <Surface style={[styles.paymentCard, isPaid && styles.paymentCardCompleted]} elevation={3}>
             {/* Top row: Icon + Title */}
             <View style={styles.paymentCardHeader}>
-              <Text style={styles.paymentCardIcon}>💳</Text>
+              <Text style={styles.paymentCardIcon}>{isPaid ? '✅' : '💳'}</Text>
               <Text style={styles.paymentCardTitle}>
-                {isWaitingConfirmation ? t('dashboard.waitingConfirmation') : t('dashboard.pleasePayOrder')}
+                {isPaid 
+                  ? t('dashboard.paymentCompleted')
+                  : (isWaitingConfirmation ? t('dashboard.waitingPaymentConfirmation') : t('dashboard.pleasePayOrder'))}
               </Text>
             </View>
-            {/* Bottom row: Amount + Buttons */}
-            <View style={styles.paymentCardRow}>
-              {!isWaitingConfirmation && (
-                <>
-                  <Text style={styles.paymentCardAmount}>{getCurrentUnpaidAmount().toFixed(0)} {t('common.rsd')}</Text>
-                  <View style={styles.paymentCardButtons}>
-                    <IconButton icon="qrcode" size={24} onPress={() => showPaymentDialog('current')} style={styles.qrButton} />
-                    <Button 
-                      mode="contained" 
-                      compact 
-                      onPress={showConfirmPayment}
-                      disabled={markingPayment}
-                      buttonColor={theme.colors.tertiary}
-                      labelStyle={styles.smallButtonLabel}
-                    >
-                      {t('dashboard.markPaid')}
-                    </Button>
-                  </View>
-                </>
-              )}
-            </View>
+            {/* Bottom row: Amount + Buttons - only when not paid */}
+            {!isPaid && (
+              <View style={styles.paymentCardRow}>
+                {!isWaitingConfirmation && (
+                  <>
+                    <Text style={styles.paymentCardAmount}>{getCurrentUnpaidAmount().toFixed(0)} {t('common.rsd')}</Text>
+                    <View style={styles.paymentCardButtons}>
+                      <IconButton icon="qrcode" size={24} onPress={() => showPaymentDialog('current')} style={styles.qrButton} />
+                      <Button 
+                        mode="contained" 
+                        compact 
+                        onPress={showConfirmPayment}
+                        disabled={markingPayment}
+                        buttonColor={theme.colors.tertiary}
+                        labelStyle={styles.smallButtonLabel}
+                      >
+                        {t('dashboard.markPaid')}
+                      </Button>
+                    </View>
+                  </>
+                )}
+              </View>
+            )}
           </Surface>
         </Pressable>
       )}
@@ -482,7 +486,7 @@ export default function DashboardScreen() {
           <Surface style={styles.paymentCardLarge} elevation={3}>
             <View style={styles.paymentCardLargeContent}>
               <Text style={styles.paymentCardLargeTitle}>
-                {isWaitingConfirmation ? t('dashboard.waitingConfirmation') : t('dashboard.pleasePayOrder')}
+                {isWaitingConfirmation ? t('dashboard.waitingPaymentConfirmation') : t('dashboard.pleasePayOrder')}
               </Text>
               {!isWaitingConfirmation && (
                 <>
@@ -680,6 +684,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ffb088',
     padding: 16,
+  },
+  paymentCardCompleted: {
+    backgroundColor: '#e8f5e9',
+    borderColor: '#a5d6a7',
   },
   paymentCardHeader: {
     flexDirection: 'row',
