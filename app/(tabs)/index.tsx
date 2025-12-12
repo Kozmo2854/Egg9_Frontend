@@ -55,6 +55,9 @@ export default function DashboardScreen() {
   const [snackbar, setSnackbar] = useState<{ visible: boolean; message: string }>({ visible: false, message: '' });
   const [paymentOrderContext, setPaymentOrderContext] = useState<{ type: 'current' | 'outstanding', order?: any } | null>(null);
   const [confirmPaymentVisible, setConfirmPaymentVisible] = useState(false);
+  
+  // Swipe navigation - must be called before any conditional returns
+  const swipeHandlers = useSwipeNavigation();
 
   useFocusEffect(
     useCallback(() => {
@@ -409,7 +412,6 @@ export default function DashboardScreen() {
   };
 
   const heroContent = getHeroContent();
-  const swipeHandlers = useSwipeNavigation();
 
   return (
     <View style={styles.container} {...swipeHandlers}>

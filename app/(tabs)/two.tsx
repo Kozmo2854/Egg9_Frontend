@@ -36,6 +36,9 @@ export default function OrderScreen() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [availableEggs, setAvailableEggs] = useState(0);
+  
+  // Swipe navigation - must be called before any conditional returns
+  const swipeHandlers = useSwipeNavigation();
 
   useFocusEffect(
     useCallback(() => {
@@ -222,7 +225,6 @@ export default function OrderScreen() {
   };
 
   const warningInfo = getWarningInfo();
-  const swipeHandlers = useSwipeNavigation();
 
   return (
     <View style={styles.container} {...swipeHandlers}>

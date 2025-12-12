@@ -45,6 +45,9 @@ export default function SubscriptionScreen() {
     nextWeekStart: string;
     nextWeekEnd: string;
   } | null>(null);
+  
+  // Swipe navigation - must be called before any conditional returns
+  const swipeHandlers = useSwipeNavigation();
 
   useFocusEffect(
     useCallback(() => {
@@ -207,7 +210,6 @@ export default function SubscriptionScreen() {
   }
 
   const showForm = (!subscription || editingSubscription) && !weeklyStock.isLowSeason;
-  const swipeHandlers = useSwipeNavigation();
 
   return (
     <View style={styles.container} {...swipeHandlers}>
