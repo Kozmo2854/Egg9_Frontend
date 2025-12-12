@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { StyleSheet, View, RefreshControl, ScrollView, Dimensions, Pressable } from 'react-native';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { StyleSheet, View, RefreshControl, ScrollView, Dimensions, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { 
   Text, 
@@ -10,28 +10,36 @@ import {
   IconButton,
 } from 'react-native-paper';
 import { useTranslation } from 'react-i18next';
+import PagerView from 'react-native-pager-view';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { apiService } from '@/services/api';
 import { WeeklyStock } from '@/types/models';
-import { useFocusEffect } from '@react-navigation/native';
 import * as OrderHelpers from '@/utils/orderHelpers';
 import { useWeekContext } from '@/contexts/WeekContext';
 import { LoadingView, ErrorView } from '@/components/common';
 import { parseError } from '@/utils/errorHandling';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { PaymentDialog, ConfirmPaymentDialog } from '@/components/PaymentDialog';
-import { useSwipeNavigation } from '@/hooks/useSwipeNavigation';
+
+// Import screen content components
+import DashboardContent from '@/components/screens/DashboardContent';
+import OrderContent from '@/components/screens/OrderContent';
+import SubscriptionContent from '@/components/screens/SubscriptionContent';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_GAP = 12;
-const HORIZONTAL_PADDING = 16;
 
-export default function DashboardScreen() {
+export default function GalleryTabsScreen() {
   const theme = useTheme();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const { setWeekDates } = useWeekContext();
   const router = useRouter();
+  const pagerRef = useRef<PagerView>(null);
   
-  // Data states
+  // Tab state
+  const [currentPage, setCurrentPage] = useState(0);
+  
+  // Shared data state
   const [weeklyStock, setWeeklyStock] = useState<WeeklyStock | null>(null);
   const [subscription, setSubscription] = useState<any>(null);
   const [currentWeekOrder, setCurrentWeekOrder] = useState<any>(null);
@@ -49,21 +57,19 @@ export default function DashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [snackbar, setSnackbar] = useState<{ visible: boolean; message: string; type?: 'success' | 'error' }>({ visible: false, message: '' });
+  
+  // Payment dialog states
   const [paymentDialogVisible, setPaymentDialogVisible] = useState(false);
   const [markingPayment, setMarkingPayment] = useState(false);
-  const [confirmingPickup, setConfirmingPickup] = useState(false);
-  const [snackbar, setSnackbar] = useState<{ visible: boolean; message: string }>({ visible: false, message: '' });
   const [paymentOrderContext, setPaymentOrderContext] = useState<{ type: 'current' | 'outstanding', order?: any } | null>(null);
   const [confirmPaymentVisible, setConfirmPaymentVisible] = useState(false);
-  
-  // Swipe navigation - must be called before any conditional returns
-  const swipeHandlers = useSwipeNavigation();
+  const [confirmingPickup, setConfirmingPickup] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-    }, [])
-  );
+  // Load data on mount (NOT on focus)
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const loadData = async (isRefresh = false) => {
     try {
@@ -110,6 +116,19 @@ export default function DashboardScreen() {
     loadData(true);
   }, []);
 
+  const showSnackbar = (message: string, type: 'success' | 'error' = 'success') => {
+    setSnackbar({ visible: true, message, type });
+  };
+
+  // Tab navigation
+  const handlePageSelected = (e: any) => {
+    setCurrentPage(e.nativeEvent.position);
+  };
+
+  const goToPage = (index: number) => {
+    pagerRef.current?.setPage(index);
+  };
+
   // Payment helpers
   const showPaymentDialog = (type: 'current' | 'outstanding' = 'current', order?: any) => {
     setPaymentOrderContext({ type, order });
@@ -139,13 +158,9 @@ export default function DashboardScreen() {
       : OrderHelpers.getUnpaidNotSubmittedQuantity(currentWeekOrder, currentWeekSubscriptionOrder);
   };
 
-  // Returns the amount that needs action (not submitted) OR all submitted amounts if waiting for confirmation
   const getCurrentUnpaidAmount = () => {
     const notSubmittedAmount = OrderHelpers.getUnpaidNotSubmittedAmount(currentWeekOrder, currentWeekSubscriptionOrder);
     const submittedAmount = OrderHelpers.getUnpaidSubmittedAmount(currentWeekOrder, currentWeekSubscriptionOrder);
-    
-    // If there are still orders to mark as paid, show that amount
-    // Otherwise show the submitted amount waiting for confirmation
     return notSubmittedAmount > 0 ? notSubmittedAmount : submittedAmount;
   };
 
@@ -166,13 +181,13 @@ export default function DashboardScreen() {
         await apiService.markOrderPaymentSubmitted(paymentOrderContext.order.id);
         await loadData();
         hidePaymentDialog();
-        setSnackbar({ visible: true, message: t('payment.paymentMarked') });
+        showSnackbar(t('payment.paymentMarked'));
         return;
       }
       
       const orderIds = OrderHelpers.getOrdersNeedingPaymentSubmission(currentWeekOrder, currentWeekSubscriptionOrder);
       if (orderIds.length === 0) {
-        setSnackbar({ visible: true, message: t('payment.allOrdersMarked') });
+        showSnackbar(t('payment.allOrdersMarked'));
         hidePaymentDialog();
         return;
       }
@@ -180,10 +195,10 @@ export default function DashboardScreen() {
       await Promise.all(orderIds.map(id => apiService.markOrderPaymentSubmitted(id)));
       await loadData();
       hidePaymentDialog();
-      setSnackbar({ visible: true, message: t('payment.paymentMarked') });
+      showSnackbar(t('payment.paymentMarked'));
     } catch (err: any) {
       const appError = parseError(err, 'markPayment');
-      setSnackbar({ visible: true, message: appError.message });
+      showSnackbar(appError.message, 'error');
     } finally {
       setMarkingPayment(false);
     }
@@ -195,10 +210,10 @@ export default function DashboardScreen() {
       const orderIds = OrderHelpers.getOrdersNeedingPickupConfirmation(currentWeekOrder, currentWeekSubscriptionOrder);
       await Promise.all(orderIds.map(id => apiService.confirmOrderPickup(id)));
       await loadData();
-      setSnackbar({ visible: true, message: t('payment.pickupConfirmed') });
+      showSnackbar(t('payment.pickupConfirmed'));
     } catch (err: any) {
       const appError = parseError(err);
-      setSnackbar({ visible: true, message: appError.message });
+      showSnackbar(appError.message, 'error');
     } finally {
       setConfirmingPickup(false);
     }
@@ -212,36 +227,6 @@ export default function DashboardScreen() {
     return `K:PR|V:01|C:1|R:${bankAccountFormatted}|N:${paymentSettings.recipientName}|I:${amountFormatted}|SF:${paymentSettings.paymentCode}|S:${paymentSettings.paymentPurpose}`;
   };
 
-  // Determine current state
-  const hasOutstanding = outstandingOrders.length > 0;
-  const hasCurrentOrders = currentWeekOrder || currentWeekSubscriptionOrder;
-  const isDelivered = ['delivered', 'completed'].includes(currentWeekOrder?.status || '') || 
-                      ['delivered', 'completed'].includes(currentWeekSubscriptionOrder?.status || '') ||
-                      weeklyStock?.allOrdersDelivered;
-  const isPaid = OrderHelpers.areAllOrdersPaid(currentWeekOrder, currentWeekSubscriptionOrder);
-  const isWaitingConfirmation = OrderHelpers.areOrdersWaitingForConfirmation(currentWeekOrder, currentWeekSubscriptionOrder);
-  // Only check pickup status if orders are delivered
-  const isPickedUp = isDelivered && OrderHelpers.areAllOrdersPickedUp(currentWeekOrder, currentWeekSubscriptionOrder);
-  const isComplete = isDelivered && isPickedUp && isPaid;
-  const hasDeliveryScheduled = weeklyStock?.deliveryDate && weeklyStock?.deliveryTime;
-  const getTotalEggs = () => (currentWeekOrder?.quantity || 0) + (currentWeekSubscriptionOrder?.quantity || 0);
-  const needsPayment = hasCurrentOrders && !isPaid;
-
-  if (loading) {
-    return <LoadingView message={t('common.loading')} />;
-  }
-
-  if (error || !weeklyStock) {
-    return (
-      <ErrorView 
-        message={error || 'Unable to load data'} 
-        onRetry={() => loadData()} 
-      />
-    );
-  }
-
-  // Render payment dialog
-  // Get payment dialog props based on context
   const getPaymentDialogProps = () => {
     const isOutstanding = paymentOrderContext?.type === 'outstanding';
     const isPaymentSubmitted = isOutstanding 
@@ -260,348 +245,111 @@ export default function DashboardScreen() {
     };
   };
 
-  const renderSnackbar = () => (
-    <Snackbar
-      visible={snackbar.visible}
-      onDismiss={() => setSnackbar({ visible: false, message: '' })}
-      duration={3000}
-      action={{ label: 'OK', onPress: () => setSnackbar({ visible: false, message: '' }) }}
-    >
-      {snackbar.message}
-    </Snackbar>
-  );
+  if (loading) {
+    return <LoadingView message={t('common.loading')} />;
+  }
 
-  // STATE 0: Outstanding Orders Takeover
-  if (hasOutstanding) {
+  if (error || !weeklyStock) {
     return (
-      <ScrollView 
-        style={styles.container}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#ff6b35']} tintColor="#ff6b35" />}
-      >
-        <View style={styles.heroSection}>
-          <Text style={styles.heroEmoji}>🐔</Text>
-          <Text style={styles.heroTitle}>{t('dashboard.oops')}</Text>
-          <Text style={styles.heroSubtitle}>{t('dashboard.unpaidOrders')}</Text>
-        </View>
-        
-        <View style={styles.outstandingList}>
-          {outstandingOrders.map((order) => (
-            <Surface key={order.id} style={styles.outstandingItem} elevation={2}>
-              <Pressable style={styles.outstandingItemContent} onPress={() => showPaymentDialog('outstanding', order)}>
-                <View>
-                  <Text style={styles.outstandingWeek}>
-                    {t('home.weekOf', { date: new Date(order.weekStart).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) })}
-                  </Text>
-                  <Text style={styles.outstandingDetails}>
-                    {order.quantity} {t('common.eggs')} • {order.total.toFixed(0)} {t('common.rsd')}
-                  </Text>
-                </View>
-                {order.paymentSubmitted ? (
-                  <View style={styles.waitingBadge}>
-                    <Text style={styles.waitingBadgeText}>⏳</Text>
-                  </View>
-                ) : (
-                  <Button mode="contained" compact buttonColor={theme.colors.primary}>
-                    {t('home.pay')}
-                  </Button>
-                )}
-              </Pressable>
-            </Surface>
-          ))}
-        </View>
-        
-        <Text style={styles.outstandingNote}>{t('dashboard.settleBalance')}</Text>
-
-        <PaymentDialog
-          visible={paymentDialogVisible}
-          onDismiss={hidePaymentDialog}
-          onMarkPaid={showConfirmPayment}
-          {...getPaymentDialogProps()}
-          bankAccountNumber={paymentSettings?.bankAccountNumber}
-          recipientName={paymentSettings?.recipientName}
-          isMarkingPayment={markingPayment}
-        />
-        <ConfirmPaymentDialog
-          visible={confirmPaymentVisible}
-          onDismiss={hideConfirmPayment}
-          onConfirm={handleMarkPaymentSubmitted}
-          isLoading={markingPayment}
-        />
-        {renderSnackbar()}
-      </ScrollView>
+      <ErrorView 
+        message={error || 'Unable to load data'} 
+        onRetry={() => loadData()} 
+      />
     );
   }
 
-  // Determine which state we're in
-  const getState = () => {
-    if (!hasCurrentOrders && !subscription) return 'NO_ORDERS';
-    if (isComplete) return 'COMPLETE';
-    if (isPickedUp && !isPaid) return 'PICKED_UP_NOT_PAID';
-    if (isDelivered && !isPickedUp) return 'DELIVERED';
-    if (hasDeliveryScheduled) return 'DELIVERY_SCHEDULED';
-    if (hasCurrentOrders) return 'ORDER_PLACED';
-    return 'NO_ORDERS';
-  };
-
-  const state = getState();
-
-  // Hero content based on state
-  const getHeroContent = () => {
-    switch (state) {
-      case 'NO_ORDERS':
-        // Determine why ordering might be closed
-        const stockNotSetup = !weeklyStock.isOrderingOpen && !weeklyStock.allOrdersDelivered;
-        const ordersDelivered = weeklyStock.allOrdersDelivered;
-        
-        if (stockNotSetup) {
-          return {
-            emoji: '📦',
-            title: t('order.stockNotSetUp'),
-            subtitle: t('order.stockNotSetUpDesc'),
-          };
-        }
-        if (ordersDelivered) {
-          return {
-            emoji: '✅',
-            title: t('order.ordersDelivered'),
-            subtitle: t('order.ordersDeliveredDesc'),
-          };
-        }
-        return {
-          emoji: '🐣',
-          title: t('dashboard.noOrdersYet'),
-          subtitle: `${availableEggs} ${t('dashboard.eggsAvailable')}`,
-        };
-      case 'ORDER_PLACED':
-        return {
-          emoji: '🚚',
-          title: t('dashboard.thankYouOrder'),
-          subtitle: t('dashboard.waitingDeliveryTime'),
-        };
-      case 'DELIVERY_SCHEDULED':
-        const deliveryDate = new Date(weeklyStock.deliveryDate!);
-        const dayName = deliveryDate.toLocaleDateString(undefined, { weekday: 'short' });
-        const dateStr = deliveryDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-        return {
-          emoji: '🐔',
-          title: t('dashboard.deliveryScheduled'),
-          subtitle: `${dayName} ${dateStr}, ${weeklyStock.deliveryTime}`,
-        };
-      case 'DELIVERED':
-        return {
-          emoji: '📦',
-          title: t('dashboard.eggsAreHere'),
-          subtitle: t('dashboard.dontForgetPickup'),
-        };
-      case 'PICKED_UP_NOT_PAID':
-        return {
-          emoji: '💳',
-          title: t('dashboard.almostDone'),
-          subtitle: t('dashboard.completePayment'),
-        };
-      case 'COMPLETE':
-        return {
-          emoji: '✅',
-          title: t('dashboard.allDone'),
-          subtitle: t('dashboard.seeYouNext'),
-        };
-      default:
-        return { emoji: '🥚', title: '', subtitle: '' };
-    }
-  };
-
-  const heroContent = getHeroContent();
+  const tabLabels = [t('tabs.home'), t('tabs.order'), t('tabs.subscription')];
+  const tabIcons = ['home', 'shopping-basket', 'refresh'];
 
   return (
-    <View style={styles.container} {...swipeHandlers}>
-      <ScrollView 
-        style={styles.scrollViewInner}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#ff6b35']} tintColor="#ff6b35" />}
+    <View style={styles.container}>
+      {/* PagerView for gallery-style swipe */}
+      <PagerView
+        ref={pagerRef}
+        style={styles.pager}
+        initialPage={0}
+        onPageSelected={handlePageSelected}
+        overdrag={true}
+        offscreenPageLimit={2}
       >
-      {/* Hero Section */}
-      <View style={styles.heroSection}>
-        {heroContent.icon ? (
-          <View style={styles.heroIconContainer}>
-            <FontAwesome name={heroContent.icon as any} size={48} color="#ff6b35" />
-          </View>
-        ) : (
-          <Text style={styles.heroEmoji}>{heroContent.emoji}</Text>
-        )}
-        <Text style={styles.heroTitle}>{heroContent.title}</Text>
-        
-        {/* Available Eggs Badge - only for NO_ORDERS state */}
-        {state === 'NO_ORDERS' && weeklyStock.isOrderingOpen && (
-          <Surface style={styles.availableBadge} elevation={3}>
-            <Text style={styles.availableNumber}>{availableEggs}</Text>
-            <Text style={styles.availableLabel}>{t('dashboard.eggsAvailable')}</Text>
-          </Surface>
-        )}
-        
-        {/* Subtitle for other states or closed ordering */}
-        {(state !== 'NO_ORDERS' || !weeklyStock.isOrderingOpen) && (
-          <Text style={styles.heroSubtitle}>{heroContent.subtitle}</Text>
-        )}
+        {/* Page 0: Dashboard */}
+        <View key="0" style={styles.page} collapsable={false}>
+          <DashboardContent
+            weeklyStock={weeklyStock}
+            subscription={subscription}
+            currentWeekOrder={currentWeekOrder}
+            currentWeekSubscriptionOrder={currentWeekSubscriptionOrder}
+            availableEggs={availableEggs}
+            outstandingOrders={outstandingOrders}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            showPaymentDialog={showPaymentDialog}
+            showConfirmPayment={showConfirmPayment}
+            handleConfirmPickup={handleConfirmPickup}
+            confirmingPickup={confirmingPickup}
+            markingPayment={markingPayment}
+            getCurrentUnpaidAmount={getCurrentUnpaidAmount}
+            goToPage={goToPage}
+          />
+        </View>
+
+        {/* Page 1: Order */}
+        <View key="1" style={styles.page} collapsable={false}>
+          <OrderContent
+            weeklyStock={weeklyStock}
+            subscription={subscription}
+            currentWeekOrder={currentWeekOrder}
+            availableEggs={availableEggs}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            onDataChange={loadData}
+            showSnackbar={showSnackbar}
+          />
+        </View>
+
+        {/* Page 2: Subscription */}
+        <View key="2" style={styles.page} collapsable={false}>
+          <SubscriptionContent
+            weeklyStock={weeklyStock}
+            subscription={subscription}
+            currentWeekSubOrder={currentWeekSubscriptionOrder}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            onDataChange={loadData}
+            showSnackbar={showSnackbar}
+          />
+        </View>
+      </PagerView>
+
+      {/* Custom Tab Bar */}
+      <View style={[styles.tabBar, { paddingBottom: insets.bottom || 8 }]}>
+        {tabLabels.map((label, index) => {
+          const isActive = currentPage === index;
+          return (
+            <Pressable
+              key={index}
+              style={styles.tab}
+              onPress={() => goToPage(index)}
+            >
+              <FontAwesome
+                name={tabIcons[index] as any}
+                size={24}
+                color={isActive ? theme.colors.primary : '#999'}
+              />
+              <Text
+                style={[
+                  styles.tabLabel,
+                  { color: isActive ? theme.colors.primary : '#999' },
+                ]}
+              >
+                {label}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
-      {/* Payment Card - shown when orders exist (not in NO_ORDERS, PICKED_UP_NOT_PAID, or COMPLETE states) */}
-      {hasCurrentOrders && state !== 'NO_ORDERS' && state !== 'PICKED_UP_NOT_PAID' && state !== 'COMPLETE' && (
-        <Pressable onPress={() => !isPaid && showPaymentDialog('current')} disabled={isPaid}>
-          <Surface style={[styles.paymentCard, isPaid && styles.paymentCardCompleted]} elevation={3}>
-            {/* Top row: Icon + Title */}
-            <View style={styles.paymentCardHeader}>
-              <Text style={styles.paymentCardIcon}>{isPaid ? '✅' : '💳'}</Text>
-              <Text style={styles.paymentCardTitle}>
-                {isPaid 
-                  ? t('dashboard.paymentCompleted')
-                  : (isWaitingConfirmation ? t('dashboard.waitingPaymentConfirmation') : t('dashboard.pleasePayOrder'))}
-              </Text>
-            </View>
-            {/* Bottom row: Amount + Buttons - only when not paid */}
-            {!isPaid && (
-              <View style={styles.paymentCardRow}>
-                {!isWaitingConfirmation && (
-                  <>
-                    <Text style={styles.paymentCardAmount}>{getCurrentUnpaidAmount().toFixed(0)} {t('common.rsd')}</Text>
-                    <View style={styles.paymentCardButtons}>
-                      <IconButton icon="qrcode" size={24} onPress={() => showPaymentDialog('current')} style={styles.qrButton} />
-                      <Button 
-                        mode="contained" 
-                        compact 
-                        onPress={showConfirmPayment}
-                        disabled={markingPayment}
-                        buttonColor={theme.colors.tertiary}
-                        labelStyle={styles.smallButtonLabel}
-                      >
-                        {t('dashboard.markPaid')}
-                      </Button>
-                    </View>
-                  </>
-                )}
-              </View>
-            )}
-          </Surface>
-        </Pressable>
-      )}
-
-      {/* PICKED_UP_NOT_PAID: Only show payment card */}
-      {state === 'PICKED_UP_NOT_PAID' && (
-        <Pressable onPress={() => showPaymentDialog('current')}>
-          <Surface style={styles.paymentCardLarge} elevation={3}>
-            <View style={styles.paymentCardLargeContent}>
-              <Text style={styles.paymentCardLargeTitle}>
-                {isWaitingConfirmation ? t('dashboard.waitingPaymentConfirmation') : t('dashboard.pleasePayOrder')}
-              </Text>
-              {!isWaitingConfirmation && (
-                <>
-                  <Text style={styles.paymentCardLargeAmount}>{getCurrentUnpaidAmount().toFixed(0)} {t('common.rsd')}</Text>
-                  <View style={styles.paymentCardLargeButtons}>
-                    <Button 
-                      mode="outlined" 
-                      icon="qrcode"
-                      onPress={() => showPaymentDialog('current')}
-                      style={styles.paymentLargeButton}
-                    >
-                      {t('dashboard.showQR')}
-                    </Button>
-                    <Button 
-                      mode="contained" 
-                      onPress={showConfirmPayment}
-                      disabled={markingPayment}
-                      buttonColor={theme.colors.tertiary}
-                      style={styles.paymentLargeButton}
-                    >
-                      {t('dashboard.markPaid')}
-                    </Button>
-                  </View>
-                </>
-              )}
-            </View>
-          </Surface>
-        </Pressable>
-      )}
-
-      {/* DELIVERED: Single Confirm Pickup button */}
-      {state === 'DELIVERED' && !isPickedUp && (
-        <Surface style={styles.pickupCard} elevation={2}>
-          <Button
-            mode="contained"
-            icon="package-variant"
-            onPress={handleConfirmPickup}
-            loading={confirmingPickup}
-            disabled={confirmingPickup}
-            style={styles.pickupButton}
-            contentStyle={styles.pickupButtonContent}
-            buttonColor={theme.colors.primary}
-          >
-            {t('dashboard.confirmPickup')} • {getTotalEggs()} {t('common.eggs')}
-          </Button>
-        </Surface>
-      )}
-
-      {/* Bottom Cards: Order + Subscription (not shown in PICKED_UP_NOT_PAID or DELIVERED states) */}
-      {state !== 'PICKED_UP_NOT_PAID' && state !== 'DELIVERED' && (
-        <View style={styles.bottomRow}>
-          {/* Order Card */}
-          <Pressable style={styles.bottomCardWrapper} onPress={() => router.push('/(tabs)/two')}>
-            <Surface style={[
-              styles.bottomCard, 
-              currentWeekOrder && styles.bottomCardActive,
-              currentWeekOrder && !currentWeekOrder.paymentSubmitted && !currentWeekOrder.isPaid && styles.bottomCardRed,
-              currentWeekOrder && currentWeekOrder.paymentSubmitted && !currentWeekOrder.isPaid && styles.bottomCardYellow,
-              currentWeekOrder && currentWeekOrder.isPaid && styles.bottomCardGreen,
-            ]} elevation={2}>
-              <Text style={styles.bottomCardIcon}>🛒</Text>
-              {state === 'NO_ORDERS' || !currentWeekOrder ? (
-                <>
-                  <Text style={styles.bottomCardTitle}>{t('dashboard.orderNow')}</Text>
-                </>
-              ) : state === 'COMPLETE' ? (
-                <>
-                  <Text style={styles.bottomCardQuantity}>{currentWeekOrder.quantity} {t('common.eggs')}</Text>
-                  <Text style={styles.bottomCardCheck}>✓</Text>
-                </>
-              ) : (
-                <>
-                  <Text style={styles.bottomCardTitle}>{t('tabs.order')}</Text>
-                  <Text style={styles.bottomCardQuantity}>{currentWeekOrder.quantity} {t('common.eggs')}</Text>
-                </>
-              )}
-            </Surface>
-          </Pressable>
-
-          {/* Subscription Card */}
-          <Pressable style={styles.bottomCardWrapper} onPress={() => router.push('/(tabs)/subscription')}>
-            <Surface style={[
-              styles.bottomCard, 
-              currentWeekSubscriptionOrder && styles.bottomCardActive,
-              currentWeekSubscriptionOrder && !currentWeekSubscriptionOrder.paymentSubmitted && !currentWeekSubscriptionOrder.isPaid && styles.bottomCardRed,
-              currentWeekSubscriptionOrder && currentWeekSubscriptionOrder.paymentSubmitted && !currentWeekSubscriptionOrder.isPaid && styles.bottomCardYellow,
-              currentWeekSubscriptionOrder && currentWeekSubscriptionOrder.isPaid && styles.bottomCardGreen,
-            ]} elevation={2}>
-              <Text style={styles.bottomCardIcon}>🔄</Text>
-              {!subscription ? (
-                <>
-                  <Text style={styles.bottomCardTitle}>{t('dashboard.subscribe')}</Text>
-                </>
-              ) : state === 'COMPLETE' ? (
-                <>
-                  <Text style={styles.bottomCardQuantity}>{subscription.quantity} {t('common.eggs')}</Text>
-                  <Text style={styles.bottomCardStatus}>{t('dashboard.active')}</Text>
-                </>
-              ) : (
-                <>
-                  <Text style={styles.bottomCardTitle}>{t('tabs.subscription')}</Text>
-                  <Text style={styles.bottomCardQuantity}>{subscription.quantity} {t('common.eggs')}</Text>
-                  <Text style={styles.bottomCardWeeks}>{subscription.weeksRemaining} {t('dashboard.weeksLeft')}</Text>
-                </>
-              )}
-            </Surface>
-          </Pressable>
-        </View>
-      )}
-
+      {/* Payment Dialog */}
       <PaymentDialog
         visible={paymentDialogVisible}
         onDismiss={hidePaymentDialog}
@@ -617,8 +365,17 @@ export default function DashboardScreen() {
         onConfirm={handleMarkPaymentSubmitted}
         isLoading={markingPayment}
       />
-      {renderSnackbar()}
-      </ScrollView>
+
+      {/* Snackbar */}
+      <Snackbar
+        visible={snackbar.visible}
+        onDismiss={() => setSnackbar({ visible: false, message: '' })}
+        duration={3000}
+        style={{ backgroundColor: snackbar.type === 'error' ? theme.colors.error : theme.colors.tertiary }}
+        action={{ label: 'OK', onPress: () => setSnackbar({ visible: false, message: '' }) }}
+      >
+        {snackbar.message}
+      </Snackbar>
     </View>
   );
 }
@@ -628,379 +385,38 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fef5f1',
   },
-  scrollViewInner: {
+  pager: {
     flex: 1,
   },
-  scrollContent: {
-    flexGrow: 1,
-    padding: HORIZONTAL_PADDING,
-    paddingTop: 16,
-  },
-  
-  // Hero Section
-  heroSection: {
-    alignItems: 'center',
-    paddingVertical: 24,
-    marginBottom: 16,
-  },
-  heroEmoji: {
-    fontSize: 64,
-    marginBottom: 12,
-  },
-  heroIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  heroTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#2d3748',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  heroSubtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-  },
-  availableBadge: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  availableNumber: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#ff6b35',
-  },
-  availableLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 4,
-  },
-  
-  // Payment Card
-  paymentCard: {
-    backgroundColor: '#fff5f0',
-    borderRadius: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#ffb088',
-    padding: 16,
-  },
-  paymentCardCompleted: {
-    backgroundColor: '#e8f5e9',
-    borderColor: '#a5d6a7',
-  },
-  paymentCardHeader: {
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 12,
-  },
-  paymentCardIcon: {
-    fontSize: 28,
-  },
-  paymentCardTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#2d3748',
-    textAlign: 'center',
-  },
-  paymentCardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  paymentCardAmount: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#ff6b35',
-  },
-  paymentCardButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  qrButton: {
-    margin: 0,
-    backgroundColor: '#fff',
-  },
-  smallButtonLabel: {
-    fontSize: 12,
-    marginVertical: 2,
-    marginHorizontal: 8,
-  },
-  
-  // Payment Card Large (for PICKED_UP_NOT_PAID state)
-  paymentCardLarge: {
-    backgroundColor: '#fff5f0',
-    borderRadius: 20,
-    marginBottom: 16,
-    borderWidth: 2,
-    borderColor: '#ff6b35',
-  },
-  paymentCardLargeContent: {
-    alignItems: 'center',
-    padding: 24,
-  },
-  paymentCardLargeTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2d3748',
-    marginBottom: 8,
-  },
-  paymentCardLargeAmount: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#ff6b35',
-    marginBottom: 20,
-  },
-  paymentCardLargeButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  paymentLargeButton: {
+  page: {
     flex: 1,
   },
-  
-  // Pickup Card
-  pickupCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    marginBottom: 16,
-    overflow: 'hidden',
-  },
-  pickupButton: {
-    borderRadius: 16,
-    margin: 0,
-  },
-  pickupButtonContent: {
-    paddingVertical: 16,
-  },
-  
-  // Bottom Row
-  bottomRow: {
+  tabBar: {
     flexDirection: 'row',
-    gap: CARD_GAP,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    paddingTop: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
   },
-  bottomCardWrapper: {
+  tab: {
     flex: 1,
-  },
-  bottomCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
     alignItems: 'center',
-    height: 140,
-    justifyContent: 'center',
+    paddingVertical: 4,
   },
-  bottomCardActive: {
-    backgroundColor: '#fff5f0',
-    borderWidth: 2,
-    borderColor: '#ffb088',
-  },
-  bottomCardRed: {
-    borderWidth: 2,
-    borderColor: '#f44336',
-    backgroundColor: '#ffebee',
-  },
-  bottomCardYellow: {
-    borderWidth: 2,
-    borderColor: '#ff9800',
-    backgroundColor: '#fff8e1',
-  },
-  bottomCardGreen: {
-    borderWidth: 2,
-    borderColor: '#4caf50',
-    backgroundColor: '#e8f5e9',
-  },
-  bottomCardIcon: {
-    fontSize: 32,
-    marginBottom: 8,
-  },
-  bottomCardTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#2d3748',
-  },
-  bottomCardQuantity: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    marginTop: 4,
-  },
-  bottomCardCheck: {
-    fontSize: 18,
-    color: '#28a745',
-    marginTop: 4,
-  },
-  bottomCardStatus: {
+  tabLabel: {
     fontSize: 12,
-    color: '#28a745',
-    fontWeight: '600',
     marginTop: 4,
-  },
-  bottomCardWeeks: {
-    fontSize: 12,
-    color: '#888',
-    marginTop: 2,
-  },
-  
-  // Outstanding Orders
-  outstandingList: {
-    gap: 12,
-    marginBottom: 16,
-  },
-  outstandingItem: {
-    borderRadius: 12,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#fed7d7',
-  },
-  outstandingItemContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-  },
-  outstandingWeek: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#2d3748',
-  },
-  outstandingDetails: {
-    fontSize: 13,
-    color: '#666',
-    marginTop: 2,
-  },
-  waitingBadge: {
-    backgroundColor: '#e3f2fd',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  waitingBadgeText: {
-    fontSize: 16,
-  },
-  outstandingNote: {
-    fontSize: 14,
-    color: '#742a2a',
-    textAlign: 'center',
-    fontStyle: 'italic',
-  },
-  
-  // Payment Dialog
-  paymentDialog: {
-    maxWidth: 340,
-    alignSelf: 'center',
-  },
-  dialogTitle: {
-    textAlign: 'center',
-    fontWeight: 'bold',
-    fontSize: 18,
-    paddingHorizontal: 16,
-  },
-  dialogContent: {
-    alignItems: 'center',
-    paddingHorizontal: 16,
-  },
-  // Confirm Payment Dialog
-  confirmDialog: {
-    maxWidth: 280,
-    alignSelf: 'center',
-    borderRadius: 16,
-  },
-  confirmDialogContent: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  confirmDialogTitle: {
-    textAlign: 'center',
-    fontWeight: 'bold',
-    fontSize: 16,
-    color: '#2d3748',
-    marginBottom: 8,
-  },
-  confirmDialogText: {
-    textAlign: 'center',
-    color: '#666',
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  confirmDialogActions: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  dialogSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 16,
-  },
-  qrCodeContainer: {
-    padding: 16,
-    backgroundColor: 'white',
-    borderRadius: 12,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  paymentDialogAmount: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    color: '#2d3748',
-  },
-  bankDetails: {
-    width: '100%',
-  },
-  bankDetailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  bankDetailLabel: {
-    fontSize: 13,
-    color: '#666',
-  },
-  bankDetailValue: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#2d3748',
-  },
-  dialogNote: {
-    fontSize: 12,
-    color: '#999',
-    textAlign: 'center',
-    marginTop: 12,
-  },
-  dialogActions: {
-    justifyContent: 'center',
-    paddingBottom: 16,
+    fontWeight: '500',
   },
 });

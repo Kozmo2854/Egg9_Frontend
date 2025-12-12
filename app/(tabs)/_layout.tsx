@@ -333,7 +333,7 @@ export default function TabLayout() {
     );
   }
 
-  // Regular users see Home, Order, Subscription
+  // Regular users see GalleryTabs (PagerView with custom tab bar)
   return (
     <WeekProvider>
       <ScrollProvider>
@@ -348,27 +348,24 @@ export default function TabLayout() {
               headerTransparent: Platform.OS === 'web',
               headerBackground: () => <HeaderBackground />,
               headerStyle: { backgroundColor: Platform.OS === 'web' ? 'transparent' : '#fef5f1' },
-              animation: 'shift', // Smooth slide animation between tabs
+              tabBarStyle: { display: 'none' }, // Hide built-in tab bar - we use custom one in PagerView
             }}>
           <Tabs.Screen
             name="index"
             options={{
               title: t('tabs.home'),
-              tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
             }}
           />
           <Tabs.Screen
             name="two"
             options={{
-              title: t('tabs.order'),
-              tabBarIcon: ({ color }) => <TabBarIcon name="shopping-basket" color={color} />,
+              href: null, // Hidden - handled by PagerView
             }}
           />
           <Tabs.Screen
             name="subscription"
             options={{
-              title: t('tabs.subscription'),
-              tabBarIcon: ({ color }) => <TabBarIcon name="refresh" color={color} />,
+              href: null, // Hidden - handled by PagerView
             }}
           />
           <Tabs.Screen
