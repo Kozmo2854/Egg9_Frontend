@@ -19,17 +19,12 @@ import { useWeekContext } from '@/contexts/WeekContext';
 import { LoadingView, ErrorView } from '@/components/common';
 import { parseError } from '@/utils/errorHandling';
 import { PaymentDialog, ConfirmPaymentDialog } from '@/components/PaymentDialog';
+import { PagerViewWrapper } from '@/components/PagerViewWrapper';
 
 // Import screen content components
 import DashboardContent from '@/components/screens/DashboardContent';
 import OrderContent from '@/components/screens/OrderContent';
 import SubscriptionContent from '@/components/screens/SubscriptionContent';
-
-// Conditionally import PagerView (native only)
-let PagerView: any = null;
-if (Platform.OS !== 'web') {
-  PagerView = require('react-native-pager-view').default;
-}
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -126,15 +121,10 @@ export default function GalleryTabsScreen() {
   };
 
   // Tab navigation
-  const handlePageSelected = (e: any) => {
-    setCurrentPage(e.nativeEvent.position);
-  };
-
   const goToPage = (index: number) => {
     setCurrentPage(index);
-    if (Platform.OS !== 'web') {
-      pagerRef.current?.setPage(index);
-    }
+    // On native, pagerRef.setPage animates to the page
+    pagerRef.current?.setPage?.(index);
   };
 
   // Payment helpers
@@ -309,101 +299,18 @@ export default function GalleryTabsScreen() {
     showSnackbar,
   };
 
-  // Web: Simple tab-based view (no swipe)
-  if (Platform.OS === 'web') {
-    return (
-      <View style={styles.container}>
-        <View style={styles.pager}>
-          {currentPage === 0 && <DashboardContent {...dashboardProps} />}
-          {currentPage === 1 && <OrderContent {...orderProps} />}
-          {currentPage === 2 && <SubscriptionContent {...subscriptionProps} />}
-        </View>
-
-        {/* Custom Tab Bar */}
-        <View style={[styles.tabBar, { paddingBottom: insets.bottom || 8 }]}>
-          {tabLabels.map((label, index) => {
-            const isActive = currentPage === index;
-            return (
-              <Pressable
-                key={index}
-                style={styles.tab}
-                onPress={() => goToPage(index)}
-              >
-                <FontAwesome
-                  name={tabIcons[index] as any}
-                  size={24}
-                  color={isActive ? theme.colors.primary : '#999'}
-                />
-                <Text
-                  style={[
-                    styles.tabLabel,
-                    { color: isActive ? theme.colors.primary : '#999' },
-                  ]}
-                >
-                  {label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        {/* Payment Dialog */}
-        <PaymentDialog
-          visible={paymentDialogVisible}
-          onDismiss={hidePaymentDialog}
-          onMarkPaid={showConfirmPayment}
-          {...getPaymentDialogProps()}
-          bankAccountNumber={paymentSettings?.bankAccountNumber}
-          recipientName={paymentSettings?.recipientName}
-          isMarkingPayment={markingPayment}
-        />
-        <ConfirmPaymentDialog
-          visible={confirmPaymentVisible}
-          onDismiss={hideConfirmPayment}
-          onConfirm={handleMarkPaymentSubmitted}
-          isLoading={markingPayment}
-        />
-
-        {/* Snackbar */}
-        <Snackbar
-          visible={snackbar.visible}
-          onDismiss={() => setSnackbar({ visible: false, message: '' })}
-          duration={3000}
-          style={{ backgroundColor: snackbar.type === 'error' ? theme.colors.error : theme.colors.tertiary }}
-          action={{ label: 'OK', onPress: () => setSnackbar({ visible: false, message: '' }) }}
-        >
-          {snackbar.message}
-        </Snackbar>
-      </View>
-    );
-  }
-
-  // Native: PagerView for gallery-style swipe
+  // Unified render using PagerViewWrapper (handles platform differences internally)
   return (
     <View style={styles.container}>
-      <PagerView
-        ref={pagerRef}
-        style={styles.pager}
-        initialPage={0}
-        onPageSelected={handlePageSelected}
-        overdrag={true}
-        offscreenPageLimit={2}
+      <PagerViewWrapper
+        currentPage={currentPage}
+        onPageSelected={setCurrentPage}
+        pagerRef={pagerRef}
       >
-        {/* Page 0: Dashboard */}
-        <View key="0" style={styles.page} collapsable={false}>
-          <DashboardContent {...dashboardProps} />
-        </View>
-
-        {/* Page 1: Order */}
-        <View key="1" style={styles.page} collapsable={false}>
-          <OrderContent {...orderProps} />
-        </View>
-
-        {/* Page 2: Subscription */}
-        <View key="2" style={styles.page} collapsable={false}>
-          <SubscriptionContent {...subscriptionProps} />
-        </View>
-      </PagerView>
+        <DashboardContent {...dashboardProps} />
+        <OrderContent {...orderProps} />
+        <SubscriptionContent {...subscriptionProps} />
+      </PagerViewWrapper>
 
       {/* Custom Tab Bar */}
       <View style={[styles.tabBar, { paddingBottom: insets.bottom || 8 }]}>
