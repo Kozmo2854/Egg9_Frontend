@@ -13,10 +13,12 @@
       },
       "android": {
         "buildType": "apk",
-        "gradleCommand": ":app:assembleDebug"
+        "gradleCommand": ":app:assembleDebug",
+        "applicationIdSuffix": ".dev"
       },
       "ios": {
-        "buildConfiguration": "Debug"
+        "buildConfiguration": "Debug",
+        "bundleIdentifier": "com.egg9.app.dev"
       }
     },
     "preview": {

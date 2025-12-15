@@ -1,0 +1,69 @@
+const IS_DEV = process.env.EXPO_PUBLIC_APP_ENV === 'development';
+
+export default {
+  expo: {
+    name: IS_DEV ? 'Egg9 Dev' : 'Egg9',
+    slug: 'egg9',
+    version: '1.0.0',
+    orientation: 'portrait',
+    icon: './assets/images/icon.png',
+    scheme: 'egg9',
+    userInterfaceStyle: 'light',
+    splash: {
+      image: './assets/images/icon.png',
+      resizeMode: 'contain',
+      backgroundColor: '#ffffff',
+    },
+    ios: {
+      supportsTablet: true,
+      bundleIdentifier: 'com.egg9.app',
+    },
+    android: {
+      package: 'com.egg9.app',
+      versionCode: 1,
+      adaptiveIcon: {
+        foregroundImage: './assets/images/adaptive-icon.png',
+        backgroundColor: '#ffffff',
+      },
+      permissions: [
+        'INTERNET',
+        'ACCESS_NETWORK_STATE',
+        'RECEIVE_BOOT_COMPLETED',
+        'VIBRATE',
+      ],
+      googleServicesFile: './google-services.json',
+    },
+    web: {
+      bundler: 'metro',
+      output: 'static',
+      favicon: './assets/images/favicon.png',
+    },
+    plugins: [
+      'expo-router',
+      'expo-font',
+      [
+        'expo-notifications',
+        {
+          icon: './assets/images/icon.png',
+          color: '#ff6b35',
+        },
+      ],
+    ],
+    experiments: {
+      typedRoutes: true,
+    },
+    updates: {
+      url: 'https://u.expo.dev/64ac6896-fa18-425f-87cb-8bdd0770015b',
+    },
+    runtimeVersion: '1.0.0',
+    extra: {
+      router: {
+        origin: false,
+      },
+      eas: {
+        projectId: '64ac6896-fa18-425f-87cb-8bdd0770015b',
+      },
+    },
+  },
+};
+
