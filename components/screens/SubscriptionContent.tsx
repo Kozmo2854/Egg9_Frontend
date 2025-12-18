@@ -12,6 +12,7 @@ import {
 } from 'react-native-paper';
 import { useTranslation } from 'react-i18next';
 import { apiService } from '@/services/api';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { WeeklyStock } from '@/types/models';
 
 const HORIZONTAL_PADDING = 16;
@@ -48,6 +49,7 @@ export default function SubscriptionContent({
     nextWeekStart: string;
     nextWeekEnd: string;
   } | null>(null);
+  const [cancelConfirmVisible, setCancelConfirmVisible] = useState(false);
 
   // Sync with parent data
   useEffect(() => {
@@ -118,12 +120,17 @@ export default function SubscriptionContent({
     }
   };
 
-  const handleCancelSubscription = async () => {
+  const handleCancelSubscription = () => {
+    setCancelConfirmVisible(true);
+  };
+
+  const confirmCancelSubscription = async () => {
     setProcessing(true);
 
     try {
       await apiService.cancelSubscription();
       setSubscription(null);
+      setCancelConfirmVisible(false);
       showSnackbar(t('subscription.subscriptionCancelled'));
       setEditingSubscription(false);
       setSubscriptionQuantity(10);
@@ -398,6 +405,16 @@ export default function SubscriptionContent({
           </Dialog.Actions>
         </Dialog>
       </Portal>
+
+      {/* Cancel Subscription Confirmation Dialog */}
+      <ConfirmDialog
+        visible={cancelConfirmVisible}
+        onDismiss={() => setCancelConfirmVisible(false)}
+        onConfirm={confirmCancelSubscription}
+        isLoading={processing}
+        title={t('subscription.cancelSubscriptionTitle')}
+        message={t('subscription.cancelSubscriptionMessage')}
+      />
     </ScrollView>
   );
 }
@@ -416,21 +433,22 @@ const styles = StyleSheet.create({
   },
   heroSection: {
     alignItems: 'center',
+    paddingVertical: 24,
     marginBottom: 16,
   },
   heroEmoji: {
-    fontSize: 56,
-    marginBottom: 8,
+    fontSize: 64,
+    marginBottom: 12,
   },
   heroTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#2d3748',
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   heroSubtitle: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#666',
     textAlign: 'center',
   },

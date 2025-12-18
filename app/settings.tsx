@@ -601,7 +601,7 @@ const styles = StyleSheet.create({
   },
   backButtonLabel: {
     fontSize: 16,
-    marginLeft: 4,
+    marginLeft: 10,
   },
   title: {
     fontSize: 28,

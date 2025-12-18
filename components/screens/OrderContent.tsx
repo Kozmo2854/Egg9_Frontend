@@ -7,6 +7,7 @@ import {
   useTheme,
   Surface,
 } from 'react-native-paper';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useTranslation } from 'react-i18next';
 import { apiService } from '@/services/api';
 import { WeeklyStock } from '@/types/models';
@@ -42,6 +43,7 @@ export default function OrderContent({
   const [availableEggs, setAvailableEggs] = useState(initialAvailable);
   const [quantity, setQuantity] = useState(initialOrder?.quantity || 10);
   const [processing, setProcessing] = useState(false);
+  const [cancelConfirmVisible, setCancelConfirmVisible] = useState(false);
 
   // Sync with parent data
   useEffect(() => {
@@ -76,13 +78,18 @@ export default function OrderContent({
     }
   };
 
-  const handleCancelOrder = async () => {
+  const handleCancelOrder = () => {
+    setCancelConfirmVisible(true);
+  };
+
+  const confirmCancelOrder = async () => {
     if (!currentWeekOrder) return;
 
     setProcessing(true);
 
     try {
       await apiService.cancelOrder(currentWeekOrder.id);
+      setCancelConfirmVisible(false);
       showSnackbar(t('order.orderCancelled'));
       onDataChange();
     } catch (err: any) {
@@ -232,7 +239,7 @@ export default function OrderContent({
             mode="contained"
             onPress={handleBuyNow}
             loading={processing}
-            disabled={processing || quantity > maxAvailable}
+            disabled={processing || quantity > maxAvailable || (currentWeekOrder && quantity === currentWeekOrder.quantity)}
             style={styles.actionButton}
             buttonColor={theme.colors.primary}
             icon={currentWeekOrder ? "check" : "cart-check"}
@@ -271,6 +278,16 @@ export default function OrderContent({
           )}
         </Surface>
       )}
+
+      {/* Cancel Order Confirmation Dialog */}
+      <ConfirmDialog
+        visible={cancelConfirmVisible}
+        onDismiss={() => setCancelConfirmVisible(false)}
+        onConfirm={confirmCancelOrder}
+        isLoading={processing}
+        title={t('order.cancelOrderTitle')}
+        message={t('order.cancelOrderMessage')}
+      />
     </ScrollView>
   );
 }
@@ -288,21 +305,22 @@ const styles = StyleSheet.create({
   },
   heroSection: {
     alignItems: 'center',
+    paddingVertical: 24,
     marginBottom: 16,
   },
   heroEmoji: {
-    fontSize: 56,
-    marginBottom: 8,
+    fontSize: 64,
+    marginBottom: 12,
   },
   heroTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#2d3748',
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   heroSubtitle: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#666',
     textAlign: 'center',
   },

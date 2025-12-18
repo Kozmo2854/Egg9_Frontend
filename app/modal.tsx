@@ -328,6 +328,7 @@ export default function LoginScreen() {
           duration={3000}
           action={{
             label: 'Dismiss',
+            textColor: '#fff',
             onPress: () => setLoginError(null),
           }}
           style={{ backgroundColor: theme.colors.error }}

@@ -1237,6 +1237,7 @@ export default function AdminScreen() {
         duration={3000}
         action={{
           label: t('common.dismiss'),
+          textColor: '#fff',
           onPress: () => setErrorMessage(null),
         }}
         style={{ backgroundColor: theme.colors.error }}

@@ -363,7 +363,7 @@ export default function GalleryTabsScreen() {
         onDismiss={() => setSnackbar({ visible: false, message: '' })}
         duration={3000}
         style={{ backgroundColor: snackbar.type === 'error' ? theme.colors.error : theme.colors.tertiary }}
-        action={{ label: 'OK', onPress: () => setSnackbar({ visible: false, message: '' }) }}
+        action={{ label: 'OK', textColor: '#fff', onPress: () => setSnackbar({ visible: false, message: '' }) }}
       >
         {snackbar.message}
       </Snackbar>
