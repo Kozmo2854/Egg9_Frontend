@@ -197,14 +197,10 @@ const headerStyles = StyleSheet.create({
     padding: 8,
   },
   centerContainer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    pointerEvents: 'none',
   },
   weekIcon: {
     fontSize: 18,
