@@ -273,12 +273,6 @@ export default function TabLayout() {
                 headerTransparent: Platform.OS === 'web',
                 headerBackground: () => <HeaderBackground />,
                 headerStyle: { backgroundColor: Platform.OS === 'web' ? 'transparent' : '#fef5f1' },
-                headerTitleContainerStyle: {
-                  position: 'absolute',
-                  left: 0,
-                  right: 0,
-                  pointerEvents: 'none',
-                },
               }}>
             <Tabs.Screen
               name="admin"
@@ -355,12 +349,6 @@ export default function TabLayout() {
               headerTransparent: Platform.OS === 'web',
               headerBackground: () => <HeaderBackground />,
               headerStyle: { backgroundColor: Platform.OS === 'web' ? 'transparent' : '#fef5f1' },
-              headerTitleContainerStyle: {
-                position: 'absolute',
-                left: 0,
-                right: 0,
-                pointerEvents: 'none',
-              },
               tabBarStyle: { display: 'none' }, // Hide built-in tab bar - we use custom one in PagerView
             }}>
           <Tabs.Screen
