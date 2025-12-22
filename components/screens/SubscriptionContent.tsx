@@ -41,7 +41,6 @@ export default function SubscriptionContent({
   
   const [subscription, setSubscription] = useState(initialSubscription);
   const [processing, setProcessing] = useState(false);
-  const [editingSubscription, setEditingSubscription] = useState(false);
   const [subscriptionQuantity, setSubscriptionQuantity] = useState(initialSubscription?.quantity || 10);
   const [subscriptionPeriod, setSubscriptionPeriod] = useState(initialSubscription?.period || 4);
   const [nextWeekConfirmation, setNextWeekConfirmation] = useState<{
@@ -71,7 +70,6 @@ export default function SubscriptionContent({
       );
       setSubscription(sub);
       showSnackbar(t('subscription.subscriptionCreated', { quantity: subscriptionQuantity, period: subscriptionPeriod }));
-      setEditingSubscription(false);
       setNextWeekConfirmation(null);
       onDataChange();
     } catch (err: any) {
@@ -90,36 +88,6 @@ export default function SubscriptionContent({
     }
   };
 
-  const handleUpdateSubscription = async (startNextWeek: boolean = false) => {
-    setProcessing(true);
-
-    try {
-      const sub = await apiService.createSubscription(
-        subscriptionQuantity, 
-        subscriptionPeriod, 
-        startNextWeek
-      );
-      setSubscription(sub);
-      showSnackbar(t('subscription.subscriptionUpdated', { quantity: subscriptionQuantity, period: subscriptionPeriod }));
-      setEditingSubscription(false);
-      setNextWeekConfirmation(null);
-      onDataChange();
-    } catch (err: any) {
-      if (err.statusCode === 409 && err.data?.message === 'insufficient_stock_this_week') {
-        setNextWeekConfirmation({
-          show: true,
-          nextWeekStart: err.data.nextWeekStart,
-          nextWeekEnd: err.data.nextWeekEnd,
-        });
-      } else {
-        const errorMsg = err?.message || err?.toString() || 'Failed to update subscription';
-        showSnackbar(typeof errorMsg === 'string' ? errorMsg : 'Failed to update subscription', 'error');
-      }
-    } finally {
-      setProcessing(false);
-    }
-  };
-
   const handleCancelSubscription = () => {
     setCancelConfirmVisible(true);
   };
@@ -132,7 +100,6 @@ export default function SubscriptionContent({
       setSubscription(null);
       setCancelConfirmVisible(false);
       showSnackbar(t('subscription.subscriptionCancelled'));
-      setEditingSubscription(false);
       setSubscriptionQuantity(10);
       setSubscriptionPeriod(4);
       onDataChange();
@@ -164,7 +131,7 @@ export default function SubscriptionContent({
     return calculateWeeklyPrice() * subscriptionPeriod;
   };
 
-  const showForm = (!subscription || editingSubscription) && !weeklyStock.isLowSeason;
+  const showForm = !subscription && !weeklyStock.isLowSeason;
 
   return (
     <ScrollView 
@@ -174,7 +141,7 @@ export default function SubscriptionContent({
       showsVerticalScrollIndicator={false}
     >
       {/* Hero Section */}
-      {subscription && !editingSubscription && (
+      {subscription && (
         <View style={styles.heroSection}>
           <Text style={styles.heroEmoji}>
             {currentWeekSubOrder?.isPaid ? '✅' : (currentWeekSubOrder ? '🔄' : '📅')}
@@ -199,7 +166,7 @@ export default function SubscriptionContent({
       )}
 
       {/* Active Subscription Card */}
-      {subscription && !editingSubscription && (
+      {subscription && (
         <Surface style={styles.subscriptionCard} elevation={2}>
           <View style={styles.cardHeader}>
             <View style={styles.cardHeaderIcon}>
@@ -221,36 +188,18 @@ export default function SubscriptionContent({
             <Text style={styles.detailValue}>{calculateWeeklyPrice().toFixed(0)} {t('common.rsd')}</Text>
           </View>
 
-          {weeklyStock.isLowSeason && (
-            <View style={styles.lowSeasonNotice}>
-              <Text style={styles.lowSeasonText}>🐔 {t('subscription.modificationsPaused')}</Text>
-            </View>
-          )}
-
-          <View style={styles.actionRow}>
-            <Button
-              mode="outlined"
-              onPress={() => setEditingSubscription(true)}
-              disabled={weeklyStock.isLowSeason}
-              icon="pencil"
-              style={[styles.actionButton, weeklyStock.isLowSeason && { opacity: 0.5 }]}
-              compact
-            >
-              {t('common.modify')}
-            </Button>
-            <Button
-              mode="outlined"
-              onPress={handleCancelSubscription}
-              disabled={processing}
-              loading={processing}
-              textColor={theme.colors.error}
-              icon="close-circle-outline"
-              style={styles.actionButton}
-              compact
-            >
-              {t('common.cancel')}
-            </Button>
-          </View>
+          {/* Cancel Button */}
+          <Button
+            mode="outlined"
+            onPress={handleCancelSubscription}
+            disabled={processing}
+            loading={processing}
+            textColor={theme.colors.error}
+            icon="close-circle-outline"
+            style={styles.cancelButton}
+          >
+            {t('common.cancel')}
+          </Button>
         </Surface>
       )}
 
@@ -272,7 +221,7 @@ export default function SubscriptionContent({
       {showForm && (
         <Surface style={styles.formCard} elevation={2}>
           <Text style={styles.formTitle}>
-            {subscription ? t('subscription.editSubscription') : t('subscription.createSubscription')}
+            {t('subscription.createSubscription')}
           </Text>
 
           <Text style={styles.sectionLabel}>{t('subscription.weeklyQuantity')}</Text>
@@ -326,29 +275,15 @@ export default function SubscriptionContent({
 
           <Button
             mode="contained"
-            onPress={() => subscription ? handleUpdateSubscription() : handleSubscribe()}
+            onPress={() => handleSubscribe()}
             loading={processing}
             disabled={processing}
             style={styles.subscribeButton}
             buttonColor={theme.colors.tertiary}
-            icon={subscription ? "check" : "calendar-check"}
+            icon="calendar-check"
           >
-            {subscription ? t('subscription.updateSubscription') : t('subscription.subscribeNow')}
+            {t('subscription.subscribeNow')}
           </Button>
-
-          {subscription && (
-            <Button
-              mode="text"
-              onPress={() => {
-                setEditingSubscription(false);
-                setSubscriptionQuantity(subscription.quantity);
-                setSubscriptionPeriod(subscription.period || 4);
-              }}
-              disabled={processing}
-            >
-              {t('subscription.cancelChanges')}
-            </Button>
-          )}
         </Surface>
       )}
 
@@ -396,7 +331,7 @@ export default function SubscriptionContent({
               {t('common.no')}
             </Button>
             <Button 
-              onPress={() => subscription ? handleUpdateSubscription(true) : handleSubscribe(true)} 
+              onPress={() => handleSubscribe(true)} 
               mode="contained"
               icon="check"
             >
@@ -497,24 +432,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#2d3748',
   },
-  lowSeasonNotice: {
-    backgroundColor: '#fff3e0',
-    borderRadius: 8,
-    padding: 10,
-    marginVertical: 8,
-  },
-  lowSeasonText: {
-    color: '#e65100',
-    fontSize: 13,
-    textAlign: 'center',
-  },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 8,
+  cancelButton: {
     marginTop: 8,
-  },
-  actionButton: {
-    flex: 1,
   },
   lowSeasonCard: {
     backgroundColor: '#fff3e0',
