@@ -131,7 +131,8 @@
     "payOnDashboard": "Platite sa početne stranice",
     "activeOrder": "Aktivna narudžbina",
     "quantity": "Količina",
-    "paidOn": "Plaćeno"
+    "paidOn": "Plaćeno",
+    "notPaidYet": "Nije još plaćeno"
   },
   "subscription": {
     "title": "Nedeljna pretplata",

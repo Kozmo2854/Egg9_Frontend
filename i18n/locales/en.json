@@ -131,7 +131,8 @@
     "lowSeasonNotice": "Our chickens are resting – orders up to {{cap}} eggs",
     "activeOrder": "Active Order",
     "quantity": "Quantity",
-    "paidOn": "Paid on"
+    "paidOn": "Paid on",
+    "notPaidYet": "Not paid yet"
   },
   "subscription": {
     "title": "Weekly Subscription",

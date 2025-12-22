@@ -230,14 +230,14 @@ export default function OrderContent({
             <Text style={styles.detailValue}>{currentWeekOrder.quantity} {t('common.eggs')}</Text>
           </View>
           
-          {currentWeekOrder.payment_submitted_at && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>{t('order.paidOn')}</Text>
-              <Text style={styles.detailValue}>
-                {new Date(currentWeekOrder.payment_submitted_at).toLocaleDateString()}
-              </Text>
-            </View>
-          )}
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>{t('order.paidOn')}</Text>
+            <Text style={styles.detailValue}>
+              {currentWeekOrder.payment_submitted_at 
+                ? new Date(currentWeekOrder.payment_submitted_at).toLocaleDateString()
+                : t('order.notPaidYet')}
+            </Text>
+          </View>
           
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>{t('order.totalPrice')}</Text>
