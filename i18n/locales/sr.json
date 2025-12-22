@@ -128,7 +128,10 @@
     "lowSeasonNotice": "Naše kokoške se odmaraju – porudžbine do {{cap}} jaja",
     "payNow": "Plati sada",
     "viewPayment": "Pogledaj plaćanje",
-    "payOnDashboard": "Platite sa početne stranice"
+    "payOnDashboard": "Platite sa početne stranice",
+    "activeOrder": "Aktivna narudžbina",
+    "quantity": "Količina",
+    "paidOn": "Plaćeno"
   },
   "subscription": {
     "title": "Nedeljna pretplata",
@@ -172,7 +175,7 @@
     "startNextWeek": "Da li želite da počnete pretplatu od sledeće nedelje?",
     "nextWeek": "📅 Sledeća nedelja",
     "whySubscribe": "✨ Zašto se pretplatiti?",
-    "benefit1": "Garantovane nedeljne zalihe - nikad ne propustite!",
+    "benefit1": "Garantovane nedeljne zalihe",
     "benefit2": "Fleksibilno trajanje: 2 do 4 nedelje",
     "benefit3": "Automatsko zakazivanje dostave",
     "benefit4": "Otkažite ili izmenite bilo kada",

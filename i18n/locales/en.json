@@ -128,7 +128,10 @@
     "payNow": "Pay Now",
     "viewPayment": "View Payment",
     "payOnDashboard": "Pay from the Dashboard",
-    "lowSeasonNotice": "Our chickens are resting – orders up to {{cap}} eggs"
+    "lowSeasonNotice": "Our chickens are resting – orders up to {{cap}} eggs",
+    "activeOrder": "Active Order",
+    "quantity": "Quantity",
+    "paidOn": "Paid on"
   },
   "subscription": {
     "title": "Weekly Subscription",
@@ -172,7 +175,7 @@
     "startNextWeek": "Would you like to start your subscription from next week instead?",
     "nextWeek": "📅 Next Week",
     "whySubscribe": "✨ Why Subscribe?",
-    "benefit1": "Guaranteed weekly stock - never miss out!",
+    "benefit1": "Guaranteed weekly stock",
     "benefit2": "Flexible duration: 2 to 4 weeks",
     "benefit3": "Automatic delivery scheduling",
     "benefit4": "Cancel or modify anytime",

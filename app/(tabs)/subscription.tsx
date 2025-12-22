@@ -36,7 +36,6 @@ export default function SubscriptionScreen() {
   const [processing, setProcessing] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [editingSubscription, setEditingSubscription] = useState(false);
   const [subscriptionQuantity, setSubscriptionQuantity] = useState(10);
   const [subscriptionPeriod, setSubscriptionPeriod] = useState(2);
   const [currentWeekSubOrder, setCurrentWeekSubOrder] = useState<any>(null);
@@ -98,7 +97,6 @@ export default function SubscriptionScreen() {
       );
       setSubscription(sub);
       setSuccessMessage(t('subscription.subscriptionCreated', { quantity: subscriptionQuantity, period: subscriptionPeriod }));
-      setEditingSubscription(false);
       setNextWeekConfirmation(null);
       
       const updatedStock = await apiService.getWeeklyStock();
@@ -119,40 +117,6 @@ export default function SubscriptionScreen() {
     }
   };
 
-  const handleUpdateSubscription = async (startNextWeek: boolean = false) => {
-    setProcessing(true);
-    setSuccessMessage(null);
-    setErrorMessage(null);
-
-    try {
-      const sub = await apiService.createSubscription(
-        subscriptionQuantity, 
-        subscriptionPeriod, 
-        startNextWeek
-      );
-      setSubscription(sub);
-      setSuccessMessage(t('subscription.subscriptionUpdated', { quantity: subscriptionQuantity, period: subscriptionPeriod }));
-      setEditingSubscription(false);
-      setNextWeekConfirmation(null);
-      
-      const updatedStock = await apiService.getWeeklyStock();
-      setWeeklyStock(updatedStock);
-    } catch (err: any) {
-      if (err.statusCode === 409 && err.data?.message === 'insufficient_stock_this_week') {
-        setNextWeekConfirmation({
-          show: true,
-          nextWeekStart: err.data.nextWeekStart,
-          nextWeekEnd: err.data.nextWeekEnd,
-        });
-      } else {
-        const errorMsg = err?.message || err?.toString() || 'Failed to update subscription';
-        setErrorMessage(typeof errorMsg === 'string' ? errorMsg : 'Failed to update subscription');
-      }
-    } finally {
-      setProcessing(false);
-    }
-  };
-
   const handleCancelSubscription = async () => {
     setProcessing(true);
     setSuccessMessage(null);
@@ -162,7 +126,6 @@ export default function SubscriptionScreen() {
       await apiService.cancelSubscription();
       setSubscription(null);
       setSuccessMessage(t('subscription.subscriptionCancelled'));
-      setEditingSubscription(false);
       setSubscriptionQuantity(10);
       setSubscriptionPeriod(4);
       
@@ -209,7 +172,7 @@ export default function SubscriptionScreen() {
     );
   }
 
-  const showForm = (!subscription || editingSubscription) && !weeklyStock.isLowSeason;
+  const showForm = !subscription && !weeklyStock.isLowSeason;
 
   return (
     <View style={styles.container} {...swipeHandlers}>
@@ -219,7 +182,7 @@ export default function SubscriptionScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Hero Section - Show subscription status */}
-        {subscription && !editingSubscription && (
+        {subscription && (
           <RNView style={styles.heroSection}>
             <Text style={styles.heroEmoji}>
               {currentWeekSubOrder?.isPaid ? '✅' : (currentWeekSubOrder ? '🔄' : '📅')}
@@ -244,7 +207,7 @@ export default function SubscriptionScreen() {
         )}
 
         {/* Active Subscription Card */}
-        {subscription && !editingSubscription && (
+        {subscription && (
           <Surface style={styles.subscriptionCard} elevation={2}>
             <RNView style={styles.cardHeader}>
               <RNView style={styles.cardHeaderIcon}>
@@ -266,38 +229,18 @@ export default function SubscriptionScreen() {
               <Text style={styles.detailValue}>{calculateWeeklyPrice().toFixed(0)} {t('common.rsd')}</Text>
             </RNView>
 
-            {/* Low Season Notice */}
-            {weeklyStock.isLowSeason && (
-              <RNView style={styles.lowSeasonNotice}>
-                <Text style={styles.lowSeasonText}>🐔 {t('subscription.modificationsPaused')}</Text>
-              </RNView>
-            )}
-
-            {/* Action Buttons */}
-            <RNView style={styles.actionRow}>
-              <Button
-                mode="outlined"
-                onPress={() => setEditingSubscription(true)}
-                disabled={weeklyStock.isLowSeason}
-                icon="pencil"
-                style={[styles.actionButton, weeklyStock.isLowSeason && { opacity: 0.5 }]}
-                compact
-              >
-                {t('common.modify')}
-              </Button>
-              <Button
-                mode="outlined"
-                onPress={handleCancelSubscription}
-                disabled={processing}
-                loading={processing}
-                textColor={theme.colors.error}
-                icon="close-circle-outline"
-                style={styles.actionButton}
-                compact
-              >
-                {t('common.cancel')}
-              </Button>
-            </RNView>
+            {/* Cancel Button */}
+            <Button
+              mode="outlined"
+              onPress={handleCancelSubscription}
+              disabled={processing}
+              loading={processing}
+              textColor={theme.colors.error}
+              icon="close-circle-outline"
+              style={styles.cancelButton}
+            >
+              {t('common.cancel')}
+            </Button>
           </Surface>
         )}
 
@@ -317,7 +260,7 @@ export default function SubscriptionScreen() {
         {showForm && (
           <Surface style={styles.formCard} elevation={2}>
             <Text style={styles.formTitle}>
-              {subscription ? t('subscription.editSubscription') : t('subscription.createSubscription')}
+              {t('subscription.createSubscription')}
             </Text>
 
             {/* Quantity Selector */}
@@ -372,32 +315,18 @@ export default function SubscriptionScreen() {
               </Text>
             </RNView>
 
-            {/* Action Buttons */}
+            {/* Subscribe Button */}
             <Button
               mode="contained"
-              onPress={() => subscription ? handleUpdateSubscription() : handleSubscribe()}
+              onPress={() => handleSubscribe()}
               loading={processing}
               disabled={processing}
               style={styles.subscribeButton}
               buttonColor={theme.colors.tertiary}
-              icon={subscription ? "check" : "calendar-check"}
+              icon="calendar-check"
             >
-              {subscription ? t('subscription.updateSubscription') : t('subscription.subscribeNow')}
+              {t('subscription.subscribeNow')}
             </Button>
-
-            {subscription && (
-              <Button
-                mode="text"
-                onPress={() => {
-                  setEditingSubscription(false);
-                  setSubscriptionQuantity(subscription.quantity);
-                  setSubscriptionPeriod(subscription.period || 4);
-                }}
-                disabled={processing}
-              >
-                {t('subscription.cancelChanges')}
-              </Button>
-            )}
           </Surface>
         )}
 
@@ -464,7 +393,7 @@ export default function SubscriptionScreen() {
               {t('common.no')}
             </Button>
             <Button 
-              onPress={() => subscription ? handleUpdateSubscription(true) : handleSubscribe(true)} 
+              onPress={() => handleSubscribe(true)} 
               mode="contained"
               icon="check"
             >
@@ -563,24 +492,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#2d3748',
   },
-  lowSeasonNotice: {
-    backgroundColor: '#fff3e0',
-    borderRadius: 8,
-    padding: 10,
-    marginVertical: 8,
-  },
-  lowSeasonText: {
-    color: '#e65100',
-    fontSize: 13,
-    textAlign: 'center',
-  },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 8,
+  cancelButton: {
     marginTop: 8,
-  },
-  actionButton: {
-    flex: 1,
   },
 
   // Low Season Card

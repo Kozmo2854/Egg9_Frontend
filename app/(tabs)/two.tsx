@@ -36,6 +36,7 @@ export default function OrderScreen() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [availableEggs, setAvailableEggs] = useState(0);
+  const [editingOrder, setEditingOrder] = useState(false);
   
   // Swipe navigation - must be called before any conditional returns
   const swipeHandlers = useSwipeNavigation();
@@ -85,7 +86,7 @@ export default function OrderScreen() {
     }
   };
 
-  const handleBuyNow = async () => {
+  const handlePlaceOrder = async () => {
     if (!weeklyStock) return;
 
     setProcessing(true);
@@ -96,6 +97,7 @@ export default function OrderScreen() {
       if (currentWeekOrder) {
         await apiService.updateOrder(currentWeekOrder.id, quantity, weeklyStock.pricePerDozen);
         setSuccessMessage(t('order.orderUpdated', { count: quantity }));
+        setEditingOrder(false);
       } else {
         await apiService.createOrder(quantity, weeklyStock.pricePerDozen);
         setSuccessMessage(t('order.orderPlaced', { count: quantity }));
@@ -272,8 +274,8 @@ export default function OrderScreen() {
           </RNView>
         )}
 
-        {/* Order Form - Only show if can order and not locked */}
-        {canOrder && !isLocked && (
+        {/* Order Form - Show if can order and (no order exists OR editing unpaid order) */}
+        {canOrder && (!currentWeekOrder || (editingOrder && !currentWeekOrder.isPaid)) && (
           <Surface style={styles.orderCard} elevation={2}>
             {/* Quantity Selector */}
             <RNView style={styles.quantityRow}>
@@ -306,45 +308,85 @@ export default function OrderScreen() {
             {/* Action Buttons */}
             <Button
               mode="contained"
-              onPress={handleBuyNow}
+              onPress={handlePlaceOrder}
               loading={processing}
               disabled={processing || quantity > maxAvailable}
               style={styles.actionButton}
               buttonColor={theme.colors.primary}
-              icon={currentWeekOrder ? "check" : "cart-check"}
+              icon={editingOrder ? "check" : "cart-check"}
             >
-              {currentWeekOrder ? t('order.updateOrder') : t('order.placeOrder')}
+              {editingOrder ? t('order.updateOrder') : t('order.placeOrder')}
             </Button>
 
-            {currentWeekOrder && (
+            {/* Cancel Edit Button - only when editing */}
+            {editingOrder && (
               <Button
                 mode="text"
-                onPress={handleCancelOrder}
+                onPress={() => {
+                  setEditingOrder(false);
+                  setQuantity(currentWeekOrder.quantity);
+                }}
                 disabled={processing}
-                textColor={theme.colors.error}
-                icon="close-circle-outline"
-                compact
               >
-                {t('order.cancelOrder')}
+                {t('subscription.cancelChanges')}
               </Button>
             )}
           </Surface>
         )}
 
-        {/* Order Summary - Show when order exists and locked */}
-        {currentWeekOrder && isLocked && (
-          <Surface style={styles.summaryCard} elevation={2}>
-            {/* Large quantity display */}
-            <RNView style={styles.summaryQuantityDisplay}>
-              <Text style={styles.summaryQuantityNumber}>{currentWeekOrder.quantity}</Text>
-              <Text style={styles.summaryQuantityLabel}>{t('common.eggs')}</Text>
+        {/* Active Order Card - Show when order exists and NOT editing */}
+        {currentWeekOrder && !editingOrder && (
+          <Surface style={styles.orderDetailsCard} elevation={2}>
+            <RNView style={styles.cardHeader}>
+              <RNView style={styles.cardHeaderIcon}>
+                <Text style={styles.cardHeaderIconText}>🛒</Text>
+              </RNView>
+              <Text style={styles.cardHeaderTitle}>{t('order.activeOrder')}</Text>
             </RNView>
             
-            {/* Only show price if not paid yet */}
+            <RNView style={styles.detailRow}>
+              <Text style={styles.detailLabel}>{t('order.quantity')}</Text>
+              <Text style={styles.detailValue}>{currentWeekOrder.quantity} {t('common.eggs')}</Text>
+            </RNView>
+            
+            {currentWeekOrder.payment_submitted_at && (
+              <RNView style={styles.detailRow}>
+                <Text style={styles.detailLabel}>{t('order.paidOn')}</Text>
+                <Text style={styles.detailValue}>
+                  {new Date(currentWeekOrder.payment_submitted_at).toLocaleDateString()}
+                </Text>
+              </RNView>
+            )}
+            
+            <RNView style={styles.detailRow}>
+              <Text style={styles.detailLabel}>{t('order.totalPrice')}</Text>
+              <Text style={styles.detailValue}>{currentWeekOrder.total.toFixed(0)} {t('common.rsd')}</Text>
+            </RNView>
+
+            {/* Modify/Cancel Buttons - Only show if NOT paid */}
             {!currentWeekOrder.isPaid && (
-              <RNView style={styles.summaryPriceRow}>
-                <Text style={styles.summaryPriceLabel}>{t('order.totalPrice')}</Text>
-                <Text style={styles.summaryPriceValue}>{currentWeekOrder.total.toFixed(0)} {t('common.rsd')}</Text>
+              <RNView style={styles.actionRow}>
+                <Button
+                  mode="outlined"
+                  onPress={() => setEditingOrder(true)}
+                  icon="pencil"
+                  style={styles.actionButtonRow}
+                  compact
+                >
+                  {t('common.modify')}
+                </Button>
+                <Button
+                  mode="outlined"
+                  onPress={handleCancelOrder}
+                  disabled={processing}
+                  loading={processing}
+                  textColor={theme.colors.error}
+                  icon="close-circle-outline"
+                  style={styles.actionButtonRow}
+                  compact
+                >
+                  {t('common.cancel')}
+                </Button>
               </RNView>
             )}
           </Surface>
@@ -496,47 +538,60 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
 
-  // Summary Card (when locked)
-  summaryCard: {
+  // Order Details Card (like subscription card)
+  orderDetailsCard: {
     backgroundColor: '#ffffff',
     borderRadius: 20,
-    padding: 24,
-    marginBottom: 16,
-    alignItems: 'center',
-  },
-  summaryQuantityDisplay: {
-    alignItems: 'center',
+    padding: 20,
     marginBottom: 16,
   },
-  summaryQuantityNumber: {
-    fontSize: 64,
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 10,
+  },
+  cardHeaderIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#ffe4d6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardHeaderIconText: {
+    fontSize: 18,
+  },
+  cardHeaderTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#2d3748',
   },
-  summaryQuantityLabel: {
-    fontSize: 18,
-    color: '#666',
-    marginTop: -8,
-  },
-  summaryPriceRow: {
+  detailRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#f8f4f2',
-    borderRadius: 12,
-    padding: 12,
-    paddingHorizontal: 24,
-    marginBottom: 16,
-    gap: 8,
+    marginBottom: 12,
   },
-  summaryPriceLabel: {
-    fontSize: 14,
+  detailLabel: {
+    fontSize: 15,
     color: '#666',
   },
-  summaryPriceValue: {
-    fontSize: 20,
+  detailValue: {
+    fontSize: 17,
     fontWeight: 'bold',
-    color: '#ff6b35',
+    color: '#2d3748',
+  },
+  cancelButton: {
+    marginTop: 8,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  actionButtonRow: {
+    flex: 1,
   },
   // Available Badge
   availableBadge: {
