@@ -360,21 +360,22 @@ const styles = StyleSheet.create({
   },
   heroSection: {
     alignItems: 'center',
+    paddingVertical: 24,
     marginBottom: 16,
   },
   heroEmoji: {
-    fontSize: 56,
-    marginBottom: 8,
+    fontSize: 64,
+    marginBottom: 12,
   },
   heroTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#2d3748',
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   heroSubtitle: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#666',
     textAlign: 'center',
   },
