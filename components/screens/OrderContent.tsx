@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, RefreshControl, ScrollView, Dimensions } from 'react-native';
+import { StyleSheet, View, RefreshControl, ScrollView } from 'react-native';
 import {
   Text,
   Button,
@@ -44,6 +44,7 @@ export default function OrderContent({
   const [quantity, setQuantity] = useState(initialOrder?.quantity || 10);
   const [processing, setProcessing] = useState(false);
   const [cancelConfirmVisible, setCancelConfirmVisible] = useState(false);
+  const [editingOrder, setEditingOrder] = useState(false);
 
   // Sync with parent data
   useEffect(() => {
@@ -54,9 +55,11 @@ export default function OrderContent({
     } else {
       setQuantity(10);
     }
+    // Reset editing state when order changes
+    setEditingOrder(false);
   }, [initialOrder, initialAvailable]);
 
-  const handleBuyNow = async () => {
+  const handlePlaceOrder = async () => {
     if (!weeklyStock) return;
 
     setProcessing(true);
@@ -65,12 +68,13 @@ export default function OrderContent({
       if (currentWeekOrder) {
         await apiService.updateOrder(currentWeekOrder.id, quantity, weeklyStock.pricePerDozen);
         showSnackbar(t('order.orderUpdated', { count: quantity }));
+        setEditingOrder(false);
       } else {
         await apiService.createOrder(quantity, weeklyStock.pricePerDozen);
         showSnackbar(t('order.orderPlaced', { count: quantity }));
       }
       
-      onDataChange(); // Trigger parent to reload data
+      onDataChange();
     } catch (err: any) {
       showSnackbar(err.message || 'Failed to place order', 'error');
     } finally {
@@ -140,7 +144,6 @@ export default function OrderContent({
   const canOrder = maxAvailable >= 10 && weeklyStock.isOrderingOpen;
   const stockNotSetup = !weeklyStock.isOrderingOpen && !weeklyStock.allOrdersDelivered;
   const ordersDelivered = weeklyStock.allOrdersDelivered;
-  const isLocked = currentWeekOrder?.isPaid || currentWeekOrder?.paymentSubmitted;
 
   const getWarningInfo = () => {
     if (!canOrder) {
@@ -156,6 +159,12 @@ export default function OrderContent({
   };
 
   const warningInfo = getWarningInfo();
+  
+  // Show form when: can order AND (no order exists OR editing unpaid order)
+  const showForm = canOrder && (!currentWeekOrder || (editingOrder && !currentWeekOrder.isPaid));
+  
+  // Show order card when: order exists AND not editing
+  const showOrderCard = currentWeekOrder && !editingOrder;
 
   return (
     <ScrollView 
@@ -179,7 +188,7 @@ export default function OrderContent({
         </Surface>
       )}
 
-      {/* Eggs Available Badge */}
+      {/* Eggs Available Badge - only when no order */}
       {canOrder && !currentWeekOrder && (
         <Surface style={styles.availableBadge} elevation={2}>
           <Text style={styles.availableNumber}>{availableEggs}</Text>
@@ -187,8 +196,8 @@ export default function OrderContent({
         </Surface>
       )}
 
-      {/* Hero Section - When order exists */}
-      {currentWeekOrder && (
+      {/* Hero Section - When order exists and not editing */}
+      {showOrderCard && (
         <View style={styles.heroSection}>
           <Text style={styles.heroEmoji}>
             {currentWeekOrder.isPaid ? '✅' : '🛒'}
@@ -206,9 +215,71 @@ export default function OrderContent({
         </View>
       )}
 
-      {/* Order Form */}
-      {canOrder && !isLocked && (
+      {/* Active Order Card - Same style as Subscription Card */}
+      {showOrderCard && (
+        <Surface style={styles.orderDetailsCard} elevation={2}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardHeaderIcon}>
+              <Text style={styles.cardHeaderIconText}>🛒</Text>
+            </View>
+            <Text style={styles.cardHeaderTitle}>{t('order.activeOrder')}</Text>
+          </View>
+          
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>{t('order.quantity')}</Text>
+            <Text style={styles.detailValue}>{currentWeekOrder.quantity} {t('common.eggs')}</Text>
+          </View>
+          
+          {currentWeekOrder.payment_submitted_at && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>{t('order.paidOn')}</Text>
+              <Text style={styles.detailValue}>
+                {new Date(currentWeekOrder.payment_submitted_at).toLocaleDateString()}
+              </Text>
+            </View>
+          )}
+          
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>{t('order.totalPrice')}</Text>
+            <Text style={styles.detailValue}>{currentWeekOrder.total.toFixed(0)} {t('common.rsd')}</Text>
+          </View>
+
+          {/* Modify/Cancel Buttons - Only show if NOT paid */}
+          {!currentWeekOrder.isPaid && (
+            <View style={styles.actionRow}>
+              <Button
+                mode="outlined"
+                onPress={() => setEditingOrder(true)}
+                icon="pencil"
+                style={styles.actionButton}
+                compact
+              >
+                {t('common.modify')}
+              </Button>
+              <Button
+                mode="outlined"
+                onPress={handleCancelOrder}
+                disabled={processing}
+                loading={processing}
+                textColor={theme.colors.error}
+                icon="close-circle-outline"
+                style={styles.actionButton}
+                compact
+              >
+                {t('common.cancel')}
+              </Button>
+            </View>
+          )}
+        </Surface>
+      )}
+
+      {/* Order Form - Show when placing new order or editing */}
+      {showForm && (
         <Surface style={styles.orderCard} elevation={2}>
+          <Text style={styles.formTitle}>
+            {editingOrder ? t('order.updateOrder') : t('order.placeOrder')}
+          </Text>
+
           <View style={styles.quantityRow}>
             <IconButton
               icon="minus-circle"
@@ -237,44 +308,27 @@ export default function OrderContent({
 
           <Button
             mode="contained"
-            onPress={handleBuyNow}
+            onPress={handlePlaceOrder}
             loading={processing}
-            disabled={processing || quantity > maxAvailable || (currentWeekOrder && quantity === currentWeekOrder.quantity)}
-            style={styles.actionButton}
+            disabled={processing || quantity > maxAvailable}
+            style={styles.submitButton}
             buttonColor={theme.colors.primary}
-            icon={currentWeekOrder ? "check" : "cart-check"}
+            icon={editingOrder ? "check" : "cart-check"}
           >
-            {currentWeekOrder ? t('order.updateOrder') : t('order.placeOrder')}
+            {editingOrder ? t('order.updateOrder') : t('order.placeOrder')}
           </Button>
 
-          {currentWeekOrder && (
+          {editingOrder && (
             <Button
               mode="text"
-              onPress={handleCancelOrder}
+              onPress={() => {
+                setEditingOrder(false);
+                setQuantity(currentWeekOrder.quantity);
+              }}
               disabled={processing}
-              textColor={theme.colors.error}
-              icon="close-circle-outline"
-              compact
             >
-              {t('order.cancelOrder')}
+              {t('subscription.cancelChanges')}
             </Button>
-          )}
-        </Surface>
-      )}
-
-      {/* Order Summary - When locked */}
-      {currentWeekOrder && isLocked && (
-        <Surface style={styles.summaryCard} elevation={2}>
-          <View style={styles.summaryQuantityDisplay}>
-            <Text style={styles.summaryQuantityNumber}>{currentWeekOrder.quantity}</Text>
-            <Text style={styles.summaryQuantityLabel}>{t('common.eggs')}</Text>
-          </View>
-          
-          {!currentWeekOrder.isPaid && (
-            <View style={styles.summaryPriceRow}>
-              <Text style={styles.summaryPriceLabel}>{t('order.totalPrice')}</Text>
-              <Text style={styles.summaryPriceValue}>{currentWeekOrder.total.toFixed(0)} {t('common.rsd')}</Text>
-            </View>
           )}
         </Surface>
       )}
@@ -301,26 +355,26 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     padding: HORIZONTAL_PADDING,
     paddingTop: 16,
+    paddingBottom: 24,
     justifyContent: 'center',
   },
   heroSection: {
     alignItems: 'center',
-    paddingVertical: 24,
     marginBottom: 16,
   },
   heroEmoji: {
-    fontSize: 64,
-    marginBottom: 12,
+    fontSize: 56,
+    marginBottom: 8,
   },
   heroTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#2d3748',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   heroSubtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#666',
     textAlign: 'center',
   },
@@ -360,10 +414,88 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     fontSize: 14,
   },
+  availableBadge: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  availableNumber: {
+    fontSize: 40,
+    fontWeight: 'bold',
+    color: '#ff6b35',
+  },
+  availableLabel: {
+    fontSize: 14,
+    color: '#666',
+  },
+  
+  // Order Details Card (same style as Subscription Card)
+  orderDetailsCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 10,
+  },
+  cardHeaderIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#ffe4d6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardHeaderIconText: {
+    fontSize: 18,
+  },
+  cardHeaderTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2d3748',
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  detailLabel: {
+    fontSize: 15,
+    color: '#666',
+  },
+  detailValue: {
+    fontSize: 17,
+    fontWeight: 'bold',
+    color: '#2d3748',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  actionButton: {
+    flex: 1,
+  },
+
+  // Order Form Card
   orderCard: {
     backgroundColor: '#ffffff',
     borderRadius: 20,
     padding: 20,
+    marginBottom: 16,
+  },
+  formTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2d3748',
+    textAlign: 'center',
     marginBottom: 16,
   },
   quantityRow: {
@@ -404,66 +536,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#ff6b35',
   },
-  actionButton: {
+  submitButton: {
     borderRadius: 12,
     marginBottom: 8,
   },
-  summaryCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 24,
-    marginBottom: 16,
-    alignItems: 'center',
-  },
-  summaryQuantityDisplay: {
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  summaryQuantityNumber: {
-    fontSize: 64,
-    fontWeight: 'bold',
-    color: '#2d3748',
-  },
-  summaryQuantityLabel: {
-    fontSize: 18,
-    color: '#666',
-    marginTop: -8,
-  },
-  summaryPriceRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8f4f2',
-    borderRadius: 12,
-    padding: 12,
-    paddingHorizontal: 24,
-    marginBottom: 16,
-    gap: 8,
-  },
-  summaryPriceLabel: {
-    fontSize: 14,
-    color: '#666',
-  },
-  summaryPriceValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#ff6b35',
-  },
-  availableBadge: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  availableNumber: {
-    fontSize: 40,
-    fontWeight: 'bold',
-    color: '#ff6b35',
-  },
-  availableLabel: {
-    fontSize: 14,
-    color: '#666',
-  },
 });
-
