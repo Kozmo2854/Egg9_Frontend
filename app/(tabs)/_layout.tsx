@@ -151,14 +151,21 @@ function HeaderLeft({ onMenuPress }: { onMenuPress: () => void }) {
   );
 }
 
-// Center: Week dates display
+// Center: Week dates display (returns null - we use headerTitle string instead)
 function HeaderCenter() {
+  return null;
+}
+
+// Custom header title component that renders centered
+function HeaderTitle() {
   const { weekStart, weekEnd } = useWeekContext();
   
-  if (!weekStart || !weekEnd) return null;
+  if (!weekStart || !weekEnd) {
+    return <View style={headerStyles.titleContainer} />;
+  }
   
   return (
-    <View style={headerStyles.centerContainer}>
+    <View style={headerStyles.titleContainer}>
       <Text style={headerStyles.weekIcon}>🥚</Text>
       <Text style={headerStyles.weekDates}>
         {formatWeekDate(weekStart)} - {formatWeekDate(weekEnd)}
@@ -196,7 +203,7 @@ const headerStyles = StyleSheet.create({
   hamburgerButton: {
     padding: 8,
   },
-  centerContainer: {
+  titleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -268,17 +275,12 @@ export default function TabLayout() {
                 tabBarActiveTintColor: Colors.light.tint,
                 headerShown: useClientOnlyValue(false, true),
                 headerLeft: () => <HeaderLeft onMenuPress={openDrawer} />,
-                headerTitle: () => <HeaderCenter />,
+                headerTitle: () => <HeaderTitle />,
+                headerTitleAlign: 'center',
                 headerRight: () => <HeaderRight />,
                 headerTransparent: Platform.OS === 'web',
                 headerBackground: () => <HeaderBackground />,
                 headerStyle: { backgroundColor: Platform.OS === 'web' ? 'transparent' : '#fef5f1' },
-                headerTitleContainerStyle: {
-                  position: 'absolute',
-                  left: 0,
-                  right: 0,
-                  pointerEvents: 'none',
-                },
               }}>
             <Tabs.Screen
               name="admin"
@@ -350,17 +352,12 @@ export default function TabLayout() {
               tabBarActiveTintColor: Colors.light.tint,
               headerShown: useClientOnlyValue(false, true),
               headerLeft: () => <HeaderLeft onMenuPress={openDrawer} />,
-              headerTitle: () => <HeaderCenter />,
+              headerTitle: () => <HeaderTitle />,
+              headerTitleAlign: 'center',
               headerRight: () => <HeaderRight />,
               headerTransparent: Platform.OS === 'web',
               headerBackground: () => <HeaderBackground />,
               headerStyle: { backgroundColor: Platform.OS === 'web' ? 'transparent' : '#fef5f1' },
-              headerTitleContainerStyle: {
-                position: 'absolute',
-                left: 0,
-                right: 0,
-                pointerEvents: 'none',
-              },
               tabBarStyle: { display: 'none' }, // Hide built-in tab bar - we use custom one in PagerView
             }}>
           <Tabs.Screen
