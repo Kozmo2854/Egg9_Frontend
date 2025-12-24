@@ -122,3 +122,16 @@ The home screen (Dashboard) has three main states:
 - `main` - Production
 - `test` - Staging/QA testing
 
+---
+
+## Subscription & Order Management
+
+### Subscriptions
+- **Cannot be edited** - Users can only create new subscriptions or cancel existing ones
+- **Cancellation preserves paid orders** - When cancelled, only unpaid orders are deleted. Paid orders (or orders with payment submitted) remain visible to admin for delivery.
+
+### Orders
+- **Can be edited/cancelled if unpaid** - Once payment is submitted or confirmed, orders cannot be modified.
+- **Order Card displays:** Quantity, Date of payment (or "Not paid yet"), Total
+- **Action buttons (Modify/Cancel):** Only visible if order is NOT paid
+
