@@ -135,3 +135,32 @@ The home screen (Dashboard) has three main states:
 - **Order Card displays:** Quantity, Date of payment (or "Not paid yet"), Total
 - **Action buttons (Modify/Cancel):** Only visible if order is NOT paid
 
+---
+
+## Production Configuration (Railway)
+
+### Required Environment Variables on Railway Backend:
+
+```
+# Logging - outputs to both file AND Railway logs
+LOG_CHANNEL=stack
+LOG_STACK=single,stderr
+LOG_LEVEL=info
+
+# Queue - sync for immediate processing (no worker needed)
+QUEUE_CONNECTION=sync
+
+# Email - disabled until SMTP issue resolved (Railway blocks port 587)
+MAIL_MAILER=array
+```
+
+### Notification Architecture
+- **Push-first, email-second** - Push notifications are sent to ALL users first, then emails are attempted
+- **Independent failures** - If email fails, push has already succeeded
+- **Timeouts configured** - Both SMTP and Expo Push API have 10-second timeouts to prevent hangs
+
+### Known Limitations
+- **Email not working on Railway** - Railway blocks outbound SMTP (port 587). Options:
+  1. Use HTTP-based email service (SendGrid, Mailgun, Postmark)
+  2. Keep emails disabled with `MAIL_MAILER=array`
+
