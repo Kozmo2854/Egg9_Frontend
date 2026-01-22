@@ -1,8 +1,22 @@
-const IS_DEV = process.env.EXPO_PUBLIC_APP_ENV === 'development';
+const APP_ENV = process.env.EXPO_PUBLIC_APP_ENV || 'production';
+
+// App name based on environment
+const APP_NAME = {
+  development: 'Egg9 Dev',
+  staging: 'Egg9 Preview',
+  production: 'Egg9',
+}[APP_ENV] || 'Egg9';
+
+// Package name based on environment (allows multiple installs on same device)
+const PACKAGE_NAME = {
+  development: 'com.egg9.app.dev',
+  staging: 'com.egg9.app.preview',
+  production: 'com.egg9.app',
+}[APP_ENV] || 'com.egg9.app';
 
 export default {
   expo: {
-    name: IS_DEV ? 'Egg9 Dev' : 'Egg9',
+    name: APP_NAME,
     slug: 'egg9',
     version: '1.0.0',
     orientation: 'portrait',
@@ -16,10 +30,10 @@ export default {
     },
     ios: {
       supportsTablet: true,
-      bundleIdentifier: 'com.egg9.app',
+      bundleIdentifier: PACKAGE_NAME,
     },
     android: {
-      package: 'com.egg9.app',
+      package: PACKAGE_NAME,
       versionCode: 1,
       adaptiveIcon: {
         foregroundImage: './assets/images/adaptive-icon.png',
