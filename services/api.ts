@@ -416,6 +416,26 @@ class ApiService {
     return { updatedCount: data.updatedCount };
   }
 
+  async skipCurrentWeek(): Promise<Week> {
+    const response = await fetch(`${this.baseUrl}/admin/week/skip`, {
+      method: 'POST',
+      headers: await this.getAuthHeaders(),
+    });
+
+    const data = await this.handleResponse<{ message: string; week: Week }>(response);
+    return data.week;
+  }
+
+  async unskipCurrentWeek(): Promise<Week> {
+    const response = await fetch(`${this.baseUrl}/admin/week/unskip`, {
+      method: 'POST',
+      headers: await this.getAuthHeaders(),
+    });
+
+    const data = await this.handleResponse<{ message: string; week: Week }>(response);
+    return data.week;
+  }
+
   // ============================================
   // ADMIN - PAYMENT SETTINGS
   // ============================================

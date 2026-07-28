@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { StyleSheet, ScrollView, View as RNView, Platform, NativeSyntheticEvent, NativeScrollEvent, RefreshControl } from 'react-native';
+import { StyleSheet, ScrollView, View as RNView, Platform, NativeSyntheticEvent, NativeScrollEvent, RefreshControl, Alert } from 'react-native';
 import { View } from '@/components/Themed';
 import {
   Card,
@@ -233,6 +233,67 @@ export default function AdminScreen() {
     }
   };
 
+
+  const performSkipWeek = async () => {
+    setProcessing(true);
+    setSuccessMessage(null);
+    setErrorMessage(null);
+
+    try {
+      const updatedWeek = await apiService.skipCurrentWeek();
+      setWeek(updatedWeek);
+      setSuccessMessage(t('admin.weekSkipped'));
+
+      const orders = await apiService.getAllOrdersAdmin();
+      setAllOrders(orders);
+    } catch (err: any) {
+      // Backend returns 409 when the week has already-paid orders
+      setErrorMessage(err.message || t('admin.failedSkipWeek'));
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleSkipWeek = () => {
+    Alert.alert(
+      t('admin.skipWeekConfirmTitle'),
+      t('admin.skipWeekConfirmMessage'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('admin.skipWeek'), style: 'destructive', onPress: performSkipWeek },
+      ]
+    );
+  };
+
+  const performUnskipWeek = async () => {
+    setProcessing(true);
+    setSuccessMessage(null);
+    setErrorMessage(null);
+
+    try {
+      const updatedWeek = await apiService.unskipCurrentWeek();
+      setWeek(updatedWeek);
+      setSuccessMessage(t('admin.weekUnskipped'));
+
+      const orders = await apiService.getAllOrdersAdmin();
+      setAllOrders(orders);
+    } catch (err: any) {
+      setErrorMessage(err.message || t('admin.failedUnskipWeek'));
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleUnskipWeek = () => {
+    Alert.alert(
+      t('admin.unskipWeekConfirmTitle'),
+      t('admin.unskipWeekConfirmMessage'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('admin.unskipWeek'), onPress: performUnskipWeek },
+      ]
+    );
+  };
 
   const handleClearData = async () => {
     await apiService.clearAllData();
@@ -479,7 +540,11 @@ export default function AdminScreen() {
               </Surface>
               )}
 
-              {editingStock ? (
+              {week.isSkipped ? (
+                <Chip icon="calendar-remove" mode="flat" style={[styles.deliveredChip, { marginTop: 4 }]}>
+                  {t('admin.weekSkippedChip')}
+                </Chip>
+              ) : editingStock ? (
                 <>
                   <TextInput
                     label={t('admin.newStockAmount')}
@@ -832,8 +897,8 @@ export default function AdminScreen() {
                 </Button>
               ) : null}
 
-              {/* Mark All as Delivered Button */}
-              {!editingDelivery && getAllPendingItems().length > 0 && (
+              {/* Mark All as Delivered Button - hidden while the week is skipped */}
+              {!editingDelivery && !week.isSkipped && getAllPendingItems().length > 0 && (
                 <Button
                   mode="contained"
                   onPress={handleMarkAllDelivered}
@@ -851,6 +916,39 @@ export default function AdminScreen() {
                 <Chip icon="check-circle" mode="flat" style={[styles.deliveredChip, { marginTop: 10 }]}>
                   {t('admin.allDeliveredChip')}
                 </Chip>
+              )}
+
+              {/* Skip / Un-skip this week */}
+              {!editingDelivery && !week.allOrdersDelivered && (
+                week.isSkipped ? (
+                  <>
+                    <Chip icon="calendar-remove" mode="flat" style={[styles.deliveredChip, { marginTop: 16 }]}>
+                      {t('admin.weekSkippedChip')}
+                    </Chip>
+                    <Button
+                      mode="outlined"
+                      onPress={handleUnskipWeek}
+                      loading={processing}
+                      disabled={processing}
+                      icon="calendar-refresh"
+                      style={[styles.button, { marginTop: 12 }]}
+                    >
+                      {t('admin.unskipWeek')}
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    mode="outlined"
+                    onPress={handleSkipWeek}
+                    loading={processing}
+                    disabled={processing}
+                    icon="calendar-remove"
+                    style={[styles.button, { marginTop: 16 }]}
+                    textColor={theme.colors.error}
+                  >
+                    {t('admin.skipWeek')}
+                  </Button>
+                )
               )}
             </RNView>
           </LinearGradient>

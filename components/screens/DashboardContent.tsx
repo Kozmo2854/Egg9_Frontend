@@ -115,6 +115,7 @@ export default function DashboardContent({
 
   // Determine which state we're in
   const getState = () => {
+    if (weeklyStock?.isSkipped) return 'SKIPPED';
     if (!hasCurrentOrders && !subscription) return 'NO_ORDERS';
     if (isComplete) return 'COMPLETE';
     if (isPickedUp && !isPaid) return 'PICKED_UP_NOT_PAID';
@@ -129,6 +130,8 @@ export default function DashboardContent({
   // Hero content based on state
   const getHeroContent = () => {
     switch (state) {
+      case 'SKIPPED':
+        return { emoji: '⏭️', title: t('dashboard.weekSkipped'), subtitle: t('dashboard.weekSkippedDesc') };
       case 'NO_ORDERS':
         const stockNotSetup = !weeklyStock.isOrderingOpen && !weeklyStock.allOrdersDelivered;
         const ordersDelivered = weeklyStock.allOrdersDelivered;

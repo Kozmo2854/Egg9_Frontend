@@ -28,6 +28,7 @@ export interface Week {
   allOrdersDelivered: boolean; // Track if all orders for this week are delivered
   isLowSeason: boolean; // Whether this week is in low season (affects subscriptions and order caps)
   subscriptionsProcessed: boolean; // Whether subscriptions have been processed for this week
+  isSkipped: boolean; // Whether this week's delivery has been skipped by an admin
   lowSeasonOrderCap: number | null; // Max eggs for one-time orders in low season (null if high season)
 }
 
