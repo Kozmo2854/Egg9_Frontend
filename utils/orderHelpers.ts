@@ -12,6 +12,28 @@ export interface Order {
   pickedUp: boolean;
 }
 
+export interface PaymentSettings {
+  bankAccountNumber: string;
+  recipientName: string;
+  paymentPurpose: string;
+  paymentCode: string;
+}
+
+/**
+ * Builds the NBS IPS (Serbian instant-payment) QR-code payload for a given amount.
+ * Shared by the dashboard and the per-page payment prompts so every screen renders
+ * an identical QR code from the same payment settings.
+ */
+export const generateNBSIPSQRCode = (
+  paymentSettings: PaymentSettings | null | undefined,
+  amount: number
+): string => {
+  if (!paymentSettings) return '';
+  const amountFormatted = `RSD${amount.toFixed(2).replace('.', ',')}`;
+  const bankAccountFormatted = paymentSettings.bankAccountNumber.replace(/-/g, '');
+  return `K:PR|V:01|C:1|R:${bankAccountFormatted}|N:${paymentSettings.recipientName}|I:${amountFormatted}|SF:${paymentSettings.paymentCode}|S:${paymentSettings.paymentPurpose}`;
+};
+
 /**
  * Calculates total amount for orders that are unpaid and not yet submitted
  * Used for displaying "Unpaid" status

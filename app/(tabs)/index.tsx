@@ -218,11 +218,8 @@ export default function GalleryTabsScreen() {
   };
 
   const generateNBSIPSQRCode = (customAmount?: number) => {
-    if (!paymentSettings) return '';
     const amount = customAmount ?? getPaymentAmount();
-    const amountFormatted = `RSD${amount.toFixed(2).replace('.', ',')}`;
-    const bankAccountFormatted = paymentSettings.bankAccountNumber.replace(/-/g, '');
-    return `K:PR|V:01|C:1|R:${bankAccountFormatted}|N:${paymentSettings.recipientName}|I:${amountFormatted}|SF:${paymentSettings.paymentCode}|S:${paymentSettings.paymentPurpose}`;
+    return OrderHelpers.generateNBSIPSQRCode(paymentSettings, amount);
   };
 
   const getPaymentDialogProps = () => {
@@ -287,6 +284,7 @@ export default function GalleryTabsScreen() {
     onRefresh,
     onDataChange: loadData,
     showSnackbar,
+    paymentSettings,
   };
 
   const subscriptionProps = {
@@ -297,6 +295,7 @@ export default function GalleryTabsScreen() {
     onRefresh,
     onDataChange: loadData,
     showSnackbar,
+    paymentSettings,
   };
 
   // Unified render using PagerViewWrapper (handles platform differences internally)

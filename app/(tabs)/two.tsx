@@ -17,6 +17,8 @@ import { LoadingView, ErrorView } from '@/components/common';
 import { parseError } from '@/utils/errorHandling';
 import { useWeekContext } from '@/contexts/WeekContext';
 import { useSwipeNavigation } from '@/hooks/useSwipeNavigation';
+import { PaymentDialog, ConfirmPaymentDialog } from '@/components/PaymentDialog';
+import * as OrderHelpers from '@/utils/orderHelpers';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const HORIZONTAL_PADDING = 16;
@@ -37,7 +39,11 @@ export default function OrderScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [availableEggs, setAvailableEggs] = useState(0);
   const [editingOrder, setEditingOrder] = useState(false);
-  
+  const [paymentSettings, setPaymentSettings] = useState<OrderHelpers.PaymentSettings | null>(null);
+  const [paymentDialogVisible, setPaymentDialogVisible] = useState(false);
+  const [confirmPaymentVisible, setConfirmPaymentVisible] = useState(false);
+  const [markingPayment, setMarkingPayment] = useState(false);
+
   // Swipe navigation - must be called before any conditional returns
   const swipeHandlers = useSwipeNavigation();
 
@@ -55,23 +61,25 @@ export default function OrderScreen() {
         setLoading(true);
       }
       setError(null);
-      const [stockData, subData, currentOrder, available] = await Promise.all([
+      const [stockData, subData, currentOrder, available, settings] = await Promise.all([
         apiService.getWeeklyStock(),
         apiService.getSubscription(),
         apiService.getCurrentWeekOrder(),
         apiService.getAvailableEggsForUser(),
+        apiService.getAppSettings(),
       ]);
       setWeeklyStock(stockData);
       setSubscription(subData);
       const oneTimeOrder = currentOrder && !currentOrder.subscriptionId ? currentOrder : null;
       setCurrentWeekOrder(oneTimeOrder);
       setAvailableEggs(available);
-      
+      setPaymentSettings(settings.paymentSettings);
+
       // Set week dates for header display
       if (stockData) {
         setWeekDates(stockData.weekStart, stockData.weekEnd);
       }
-      
+
       if (oneTimeOrder) {
         setQuantity(oneTimeOrder.quantity);
       } else {
@@ -156,6 +164,22 @@ export default function OrderScreen() {
     }
   };
 
+  const handleMarkPaymentSubmitted = async () => {
+    setConfirmPaymentVisible(false);
+    if (!currentWeekOrder || currentWeekOrder.isPaid || currentWeekOrder.paymentSubmitted) return;
+    try {
+      setMarkingPayment(true);
+      await apiService.markOrderPaymentSubmitted(currentWeekOrder.id);
+      setPaymentDialogVisible(false);
+      setSuccessMessage(t('payment.paymentMarked'));
+      await loadData();
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to mark payment');
+    } finally {
+      setMarkingPayment(false);
+    }
+  };
+
   const incrementQuantity = () => {
     let maxAvailable = availableEggs;
     if (currentWeekOrder) {
@@ -234,6 +258,13 @@ export default function OrderScreen() {
   };
 
   const warningInfo = getWarningInfo();
+
+  const payableOrder = currentWeekOrder && !currentWeekOrder.isPaid && !currentWeekOrder.paymentSubmitted
+    ? currentWeekOrder
+    : null;
+  const awaitingConfirmation = !!currentWeekOrder && !currentWeekOrder.isPaid && currentWeekOrder.paymentSubmitted;
+  const paymentAmount = OrderHelpers.getUnpaidNotSubmittedAmount(currentWeekOrder, null);
+  const paymentQuantity = OrderHelpers.getUnpaidNotSubmittedQuantity(currentWeekOrder, null);
 
   return (
     <View style={styles.container} {...swipeHandlers}>
@@ -370,6 +401,40 @@ export default function OrderScreen() {
               <Text style={styles.detailValue}>{currentWeekOrder.total.toFixed(0)} {t('common.rsd')}</Text>
             </RNView>
 
+            {/* Pay right here instead of on the dashboard */}
+            {payableOrder && (
+              <RNView style={styles.paymentRow}>
+                <Button
+                  mode="contained"
+                  onPress={() => setPaymentDialogVisible(true)}
+                  icon="qrcode"
+                  style={styles.paymentButton}
+                  buttonColor={theme.colors.tertiary}
+                  compact
+                >
+                  {t('order.payNow')}
+                </Button>
+                <Button
+                  mode="outlined"
+                  onPress={() => setConfirmPaymentVisible(true)}
+                  disabled={markingPayment}
+                  loading={markingPayment}
+                  icon="check"
+                  style={styles.paymentButton}
+                  compact
+                >
+                  {t('payment.markPaid')}
+                </Button>
+              </RNView>
+            )}
+
+            {/* Awaiting admin confirmation after marking paid */}
+            {awaitingConfirmation && (
+              <RNView style={styles.awaitingBadge}>
+                <Text style={styles.awaitingText}>{t('order.awaitingConfirmation')}</Text>
+              </RNView>
+            )}
+
             {/* Modify/Cancel Buttons - Only show if NOT paid */}
             {!currentWeekOrder.isPaid && (
               <RNView style={styles.actionRow}>
@@ -417,6 +482,26 @@ export default function OrderScreen() {
       >
         {errorMessage}
       </Snackbar>
+
+      {/* Payment Dialog (reused from the dashboard) */}
+      <PaymentDialog
+        visible={paymentDialogVisible}
+        onDismiss={() => setPaymentDialogVisible(false)}
+        onMarkPaid={() => setConfirmPaymentVisible(true)}
+        quantity={paymentQuantity}
+        amount={paymentAmount}
+        qrCodeValue={OrderHelpers.generateNBSIPSQRCode(paymentSettings, paymentAmount)}
+        bankAccountNumber={paymentSettings?.bankAccountNumber}
+        recipientName={paymentSettings?.recipientName}
+        isPaymentSubmitted={!payableOrder}
+        isMarkingPayment={markingPayment}
+      />
+      <ConfirmPaymentDialog
+        visible={confirmPaymentVisible}
+        onDismiss={() => setConfirmPaymentVisible(false)}
+        onConfirm={handleMarkPaymentSubmitted}
+        isLoading={markingPayment}
+      />
     </View>
   );
 }
@@ -599,6 +684,28 @@ const styles = StyleSheet.create({
   },
   actionButtonRow: {
     flex: 1,
+  },
+  paymentRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  paymentButton: {
+    flex: 1,
+  },
+  awaitingBadge: {
+    backgroundColor: '#fff3e0',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  awaitingText: {
+    color: '#e65100',
+    fontWeight: '600',
+    fontSize: 14,
   },
   // Available Badge
   availableBadge: {

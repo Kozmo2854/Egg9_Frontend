@@ -21,6 +21,8 @@ import { LoadingView, ErrorView } from '@/components/common';
 import { parseError } from '@/utils/errorHandling';
 import { useWeekContext } from '@/contexts/WeekContext';
 import { useSwipeNavigation } from '@/hooks/useSwipeNavigation';
+import { PaymentDialog, ConfirmPaymentDialog } from '@/components/PaymentDialog';
+import * as OrderHelpers from '@/utils/orderHelpers';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const HORIZONTAL_PADDING = 16;
@@ -44,7 +46,11 @@ export default function SubscriptionScreen() {
     nextWeekStart: string;
     nextWeekEnd: string;
   } | null>(null);
-  
+  const [paymentSettings, setPaymentSettings] = useState<OrderHelpers.PaymentSettings | null>(null);
+  const [paymentDialogVisible, setPaymentDialogVisible] = useState(false);
+  const [confirmPaymentVisible, setConfirmPaymentVisible] = useState(false);
+  const [markingPayment, setMarkingPayment] = useState(false);
+
   // Swipe navigation - must be called before any conditional returns
   const swipeHandlers = useSwipeNavigation();
 
@@ -58,14 +64,16 @@ export default function SubscriptionScreen() {
     try {
       setLoading(true);
       setError(null);
-      const [stockData, subData, subOrder] = await Promise.all([
+      const [stockData, subData, subOrder, settings] = await Promise.all([
         apiService.getWeeklyStock(),
         apiService.getSubscription(),
         apiService.getCurrentWeekSubscriptionOrder(),
+        apiService.getAppSettings(),
       ]);
       setWeeklyStock(stockData);
       setSubscription(subData);
       setCurrentWeekSubOrder(subOrder);
+      setPaymentSettings(settings.paymentSettings);
       
       // Set week dates for header display
       if (stockData) {
@@ -138,6 +146,22 @@ export default function SubscriptionScreen() {
     }
   };
 
+  const handleMarkPaymentSubmitted = async () => {
+    setConfirmPaymentVisible(false);
+    if (!currentWeekSubOrder || currentWeekSubOrder.isPaid || currentWeekSubOrder.paymentSubmitted) return;
+    try {
+      setMarkingPayment(true);
+      await apiService.markOrderPaymentSubmitted(currentWeekSubOrder.id);
+      setPaymentDialogVisible(false);
+      setSuccessMessage(t('payment.paymentMarked'));
+      await loadData();
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to mark payment');
+    } finally {
+      setMarkingPayment(false);
+    }
+  };
+
   const incrementSubscriptionQuantity = () => {
     if (subscriptionQuantity < 30) {
       setSubscriptionQuantity(subscriptionQuantity + 10);
@@ -173,6 +197,13 @@ export default function SubscriptionScreen() {
   }
 
   const showForm = !subscription && !weeklyStock.isLowSeason;
+
+  const payableOrder = currentWeekSubOrder && !currentWeekSubOrder.isPaid && !currentWeekSubOrder.paymentSubmitted
+    ? currentWeekSubOrder
+    : null;
+  const awaitingConfirmation = !!currentWeekSubOrder && !currentWeekSubOrder.isPaid && currentWeekSubOrder.paymentSubmitted;
+  const paymentAmount = OrderHelpers.getUnpaidNotSubmittedAmount(null, currentWeekSubOrder);
+  const paymentQuantity = OrderHelpers.getUnpaidNotSubmittedQuantity(null, currentWeekSubOrder);
 
   return (
     <View style={styles.container} {...swipeHandlers}>
@@ -228,6 +259,40 @@ export default function SubscriptionScreen() {
               <Text style={styles.detailLabel}>{t('subscription.weeklyPrice')}</Text>
               <Text style={styles.detailValue}>{calculateWeeklyPrice().toFixed(0)} {t('common.rsd')}</Text>
             </RNView>
+
+            {/* Pay right here instead of on the dashboard */}
+            {payableOrder && (
+              <RNView style={styles.paymentRow}>
+                <Button
+                  mode="contained"
+                  onPress={() => setPaymentDialogVisible(true)}
+                  icon="qrcode"
+                  style={styles.paymentButton}
+                  buttonColor={theme.colors.tertiary}
+                  compact
+                >
+                  {t('order.payNow')}
+                </Button>
+                <Button
+                  mode="outlined"
+                  onPress={() => setConfirmPaymentVisible(true)}
+                  disabled={markingPayment}
+                  loading={markingPayment}
+                  icon="check"
+                  style={styles.paymentButton}
+                  compact
+                >
+                  {t('payment.markPaid')}
+                </Button>
+              </RNView>
+            )}
+
+            {/* Awaiting admin confirmation after marking paid */}
+            {awaitingConfirmation && (
+              <RNView style={styles.awaitingBadge}>
+                <Text style={styles.awaitingText}>{t('order.awaitingConfirmation')}</Text>
+              </RNView>
+            )}
 
             {/* Cancel Button */}
             <Button
@@ -402,6 +467,26 @@ export default function SubscriptionScreen() {
           </Dialog.Actions>
         </Dialog>
       </Portal>
+
+      {/* Payment Dialog (reused from the dashboard) */}
+      <PaymentDialog
+        visible={paymentDialogVisible}
+        onDismiss={() => setPaymentDialogVisible(false)}
+        onMarkPaid={() => setConfirmPaymentVisible(true)}
+        quantity={paymentQuantity}
+        amount={paymentAmount}
+        qrCodeValue={OrderHelpers.generateNBSIPSQRCode(paymentSettings, paymentAmount)}
+        bankAccountNumber={paymentSettings?.bankAccountNumber}
+        recipientName={paymentSettings?.recipientName}
+        isPaymentSubmitted={!payableOrder}
+        isMarkingPayment={markingPayment}
+      />
+      <ConfirmPaymentDialog
+        visible={confirmPaymentVisible}
+        onDismiss={() => setConfirmPaymentVisible(false)}
+        onConfirm={handleMarkPaymentSubmitted}
+        isLoading={markingPayment}
+      />
     </View>
   );
 }
@@ -494,6 +579,28 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     marginTop: 8,
+  },
+  paymentRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  paymentButton: {
+    flex: 1,
+  },
+  awaitingBadge: {
+    backgroundColor: '#fff3e0',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  awaitingText: {
+    color: '#e65100',
+    fontWeight: '600',
+    fontSize: 14,
   },
 
   // Low Season Card

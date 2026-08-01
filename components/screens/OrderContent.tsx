@@ -8,9 +8,11 @@ import {
   Surface,
 } from 'react-native-paper';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { PaymentDialog, ConfirmPaymentDialog } from '@/components/PaymentDialog';
 import { useTranslation } from 'react-i18next';
 import { apiService } from '@/services/api';
 import { WeeklyStock } from '@/types/models';
+import * as OrderHelpers from '@/utils/orderHelpers';
 
 const HORIZONTAL_PADDING = 16;
 
@@ -23,6 +25,7 @@ interface OrderContentProps {
   onRefresh: () => void;
   onDataChange: () => void;
   showSnackbar: (message: string, type?: 'success' | 'error') => void;
+  paymentSettings?: OrderHelpers.PaymentSettings | null;
 }
 
 export default function OrderContent({
@@ -34,6 +37,7 @@ export default function OrderContent({
   onRefresh,
   onDataChange,
   showSnackbar,
+  paymentSettings,
 }: OrderContentProps) {
   const theme = useTheme();
   const { t } = useTranslation();
@@ -45,6 +49,11 @@ export default function OrderContent({
   const [processing, setProcessing] = useState(false);
   const [cancelConfirmVisible, setCancelConfirmVisible] = useState(false);
   const [editingOrder, setEditingOrder] = useState(false);
+
+  // Payment state (mirrors the dashboard's PaymentDialog wiring)
+  const [paymentDialogVisible, setPaymentDialogVisible] = useState(false);
+  const [confirmPaymentVisible, setConfirmPaymentVisible] = useState(false);
+  const [markingPayment, setMarkingPayment] = useState(false);
 
   // Sync with parent data
   useEffect(() => {
@@ -100,6 +109,31 @@ export default function OrderContent({
       showSnackbar(err.message || 'Failed to cancel order', 'error');
     } finally {
       setProcessing(false);
+    }
+  };
+
+  // Payable order for THIS page = the one-time current-week order that is
+  // unpaid and not yet submitted. Amount/quantity reuse the dashboard helpers.
+  const payableOrder = currentWeekOrder && !currentWeekOrder.isPaid && !currentWeekOrder.paymentSubmitted
+    ? currentWeekOrder
+    : null;
+  const awaitingConfirmation = !!currentWeekOrder && !currentWeekOrder.isPaid && currentWeekOrder.paymentSubmitted;
+  const paymentAmount = OrderHelpers.getUnpaidNotSubmittedAmount(currentWeekOrder, null);
+  const paymentQuantity = OrderHelpers.getUnpaidNotSubmittedQuantity(currentWeekOrder, null);
+
+  const handleMarkPaymentSubmitted = async () => {
+    setConfirmPaymentVisible(false);
+    if (!payableOrder) return;
+    try {
+      setMarkingPayment(true);
+      await apiService.markOrderPaymentSubmitted(payableOrder.id);
+      setPaymentDialogVisible(false);
+      showSnackbar(t('payment.paymentMarked'));
+      onDataChange();
+    } catch (err: any) {
+      showSnackbar(err.message || 'Failed to mark payment', 'error');
+    } finally {
+      setMarkingPayment(false);
     }
   };
 
@@ -251,6 +285,40 @@ export default function OrderContent({
             <Text style={styles.detailValue}>{currentWeekOrder.total.toFixed(0)} {t('common.rsd')}</Text>
           </View>
 
+          {/* Pay right here instead of on the dashboard */}
+          {payableOrder && (
+            <View style={styles.paymentRow}>
+              <Button
+                mode="contained"
+                onPress={() => setPaymentDialogVisible(true)}
+                icon="qrcode"
+                style={styles.paymentButton}
+                buttonColor={theme.colors.tertiary}
+                compact
+              >
+                {t('order.payNow')}
+              </Button>
+              <Button
+                mode="outlined"
+                onPress={() => setConfirmPaymentVisible(true)}
+                disabled={markingPayment}
+                loading={markingPayment}
+                icon="check"
+                style={styles.paymentButton}
+                compact
+              >
+                {t('payment.markPaid')}
+              </Button>
+            </View>
+          )}
+
+          {/* Awaiting admin confirmation after marking paid */}
+          {awaitingConfirmation && (
+            <View style={styles.awaitingBadge}>
+              <Text style={styles.awaitingText}>{t('order.awaitingConfirmation')}</Text>
+            </View>
+          )}
+
           {/* Modify/Cancel Buttons - Only show if NOT paid */}
           {!currentWeekOrder.isPaid && (
             <View style={styles.actionRow}>
@@ -348,6 +416,26 @@ export default function OrderContent({
         isLoading={processing}
         title={t('order.cancelOrderTitle')}
         message={t('order.cancelOrderMessage')}
+      />
+
+      {/* Payment Dialog (reused from the dashboard) */}
+      <PaymentDialog
+        visible={paymentDialogVisible}
+        onDismiss={() => setPaymentDialogVisible(false)}
+        onMarkPaid={() => setConfirmPaymentVisible(true)}
+        quantity={paymentQuantity}
+        amount={paymentAmount}
+        qrCodeValue={OrderHelpers.generateNBSIPSQRCode(paymentSettings, paymentAmount)}
+        bankAccountNumber={paymentSettings?.bankAccountNumber}
+        recipientName={paymentSettings?.recipientName}
+        isPaymentSubmitted={!payableOrder}
+        isMarkingPayment={markingPayment}
+      />
+      <ConfirmPaymentDialog
+        visible={confirmPaymentVisible}
+        onDismiss={() => setConfirmPaymentVisible(false)}
+        onConfirm={handleMarkPaymentSubmitted}
+        isLoading={markingPayment}
       />
     </ScrollView>
   );
@@ -490,6 +578,28 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
+  },
+  paymentRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  paymentButton: {
+    flex: 1,
+  },
+  awaitingBadge: {
+    backgroundColor: '#fff3e0',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  awaitingText: {
+    color: '#e65100',
+    fontWeight: '600',
+    fontSize: 14,
   },
 
   // Order Form Card

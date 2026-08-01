@@ -13,7 +13,9 @@ import {
 import { useTranslation } from 'react-i18next';
 import { apiService } from '@/services/api';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { PaymentDialog, ConfirmPaymentDialog } from '@/components/PaymentDialog';
 import { WeeklyStock } from '@/types/models';
+import * as OrderHelpers from '@/utils/orderHelpers';
 
 const HORIZONTAL_PADDING = 16;
 
@@ -25,6 +27,7 @@ interface SubscriptionContentProps {
   onRefresh: () => void;
   onDataChange: () => void;
   showSnackbar: (message: string, type?: 'success' | 'error') => void;
+  paymentSettings?: OrderHelpers.PaymentSettings | null;
 }
 
 export default function SubscriptionContent({
@@ -35,6 +38,7 @@ export default function SubscriptionContent({
   onRefresh,
   onDataChange,
   showSnackbar,
+  paymentSettings,
 }: SubscriptionContentProps) {
   const theme = useTheme();
   const { t } = useTranslation();
@@ -49,6 +53,36 @@ export default function SubscriptionContent({
     nextWeekEnd: string;
   } | null>(null);
   const [cancelConfirmVisible, setCancelConfirmVisible] = useState(false);
+
+  // Payment state (mirrors the dashboard's PaymentDialog wiring)
+  const [paymentDialogVisible, setPaymentDialogVisible] = useState(false);
+  const [confirmPaymentVisible, setConfirmPaymentVisible] = useState(false);
+  const [markingPayment, setMarkingPayment] = useState(false);
+
+  // Payable order for THIS page = the current-week subscription order that is
+  // unpaid and not yet submitted. Amount/quantity reuse the dashboard helpers.
+  const payableOrder = currentWeekSubOrder && !currentWeekSubOrder.isPaid && !currentWeekSubOrder.paymentSubmitted
+    ? currentWeekSubOrder
+    : null;
+  const awaitingConfirmation = !!currentWeekSubOrder && !currentWeekSubOrder.isPaid && currentWeekSubOrder.paymentSubmitted;
+  const paymentAmount = OrderHelpers.getUnpaidNotSubmittedAmount(null, currentWeekSubOrder);
+  const paymentQuantity = OrderHelpers.getUnpaidNotSubmittedQuantity(null, currentWeekSubOrder);
+
+  const handleMarkPaymentSubmitted = async () => {
+    setConfirmPaymentVisible(false);
+    if (!payableOrder) return;
+    try {
+      setMarkingPayment(true);
+      await apiService.markOrderPaymentSubmitted(payableOrder.id);
+      setPaymentDialogVisible(false);
+      showSnackbar(t('payment.paymentMarked'));
+      onDataChange();
+    } catch (err: any) {
+      showSnackbar(err.message || 'Failed to mark payment', 'error');
+    } finally {
+      setMarkingPayment(false);
+    }
+  };
 
   // Sync with parent data
   useEffect(() => {
@@ -187,6 +221,40 @@ export default function SubscriptionContent({
             <Text style={styles.detailLabel}>{t('subscription.weeklyPrice')}</Text>
             <Text style={styles.detailValue}>{calculateWeeklyPrice().toFixed(0)} {t('common.rsd')}</Text>
           </View>
+
+          {/* Pay right here instead of on the dashboard */}
+          {payableOrder && (
+            <View style={styles.paymentRow}>
+              <Button
+                mode="contained"
+                onPress={() => setPaymentDialogVisible(true)}
+                icon="qrcode"
+                style={styles.paymentButton}
+                buttonColor={theme.colors.tertiary}
+                compact
+              >
+                {t('order.payNow')}
+              </Button>
+              <Button
+                mode="outlined"
+                onPress={() => setConfirmPaymentVisible(true)}
+                disabled={markingPayment}
+                loading={markingPayment}
+                icon="check"
+                style={styles.paymentButton}
+                compact
+              >
+                {t('payment.markPaid')}
+              </Button>
+            </View>
+          )}
+
+          {/* Awaiting admin confirmation after marking paid */}
+          {awaitingConfirmation && (
+            <View style={styles.awaitingBadge}>
+              <Text style={styles.awaitingText}>{t('order.awaitingConfirmation')}</Text>
+            </View>
+          )}
 
           {/* Cancel Button */}
           <Button
@@ -350,6 +418,26 @@ export default function SubscriptionContent({
         title={t('subscription.cancelSubscriptionTitle')}
         message={t('subscription.cancelSubscriptionMessage')}
       />
+
+      {/* Payment Dialog (reused from the dashboard) */}
+      <PaymentDialog
+        visible={paymentDialogVisible}
+        onDismiss={() => setPaymentDialogVisible(false)}
+        onMarkPaid={() => setConfirmPaymentVisible(true)}
+        quantity={paymentQuantity}
+        amount={paymentAmount}
+        qrCodeValue={OrderHelpers.generateNBSIPSQRCode(paymentSettings, paymentAmount)}
+        bankAccountNumber={paymentSettings?.bankAccountNumber}
+        recipientName={paymentSettings?.recipientName}
+        isPaymentSubmitted={!payableOrder}
+        isMarkingPayment={markingPayment}
+      />
+      <ConfirmPaymentDialog
+        visible={confirmPaymentVisible}
+        onDismiss={() => setConfirmPaymentVisible(false)}
+        onConfirm={handleMarkPaymentSubmitted}
+        isLoading={markingPayment}
+      />
     </ScrollView>
   );
 }
@@ -434,6 +522,28 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     marginTop: 8,
+  },
+  paymentRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  paymentButton: {
+    flex: 1,
+  },
+  awaitingBadge: {
+    backgroundColor: '#fff3e0',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  awaitingText: {
+    color: '#e65100',
+    fontWeight: '600',
+    fontSize: 14,
   },
   lowSeasonCard: {
     backgroundColor: '#fff3e0',
