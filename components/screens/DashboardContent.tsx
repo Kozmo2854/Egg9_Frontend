@@ -15,6 +15,8 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_GAP = 12;
 const HORIZONTAL_PADDING = 16;
+// Max width so single info/CTA cards stay centered and don't stretch on wide web screens.
+const CARD_MAX_WIDTH = 420;
 
 interface DashboardContentProps {
   weeklyStock: WeeklyStock;
@@ -131,7 +133,11 @@ export default function DashboardContent({
   const getHeroContent = () => {
     switch (state) {
       case 'SKIPPED':
-        return { emoji: '⏭️', title: t('dashboard.weekSkipped'), subtitle: t('dashboard.weekSkippedDesc') };
+        return {
+          emoji: '⏭️',
+          title: t('dashboard.weekSkipped'),
+          subtitle: subscription ? t('dashboard.weekSkippedDesc') : t('dashboard.weekSkippedDescNoSub'),
+        };
       case 'NO_ORDERS':
         const stockNotSetup = !weeklyStock.isOrderingOpen && !weeklyStock.allOrdersDelivered;
         const ordersDelivered = weeklyStock.allOrdersDelivered;
@@ -285,10 +291,10 @@ export default function DashboardContent({
           "subscribe now, starts next week" CTA would fail. Show the paused-subscriptions
           message instead (non-actionable) while the hero keeps the "this week is skipped" copy. */}
       {state === 'SKIPPED' && !subscription && weeklyStock?.isLowSeason && (
-        <Surface style={[styles.bottomCard, styles.skipSubscribeCard]} elevation={2}>
-          <Text style={styles.bottomCardIcon}>😴</Text>
-          <Text style={styles.bottomCardTitle}>{t('subscription.subscriptionsPaused')}</Text>
-          <Text style={styles.skipSubscribeText}>{t('subscription.lowSeasonMessage')}</Text>
+        <Surface style={styles.skipInfoCard} elevation={2}>
+          <Text style={styles.skipInfoIcon}>😴</Text>
+          <Text style={styles.skipInfoTitle}>{t('subscription.subscriptionsPaused')}</Text>
+          <Text style={styles.skipInfoText}>{t('subscription.lowSeasonMessage')}</Text>
         </Surface>
       )}
 
@@ -525,6 +531,8 @@ const styles = StyleSheet.create({
   },
   skipSubscribeWrapper: {
     width: '100%',
+    maxWidth: CARD_MAX_WIDTH,
+    alignSelf: 'center',
   },
   skipSubscribeCard: {
     height: undefined,
@@ -536,6 +544,34 @@ const styles = StyleSheet.create({
     color: '#2d3748',
     textAlign: 'center',
     marginTop: 4,
+  },
+  // Low-season skipped info card: compact, centered, width-constrained on wide web.
+  skipInfoCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: CARD_MAX_WIDTH,
+  },
+  skipInfoIcon: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  skipInfoTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#2d3748',
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  skipInfoText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 20,
   },
   bottomCardWrapper: {
     flex: 1,

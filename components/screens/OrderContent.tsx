@@ -147,6 +147,13 @@ export default function OrderContent({
 
   const getWarningInfo = () => {
     if (!canOrder) {
+      if (weeklyStock.isSkipped) {
+        return {
+          icon: '⏭️',
+          message: t('dashboard.weekSkipped'),
+          subtitle: subscription ? t('dashboard.weekSkippedDesc') : t('dashboard.weekSkippedDescNoSub'),
+        };
+      }
       if (stockNotSetup) {
         return { icon: '📦', message: t('order.stockNotSetUp'), subtitle: t('order.stockNotSetUpDesc') };
       }

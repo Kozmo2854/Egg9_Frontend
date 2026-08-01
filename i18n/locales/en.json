@@ -331,6 +331,7 @@
     "eggsAvailable": "eggs available this week",
     "weekSkipped": "This week is skipped",
     "weekSkippedDesc": "There's no delivery this week. Your subscription is paused for this week and resumes on the next cycle.",
+    "weekSkippedDescNoSub": "There's no delivery this week — we'll be back next week.",
     "skipSubscribeCta": "This week is skipped — subscribe now and your deliveries start next week.",
     "beQuick": "Be quick and get your eggs before stock runs out! 🐣",
     "orderingClosed": "Ordering is closed for this week",

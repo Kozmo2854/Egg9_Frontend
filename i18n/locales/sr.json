@@ -331,6 +331,7 @@
     "eggsAvailable": "jaja dostupno ove nedelje",
     "weekSkipped": "Ova nedelja je preskočena",
     "weekSkippedDesc": "Ove nedelje nema isporuke. Vaša pretplata je pauzirana za ovu nedelju i nastavlja se u sledećem ciklusu.",
+    "weekSkippedDescNoSub": "Ove nedelje nema isporuke — vraćamo se sledeće nedelje.",
     "skipSubscribeCta": "Ova nedelja je preskočena — pretplatite se sada i isporuke počinju od sledeće nedelje.",
     "beQuick": "Požurite i nabavite jaja pre nego što nestane! 🐣",
     "orderingClosed": "Naručivanje je zatvoreno za ovu nedelju",
