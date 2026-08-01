@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { StyleSheet, ScrollView, View as RNView, Platform, NativeSyntheticEvent, NativeScrollEvent, RefreshControl, Alert } from 'react-native';
+import { StyleSheet, ScrollView, View as RNView, Platform, NativeSyntheticEvent, NativeScrollEvent, RefreshControl } from 'react-native';
 import { View } from '@/components/Themed';
 import {
   Card,
@@ -23,6 +23,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useScrollContext } from '@/contexts/ScrollContext';
 import { LoadingView, ErrorView } from '@/components/common';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { parseError } from '@/utils/errorHandling';
 import { isDevMode } from '@/utils/devMode';
 
@@ -66,6 +67,10 @@ export default function AdminScreen() {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState<Date>(new Date());
+
+  // Cross-platform confirm dialogs (Alert.alert is a no-op on RN Web)
+  const [skipConfirmVisible, setSkipConfirmVisible] = useState(false);
+  const [unskipConfirmVisible, setUnskipConfirmVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -235,6 +240,7 @@ export default function AdminScreen() {
 
 
   const performSkipWeek = async () => {
+    setSkipConfirmVisible(false);
     setProcessing(true);
     setSuccessMessage(null);
     setErrorMessage(null);
@@ -255,17 +261,11 @@ export default function AdminScreen() {
   };
 
   const handleSkipWeek = () => {
-    Alert.alert(
-      t('admin.skipWeekConfirmTitle'),
-      t('admin.skipWeekConfirmMessage'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        { text: t('admin.skipWeek'), style: 'destructive', onPress: performSkipWeek },
-      ]
-    );
+    setSkipConfirmVisible(true);
   };
 
   const performUnskipWeek = async () => {
+    setUnskipConfirmVisible(false);
     setProcessing(true);
     setSuccessMessage(null);
     setErrorMessage(null);
@@ -285,14 +285,7 @@ export default function AdminScreen() {
   };
 
   const handleUnskipWeek = () => {
-    Alert.alert(
-      t('admin.unskipWeekConfirmTitle'),
-      t('admin.unskipWeekConfirmMessage'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        { text: t('admin.unskipWeek'), onPress: performUnskipWeek },
-      ]
-    );
+    setUnskipConfirmVisible(true);
   };
 
   const handleClearData = async () => {
@@ -1337,6 +1330,27 @@ export default function AdminScreen() {
       >
         {errorMessage}
       </Snackbar>
+
+      {/* Skip Week Confirmation - cross-platform (works on web + native) */}
+      <ConfirmDialog
+        visible={skipConfirmVisible}
+        onDismiss={() => setSkipConfirmVisible(false)}
+        onConfirm={performSkipWeek}
+        isLoading={processing}
+        title={t('admin.skipWeekConfirmTitle')}
+        message={t('admin.skipWeekConfirmMessage')}
+      />
+
+      {/* Un-skip Week Confirmation - cross-platform (works on web + native) */}
+      <ConfirmDialog
+        visible={unskipConfirmVisible}
+        onDismiss={() => setUnskipConfirmVisible(false)}
+        onConfirm={performUnskipWeek}
+        isLoading={processing}
+        title={t('admin.unskipWeekConfirmTitle')}
+        message={t('admin.unskipWeekConfirmMessage')}
+        confirmButtonColor={theme.colors.primary}
+      />
 
       {/* Date Picker - Native only */}
       {Platform.OS !== 'web' && showDatePicker && (
