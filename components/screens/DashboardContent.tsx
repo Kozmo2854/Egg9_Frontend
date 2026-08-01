@@ -388,6 +388,11 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+    // Vertically center dashboard content when it's shorter than the viewport
+    // (most visible on wide/tall web screens in sparse states like a skipped week).
+    // flexGrow:1 lets the content container fill available height so justifyContent
+    // can center; when content is taller, it simply scrolls normally. Safe on native too.
+    justifyContent: 'center',
     padding: HORIZONTAL_PADDING,
     paddingTop: 16,
   },
