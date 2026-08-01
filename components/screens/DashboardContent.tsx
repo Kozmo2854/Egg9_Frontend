@@ -244,10 +244,12 @@ export default function DashboardContent({
                 <>
                   <Text style={styles.paymentCardLargeAmount}>{getCurrentUnpaidAmount().toFixed(0)} {t('common.rsd')}</Text>
                   <View style={styles.paymentCardLargeButtons}>
-                    <Button 
-                      mode="outlined" 
+                    <Button
+                      mode="contained"
                       icon="qrcode"
                       onPress={() => showPaymentDialog('current')}
+                      buttonColor={theme.colors.tertiary}
+                      compact
                       style={styles.paymentLargeButton}
                     >
                       {t('dashboard.showQR')}
