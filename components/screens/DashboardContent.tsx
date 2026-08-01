@@ -5,7 +5,6 @@ import {
   useTheme,
   Surface,
   Button,
-  IconButton,
 } from 'react-native-paper';
 import { useTranslation } from 'react-i18next';
 import * as OrderHelpers from '@/utils/orderHelpers';
@@ -212,14 +211,22 @@ export default function DashboardContent({
                   <>
                     <Text style={styles.paymentCardAmount}>{getCurrentUnpaidAmount().toFixed(0)} {t('common.rsd')}</Text>
                     <View style={styles.paymentCardButtons}>
-                      <IconButton icon="qrcode" size={24} onPress={() => showPaymentDialog('current')} style={styles.qrButton} />
-                      <Button 
-                        mode="contained" 
-                        compact 
+                      <Button
+                        mode="contained"
+                        icon="qrcode"
+                        onPress={() => showPaymentDialog('current')}
+                        buttonColor={theme.colors.tertiary}
+                        style={styles.paymentCardButton}
+                        compact
+                      >
+                        {t('order.payNow')}
+                      </Button>
+                      <Button
+                        mode="outlined"
+                        compact
                         onPress={showConfirmPayment}
                         disabled={markingPayment}
-                        buttonColor={theme.colors.tertiary}
-                        labelStyle={styles.smallButtonLabel}
+                        style={styles.paymentCardButton}
                       >
                         {t('dashboard.markPaid')}
                       </Button>
@@ -254,11 +261,10 @@ export default function DashboardContent({
                     >
                       {t('dashboard.showQR')}
                     </Button>
-                    <Button 
-                      mode="contained" 
+                    <Button
+                      mode="outlined"
                       onPress={showConfirmPayment}
                       disabled={markingPayment}
-                      buttonColor={theme.colors.tertiary}
                       style={styles.paymentLargeButton}
                     >
                       {t('dashboard.markPaid')}
@@ -476,18 +482,13 @@ const styles = StyleSheet.create({
     color: '#ff6b35',
   },
   paymentCardButtons: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 8,
   },
-  qrButton: {
-    margin: 0,
-    backgroundColor: '#fff',
-  },
-  smallButtonLabel: {
-    fontSize: 12,
-    marginVertical: 2,
-    marginHorizontal: 8,
+  paymentCardButton: {
+    flex: 1,
   },
   paymentCardLarge: {
     backgroundColor: '#fff5f0',
