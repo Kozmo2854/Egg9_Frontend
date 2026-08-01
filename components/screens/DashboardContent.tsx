@@ -281,10 +281,21 @@ export default function DashboardContent({
         </Surface>
       )}
 
-      {/* SKIPPED: hide the one-time order card; keep only the (reworded) Subscribe card.
+      {/* SKIPPED + LOW season: subscriptions are blocked in low season, so the
+          "subscribe now, starts next week" CTA would fail. Show the paused-subscriptions
+          message instead (non-actionable) while the hero keeps the "this week is skipped" copy. */}
+      {state === 'SKIPPED' && !subscription && weeklyStock?.isLowSeason && (
+        <Surface style={[styles.bottomCard, styles.skipSubscribeCard]} elevation={2}>
+          <Text style={styles.bottomCardIcon}>😴</Text>
+          <Text style={styles.bottomCardTitle}>{t('subscription.subscriptionsPaused')}</Text>
+          <Text style={styles.skipSubscribeText}>{t('subscription.lowSeasonMessage')}</Text>
+        </Surface>
+      )}
+
+      {/* SKIPPED + HIGH season: hide the one-time order card; keep only the (reworded) Subscribe card.
           Subscribing on a skipped week routes to the subscription tab, whose existing
           "start next week" flow creates a next-week subscription (no order this week). */}
-      {state === 'SKIPPED' && (
+      {state === 'SKIPPED' && !(!subscription && weeklyStock?.isLowSeason) && (
         <Pressable style={styles.skipSubscribeWrapper} onPress={() => goToPage(2)}>
           <Surface style={[
             styles.bottomCard,
