@@ -586,6 +586,34 @@ export default function AdminScreen() {
                   {t('admin.editStock')}
                 </Button>
               )}
+
+              {/* Skip / Un-skip this week */}
+              {!editingStock && !week.allOrdersDelivered && (
+                week.isSkipped ? (
+                  <Button
+                    mode="outlined"
+                    onPress={handleUnskipWeek}
+                    loading={processing}
+                    disabled={processing}
+                    icon="calendar-refresh"
+                    style={[styles.button, { marginTop: 4 }]}
+                  >
+                    {t('admin.unskipWeek')}
+                  </Button>
+                ) : (
+                  <Button
+                    mode="outlined"
+                    onPress={handleSkipWeek}
+                    loading={processing}
+                    disabled={processing}
+                    icon="calendar-remove"
+                    style={[styles.button, { marginTop: 4 }]}
+                    textColor={theme.colors.error}
+                  >
+                    {t('admin.skipWeek')}
+                  </Button>
+                )
+              )}
             </RNView>
           </LinearGradient>
         </Card>
@@ -916,39 +944,6 @@ export default function AdminScreen() {
                 <Chip icon="check-circle" mode="flat" style={[styles.deliveredChip, { marginTop: 10 }]}>
                   {t('admin.allDeliveredChip')}
                 </Chip>
-              )}
-
-              {/* Skip / Un-skip this week */}
-              {!editingDelivery && !week.allOrdersDelivered && (
-                week.isSkipped ? (
-                  <>
-                    <Chip icon="calendar-remove" mode="flat" style={[styles.deliveredChip, { marginTop: 16 }]}>
-                      {t('admin.weekSkippedChip')}
-                    </Chip>
-                    <Button
-                      mode="outlined"
-                      onPress={handleUnskipWeek}
-                      loading={processing}
-                      disabled={processing}
-                      icon="calendar-refresh"
-                      style={[styles.button, { marginTop: 12 }]}
-                    >
-                      {t('admin.unskipWeek')}
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    mode="outlined"
-                    onPress={handleSkipWeek}
-                    loading={processing}
-                    disabled={processing}
-                    icon="calendar-remove"
-                    style={[styles.button, { marginTop: 16 }]}
-                    textColor={theme.colors.error}
-                  >
-                    {t('admin.skipWeek')}
-                  </Button>
-                )
               )}
             </RNView>
           </LinearGradient>
