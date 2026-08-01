@@ -504,7 +504,13 @@ export default function AdminScreen() {
                 <Text variant="titleLarge" style={styles.cardTitle}>{t('admin.weeklyStock')}</Text>
               </RNView>
 
-              {week.availableEggs === 0 ? (
+              {week.isSkipped ? (
+                <Surface style={styles.infoCard} elevation={2}>
+                  <Text variant="bodyLarge" style={styles.noDataText}>
+                    {t('admin.weekSkippedStockMessage')}
+                  </Text>
+                </Surface>
+              ) : week.availableEggs === 0 ? (
                 <Surface style={styles.infoCard} elevation={2}>
                   <Text variant="bodyLarge" style={styles.noDataText}>
                     {t('admin.addStockPrompt')}
@@ -750,7 +756,8 @@ export default function AdminScreen() {
           </LinearGradient>
         </Card>
 
-        {/* Delivery Management */}
+        {/* Delivery Management - hidden while the week is skipped */}
+        {!week.isSkipped && (
         <Card style={styles.card} mode="elevated">
           <LinearGradient
             colors={[theme.colors.secondaryContainer, '#ffffff']}
@@ -941,6 +948,7 @@ export default function AdminScreen() {
             </RNView>
           </LinearGradient>
         </Card>
+        )}
 
         {/* Active Subscriptions */}
         <Card style={styles.card} mode="elevated">
@@ -976,7 +984,8 @@ export default function AdminScreen() {
           </Card.Content>
         </Card>
 
-        {/* This Week's Summary Table */}
+        {/* This Week's Summary Table - hidden while the week is skipped */}
+        {!week.isSkipped && (
         <Card style={styles.card} mode="elevated">
           <LinearGradient
             colors={[theme.colors.tertiaryContainer, '#ffffff']}
@@ -1041,6 +1050,7 @@ export default function AdminScreen() {
             </RNView>
           </LinearGradient>
         </Card>
+        )}
 
         {/* Outstanding Orders from Previous Weeks */}
         {getOutstandingOrders().length > 0 && (

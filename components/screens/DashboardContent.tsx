@@ -281,8 +281,32 @@ export default function DashboardContent({
         </Surface>
       )}
 
+      {/* SKIPPED: hide the one-time order card; keep only the (reworded) Subscribe card.
+          Subscribing on a skipped week routes to the subscription tab, whose existing
+          "start next week" flow creates a next-week subscription (no order this week). */}
+      {state === 'SKIPPED' && (
+        <Pressable style={styles.skipSubscribeWrapper} onPress={() => goToPage(2)}>
+          <Surface style={[
+            styles.bottomCard,
+            styles.skipSubscribeCard,
+            subscription && styles.bottomCardActive,
+          ]} elevation={2}>
+            <Text style={styles.bottomCardIcon}>🔄</Text>
+            {!subscription ? (
+              <Text style={styles.skipSubscribeText}>{t('dashboard.skipSubscribeCta')}</Text>
+            ) : (
+              <>
+                <Text style={styles.bottomCardTitle}>{t('tabs.subscription')}</Text>
+                <Text style={styles.bottomCardQuantity}>{subscription.quantity} {t('common.eggs')}</Text>
+                <Text style={styles.bottomCardWeeks}>{subscription.weeksRemaining} {t('dashboard.weeksLeft')}</Text>
+              </>
+            )}
+          </Surface>
+        </Pressable>
+      )}
+
       {/* Bottom Cards: Order + Subscription */}
-      {state !== 'PICKED_UP_NOT_PAID' && state !== 'DELIVERED' && (
+      {state !== 'PICKED_UP_NOT_PAID' && state !== 'DELIVERED' && state !== 'SKIPPED' && (
         <View style={styles.bottomRow}>
           <Pressable style={styles.bottomCardWrapper} onPress={() => goToPage(1)}>
             <Surface style={[
@@ -487,6 +511,20 @@ const styles = StyleSheet.create({
   bottomRow: {
     flexDirection: 'row',
     gap: CARD_GAP,
+  },
+  skipSubscribeWrapper: {
+    width: '100%',
+  },
+  skipSubscribeCard: {
+    height: undefined,
+    paddingVertical: 20,
+  },
+  skipSubscribeText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#2d3748',
+    textAlign: 'center',
+    marginTop: 4,
   },
   bottomCardWrapper: {
     flex: 1,

@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { Dialog, Portal, Button, Text, useTheme } from 'react-native-paper';
 import { useTranslation } from 'react-i18next';
 
@@ -25,28 +25,32 @@ export function ConfirmDialog({
   const theme = useTheme();
   const { t } = useTranslation();
 
+  // Uses Paper's standard Dialog sub-components (Title/Content/Actions) so it
+  // centers and sizes correctly on BOTH native and web. Avoid web-only hacks
+  // (zIndex / fixed maxWidth / manual alignSelf) which mis-render on native.
   return (
     <Portal>
       <Dialog visible={visible} onDismiss={onDismiss} style={styles.dialog}>
-        <View style={styles.content}>
+        <Dialog.Content style={styles.content}>
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.message}>{message}</Text>
-          <View style={styles.actions}>
-            <Button onPress={onDismiss} mode="outlined" compact style={{ marginRight: 8 }}>
-              {t('common.no')}
-            </Button>
-            <Button 
-              onPress={onConfirm} 
-              mode="contained"
-              compact
-              loading={isLoading}
-              disabled={isLoading}
-              buttonColor={confirmButtonColor || theme.colors.error}
-            >
-              {t('common.yes')}
-            </Button>
-          </View>
-        </View>
+        </Dialog.Content>
+        <Dialog.Actions style={styles.actions}>
+          <Button onPress={onDismiss} mode="outlined" compact style={styles.button}>
+            {t('common.no')}
+          </Button>
+          <Button
+            onPress={onConfirm}
+            mode="contained"
+            compact
+            loading={isLoading}
+            disabled={isLoading}
+            buttonColor={confirmButtonColor || theme.colors.error}
+            style={styles.button}
+          >
+            {t('common.yes')}
+          </Button>
+        </Dialog.Actions>
       </Dialog>
     </Portal>
   );
@@ -54,15 +58,14 @@ export function ConfirmDialog({
 
 const styles = StyleSheet.create({
   dialog: {
-    maxWidth: 280,
     alignSelf: 'center',
+    width: '100%',
+    maxWidth: 340,
     borderRadius: 16,
-    zIndex: 9999,
-    elevation: 24,
   },
   content: {
-    padding: 20,
     alignItems: 'center',
+    paddingTop: 8,
   },
   title: {
     textAlign: 'center',
@@ -76,11 +79,12 @@ const styles = StyleSheet.create({
     color: '#666',
     fontSize: 14,
     lineHeight: 20,
-    marginBottom: 16,
   },
   actions: {
-    flexDirection: 'row',
     justifyContent: 'center',
+    gap: 8,
+  },
+  button: {
+    minWidth: 96,
   },
 });
-
