@@ -62,7 +62,7 @@ export default function GalleryTabsScreen() {
   // Payment dialog states
   const [paymentDialogVisible, setPaymentDialogVisible] = useState(false);
   const [markingPayment, setMarkingPayment] = useState(false);
-  const [paymentOrderContext, setPaymentOrderContext] = useState<{ type: 'current' | 'outstanding', order?: any } | null>(null);
+  const [paymentOrderContext, setPaymentOrderContext] = useState<{ type: 'current' | 'outstanding' | 'outstanding-all', order?: any } | null>(null);
   const [confirmPaymentVisible, setConfirmPaymentVisible] = useState(false);
   const [confirmingPickup, setConfirmingPickup] = useState(false);
 
@@ -128,10 +128,13 @@ export default function GalleryTabsScreen() {
   };
 
   // Payment helpers
-  const showPaymentDialog = (type: 'current' | 'outstanding' = 'current', order?: any) => {
+  const showPaymentDialog = (type: 'current' | 'outstanding' | 'outstanding-all' = 'current', order?: any) => {
     setPaymentOrderContext({ type, order });
     setPaymentDialogVisible(true);
   };
+
+  // Pay ALL outstanding orders at once (single button in the dashboard outstanding box).
+  const onPayAllOutstanding = () => showPaymentDialog('outstanding-all');
 
   const hidePaymentDialog = () => {
     setPaymentDialogVisible(false);
@@ -139,6 +142,9 @@ export default function GalleryTabsScreen() {
   };
 
   const getPaymentAmount = () => {
+    if (paymentOrderContext?.type === 'outstanding-all') {
+      return outstandingOrders.reduce((sum, o) => sum + o.total, 0);
+    }
     if (paymentOrderContext?.type === 'outstanding' && paymentOrderContext.order) {
       return paymentOrderContext.order.total;
     }
@@ -148,6 +154,9 @@ export default function GalleryTabsScreen() {
   };
 
   const getPaymentQuantity = () => {
+    if (paymentOrderContext?.type === 'outstanding-all') {
+      return outstandingOrders.reduce((sum, o) => sum + o.quantity, 0);
+    }
     if (paymentOrderContext?.type === 'outstanding' && paymentOrderContext.order) {
       return paymentOrderContext.order.quantity;
     }
@@ -175,6 +184,18 @@ export default function GalleryTabsScreen() {
     try {
       setMarkingPayment(true);
       
+      if (paymentOrderContext?.type === 'outstanding-all') {
+        if (outstandingOrders.length === 0) {
+          hidePaymentDialog();
+          return;
+        }
+        await Promise.all(outstandingOrders.map((o) => apiService.markOrderPaymentSubmitted(o.id)));
+        await loadData();
+        hidePaymentDialog();
+        showSnackbar(t('payment.paymentMarked'));
+        return;
+      }
+
       if (paymentOrderContext?.type === 'outstanding' && paymentOrderContext.order) {
         await apiService.markOrderPaymentSubmitted(paymentOrderContext.order.id);
         await loadData();
@@ -224,17 +245,31 @@ export default function GalleryTabsScreen() {
 
   const getPaymentDialogProps = () => {
     const isOutstanding = paymentOrderContext?.type === 'outstanding';
-    const isPaymentSubmitted = isOutstanding 
-      ? paymentOrderContext.order?.paymentSubmitted 
-      : OrderHelpers.areAllOrdersPaymentSubmitted(currentWeekOrder, currentWeekSubscriptionOrder);
-    const weekLabel = isOutstanding && paymentOrderContext.order
-      ? t('home.weekOf', { date: new Date(paymentOrderContext.order.weekStart).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) })
-      : undefined;
+    const isOutstandingAll = paymentOrderContext?.type === 'outstanding-all';
+
+    let isPaymentSubmitted: boolean;
+    let weekLabel: string | undefined;
+    if (isOutstandingAll) {
+      isPaymentSubmitted = outstandingOrders.length === 0;
+      weekLabel = t('payment.ordersCount', { count: outstandingOrders.length });
+    } else if (isOutstanding) {
+      isPaymentSubmitted = paymentOrderContext.order?.paymentSubmitted;
+      weekLabel = paymentOrderContext.order
+        ? t('home.weekOf', { date: new Date(paymentOrderContext.order.weekStart).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) })
+        : undefined;
+    } else {
+      isPaymentSubmitted = OrderHelpers.areAllOrdersPaymentSubmitted(currentWeekOrder, currentWeekSubscriptionOrder);
+      weekLabel = undefined;
+    }
 
     return {
       quantity: getPaymentQuantity(),
       amount: getPaymentAmount(),
-      qrCodeValue: generateNBSIPSQRCode(isOutstanding ? paymentOrderContext?.order?.total : undefined),
+      qrCodeValue: generateNBSIPSQRCode(
+        isOutstandingAll
+          ? outstandingOrders.reduce((sum, o) => sum + o.total, 0)
+          : (isOutstanding ? paymentOrderContext?.order?.total : undefined)
+      ),
       isPaymentSubmitted,
       weekLabel,
     };
@@ -267,6 +302,7 @@ export default function GalleryTabsScreen() {
     refreshing,
     onRefresh,
     showPaymentDialog,
+    onPayAllOutstanding,
     showConfirmPayment,
     handleConfirmPickup,
     confirmingPickup,

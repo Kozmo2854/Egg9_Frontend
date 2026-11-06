@@ -22,6 +22,8 @@ export default function OrderHistoryScreen() {
   // Payment flow (reuses the same PaymentDialog as the home tab)
   const [paymentSettings, setPaymentSettings] = useState<OrderHelpers.PaymentSettings | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  // 'single' = per-order Pay Now, 'all' = top "Pay All" across the whole payable set.
+  const [paymentContext, setPaymentContext] = useState<'single' | 'all'>('single');
   const [paymentDialogVisible, setPaymentDialogVisible] = useState(false);
   const [confirmPaymentVisible, setConfirmPaymentVisible] = useState(false);
   const [markingPayment, setMarkingPayment] = useState(false);
@@ -48,17 +50,34 @@ export default function OrderHistoryScreen() {
     }
   }, []);
 
+  // Payable = unpaid AND not yet submitted. "Pay All" acts on exactly this set.
+  const payableOrders = orders.filter((o) => !o.isPaid && !o.paymentSubmitted);
+  const payAllAmount = payableOrders.reduce((sum, o) => sum + o.total, 0);
+  const payAllQuantity = payableOrders.reduce((sum, o) => sum + o.quantity, 0);
+
   const openPaymentDialog = (order: Order) => {
+    setPaymentContext('single');
     setSelectedOrder(order);
+    setPaymentDialogVisible(true);
+  };
+
+  const openPayAllDialog = () => {
+    setPaymentContext('all');
+    setSelectedOrder(null);
     setPaymentDialogVisible(true);
   };
 
   const handleMarkPaymentSubmitted = async () => {
     setConfirmPaymentVisible(false);
-    if (!selectedOrder || selectedOrder.isPaid || selectedOrder.paymentSubmitted) return;
     try {
       setMarkingPayment(true);
-      await apiService.markOrderPaymentSubmitted(selectedOrder.id);
+      if (paymentContext === 'all') {
+        if (payableOrders.length === 0) return;
+        await Promise.all(payableOrders.map((o) => apiService.markOrderPaymentSubmitted(o.id)));
+      } else {
+        if (!selectedOrder || selectedOrder.isPaid || selectedOrder.paymentSubmitted) return;
+        await apiService.markOrderPaymentSubmitted(selectedOrder.id);
+      }
       setPaymentDialogVisible(false);
       setSelectedOrder(null);
       setSuccessMessage(t('payment.paymentMarked'));
@@ -147,9 +166,22 @@ export default function OrderHistoryScreen() {
             {t('common.back')}
           </Button>
           <Text style={styles.title}>{t('settings.orderHistory')}</Text>
-          <Text style={styles.subtitle}>
-            {t('orderHistory.totalOrders', { count: orders.length })}
-          </Text>
+          <View style={styles.subtitleRow}>
+            <Text style={styles.subtitle}>
+              {t('orderHistory.totalOrders', { count: orders.length })}
+            </Text>
+            {payableOrders.length > 0 && (
+              <Button
+                mode="contained"
+                onPress={openPayAllDialog}
+                icon="qrcode"
+                buttonColor={theme.colors.tertiary}
+                compact
+              >
+                {t('payment.payAll')}
+              </Button>
+            )}
+          </View>
         </View>
 
         {orders.length === 0 ? (
@@ -232,13 +264,24 @@ export default function OrderHistoryScreen() {
         visible={paymentDialogVisible}
         onDismiss={() => setPaymentDialogVisible(false)}
         onMarkPaid={() => setConfirmPaymentVisible(true)}
-        quantity={selectedOrder?.quantity ?? 0}
-        amount={selectedOrder?.total ?? 0}
-        qrCodeValue={OrderHelpers.generateNBSIPSQRCode(paymentSettings, selectedOrder?.total ?? 0)}
+        quantity={paymentContext === 'all' ? payAllQuantity : (selectedOrder?.quantity ?? 0)}
+        amount={paymentContext === 'all' ? payAllAmount : (selectedOrder?.total ?? 0)}
+        qrCodeValue={OrderHelpers.generateNBSIPSQRCode(
+          paymentSettings,
+          paymentContext === 'all' ? payAllAmount : (selectedOrder?.total ?? 0)
+        )}
         bankAccountNumber={paymentSettings?.bankAccountNumber}
         recipientName={paymentSettings?.recipientName}
-        weekLabel={selectedOrder ? formatWeekRange(selectedOrder) : undefined}
-        isPaymentSubmitted={!selectedOrder || selectedOrder.isPaid || selectedOrder.paymentSubmitted}
+        weekLabel={
+          paymentContext === 'all'
+            ? t('payment.ordersCount', { count: payableOrders.length })
+            : (selectedOrder ? formatWeekRange(selectedOrder) : undefined)
+        }
+        isPaymentSubmitted={
+          paymentContext === 'all'
+            ? payableOrders.length === 0
+            : (!selectedOrder || selectedOrder.isPaid || selectedOrder.paymentSubmitted)
+        }
         isMarkingPayment={markingPayment}
       />
       <ConfirmPaymentDialog
@@ -298,10 +341,15 @@ const styles = StyleSheet.create({
     color: '#2d3748',
     marginTop: 8,
   },
+  subtitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
   subtitle: {
     fontSize: 14,
     color: '#666',
-    marginTop: 4,
   },
   emptyCard: {
     borderRadius: 16,

@@ -196,7 +196,11 @@
     "markPaid": "Označi plaćeno",
     "paymentMarked": "Plaćanje označeno kao poslato!",
     "allOrdersMarked": "Sve porudžbine su već označene kao plaćene",
-    "pickupConfirmed": "Preuzimanje potvrđeno!"
+    "pickupConfirmed": "Preuzimanje potvrđeno!",
+    "payAll": "Plati sve",
+    "ordersCount_one": "{{count}} narudžbina",
+    "ordersCount_few": "{{count}} narudžbine",
+    "ordersCount_other": "{{count}} narudžbina"
   },
   "admin": {
     "title": "Admin panel",

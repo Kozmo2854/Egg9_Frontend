@@ -26,7 +26,8 @@ interface DashboardContentProps {
   outstandingOrders: any[];
   refreshing: boolean;
   onRefresh: () => void;
-  showPaymentDialog: (type: 'current' | 'outstanding', order?: any) => void;
+  showPaymentDialog: (type: 'current' | 'outstanding' | 'outstanding-all', order?: any) => void;
+  onPayAllOutstanding: () => void;
   showConfirmPayment: () => void;
   handleConfirmPickup: () => void;
   confirmingPickup: boolean;
@@ -45,6 +46,7 @@ export default function DashboardContent({
   refreshing,
   onRefresh,
   showPaymentDialog,
+  onPayAllOutstanding,
   showConfirmPayment,
   handleConfirmPickup,
   confirmingPickup,
@@ -86,7 +88,7 @@ export default function DashboardContent({
         <View style={styles.outstandingList}>
           {outstandingOrders.map((order) => (
             <Surface key={order.id} style={styles.outstandingItem} elevation={2}>
-              <Pressable style={styles.outstandingItemContent} onPress={() => showPaymentDialog('outstanding', order)}>
+              <Pressable style={styles.outstandingItemContent} onPress={onPayAllOutstanding}>
                 <View>
                   <Text style={styles.outstandingWeek}>
                     {t('home.weekOf', { date: new Date(order.weekStart).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) })}
@@ -95,20 +97,23 @@ export default function DashboardContent({
                     {order.quantity} {t('common.eggs')} • {order.total.toFixed(0)} {t('common.rsd')}
                   </Text>
                 </View>
-                {order.paymentSubmitted ? (
-                  <View style={styles.waitingBadge}>
-                    <Text style={styles.waitingBadgeText}>⏳</Text>
-                  </View>
-                ) : (
-                  <Button mode="contained" compact buttonColor={theme.colors.primary}>
-                    {t('home.pay')}
-                  </Button>
-                )}
               </Pressable>
             </Surface>
           ))}
         </View>
-        
+
+        {/* Single green "Pay Now" button paying ALL outstanding orders at once. */}
+        <View style={styles.outstandingPayAllRow}>
+          <Button
+            mode="contained"
+            onPress={onPayAllOutstanding}
+            icon="qrcode"
+            buttonColor={theme.colors.tertiary}
+          >
+            {t('order.payNow')}
+          </Button>
+        </View>
+
         <Text style={styles.outstandingNote}>{t('dashboard.settleBalance')}</Text>
       </ScrollView>
     );
@@ -652,6 +657,12 @@ const styles = StyleSheet.create({
   },
   outstandingList: {
     gap: 12,
+    marginBottom: 16,
+  },
+  outstandingPayAllRow: {
+    width: '100%',
+    maxWidth: CARD_MAX_WIDTH,
+    alignSelf: 'center',
     marginBottom: 16,
   },
   outstandingItem: {

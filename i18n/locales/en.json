@@ -196,7 +196,10 @@
     "markPaid": "Mark Paid",
     "paymentMarked": "Payment marked as submitted!",
     "allOrdersMarked": "All orders have already been marked as paid",
-    "pickupConfirmed": "Pickup confirmed!"
+    "pickupConfirmed": "Pickup confirmed!",
+    "payAll": "Pay All",
+    "ordersCount_one": "{{count}} order",
+    "ordersCount_other": "{{count}} orders"
   },
   "admin": {
     "title": "Admin Panel",
