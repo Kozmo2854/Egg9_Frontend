@@ -1,30 +1,45 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, View, ScrollView, RefreshControl } from 'react-native';
-import { Text, Surface, Chip, Button, ActivityIndicator, useTheme } from 'react-native-paper';
+import { Text, Surface, Chip, Button, ActivityIndicator, Snackbar, useTheme } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { apiService } from '@/services/api';
 import { Order } from '@/types/models';
+import { PaymentDialog, ConfirmPaymentDialog } from '@/components/PaymentDialog';
+import * as OrderHelpers from '@/utils/orderHelpers';
 
 export default function OrderHistoryScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Payment flow (reuses the same PaymentDialog as the home tab)
+  const [paymentSettings, setPaymentSettings] = useState<OrderHelpers.PaymentSettings | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [paymentDialogVisible, setPaymentDialogVisible] = useState(false);
+  const [confirmPaymentVisible, setConfirmPaymentVisible] = useState(false);
+  const [markingPayment, setMarkingPayment] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   const loadOrders = useCallback(async () => {
     try {
-      const data = await apiService.getOrders();
+      const [data, settings] = await Promise.all([
+        apiService.getOrders(),
+        apiService.getAppSettings(),
+      ]);
       // Sort by date descending (newest first)
-      const sorted = data.sort((a, b) => 
+      const sorted = data.sort((a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
       setOrders(sorted);
+      setPaymentSettings(settings.paymentSettings);
     } catch (error) {
       console.error('Failed to load orders:', error);
     } finally {
@@ -32,6 +47,28 @@ export default function OrderHistoryScreen() {
       setRefreshing(false);
     }
   }, []);
+
+  const openPaymentDialog = (order: Order) => {
+    setSelectedOrder(order);
+    setPaymentDialogVisible(true);
+  };
+
+  const handleMarkPaymentSubmitted = async () => {
+    setConfirmPaymentVisible(false);
+    if (!selectedOrder || selectedOrder.isPaid || selectedOrder.paymentSubmitted) return;
+    try {
+      setMarkingPayment(true);
+      await apiService.markOrderPaymentSubmitted(selectedOrder.id);
+      setPaymentDialogVisible(false);
+      setSelectedOrder(null);
+      setSuccessMessage(t('payment.paymentMarked'));
+      await loadOrders();
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to mark payment');
+    } finally {
+      setMarkingPayment(false);
+    }
+  };
 
   useEffect(() => {
     loadOrders();
@@ -165,6 +202,21 @@ export default function OrderHistoryScreen() {
                 )}
               </View>
 
+              {/* Pay Now - only for orders that are unpaid and not yet submitted */}
+              {!order.isPaid && !order.paymentSubmitted && (
+                <View style={styles.payNowRow}>
+                  <Button
+                    mode="contained"
+                    onPress={() => openPaymentDialog(order)}
+                    icon="qrcode"
+                    buttonColor={theme.colors.tertiary}
+                    compact
+                  >
+                    {t('order.payNow')}
+                  </Button>
+                </View>
+              )}
+
               {order.pickedUp && (
                 <View style={styles.pickedUpBadge}>
                   <Text style={styles.pickedUpText}>✓ {t('orderHistory.pickedUp')}</Text>
@@ -174,6 +226,45 @@ export default function OrderHistoryScreen() {
           ))
         )}
       </ScrollView>
+
+      {/* Payment Dialog (reused from the home tab), scoped to the selected order */}
+      <PaymentDialog
+        visible={paymentDialogVisible}
+        onDismiss={() => setPaymentDialogVisible(false)}
+        onMarkPaid={() => setConfirmPaymentVisible(true)}
+        quantity={selectedOrder?.quantity ?? 0}
+        amount={selectedOrder?.total ?? 0}
+        qrCodeValue={OrderHelpers.generateNBSIPSQRCode(paymentSettings, selectedOrder?.total ?? 0)}
+        bankAccountNumber={paymentSettings?.bankAccountNumber}
+        recipientName={paymentSettings?.recipientName}
+        weekLabel={selectedOrder ? formatWeekRange(selectedOrder) : undefined}
+        isPaymentSubmitted={!selectedOrder || selectedOrder.isPaid || selectedOrder.paymentSubmitted}
+        isMarkingPayment={markingPayment}
+      />
+      <ConfirmPaymentDialog
+        visible={confirmPaymentVisible}
+        onDismiss={() => setConfirmPaymentVisible(false)}
+        onConfirm={handleMarkPaymentSubmitted}
+        isLoading={markingPayment}
+      />
+
+      <Snackbar
+        visible={!!successMessage}
+        onDismiss={() => setSuccessMessage(null)}
+        duration={3000}
+        style={{ backgroundColor: theme.colors.tertiary }}
+      >
+        {successMessage}
+      </Snackbar>
+
+      <Snackbar
+        visible={!!errorMessage}
+        onDismiss={() => setErrorMessage(null)}
+        duration={3000}
+        style={{ backgroundColor: theme.colors.error }}
+      >
+        {errorMessage}
+      </Snackbar>
     </View>
   );
 }
@@ -278,6 +369,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: '#2d3748',
+  },
+  payNowRow: {
+    marginTop: 12,
+    alignItems: 'flex-end',
   },
   pickedUpBadge: {
     marginTop: 8,
