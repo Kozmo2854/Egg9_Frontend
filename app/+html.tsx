@@ -8,6 +8,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
+        <script dangerouslySetInnerHTML={{ __html: "(function(){try{if(window.location.hostname==='egg9.up.railway.app'){window.location.replace('https://egg9.net'+window.location.pathname+window.location.search+window.location.hash);}}catch(e){}})();" }} />
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
