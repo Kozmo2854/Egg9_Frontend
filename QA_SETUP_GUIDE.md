@@ -69,7 +69,7 @@ git --version
 docker --version
 # Should show something like: Docker version 24.0.0
 
-docker-compose --version
+docker compose version
 # Should show something like: Docker Compose version v2.20.0
 ```
 
@@ -169,20 +169,26 @@ cp .env.example .env
 Make sure Docker Desktop is running, then:
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 **What this does:**
 - Downloads necessary images (first time only, takes a few minutes)
 - Starts the database (MySQL)
 - Starts the PHP server
+- Starts Mailpit, which catches all emails (view them at http://localhost:8025)
 - The `-d` flag runs it in the background
 
 **Verify it's running:**
 ```bash
-docker-compose ps
+docker compose ps
 ```
 You should see containers with "Up" status.
+
+**First run only — generate the app key:**
+```bash
+docker compose exec backend php artisan key:generate
+```
 
 ### Step 4: Set up the database
 
@@ -190,10 +196,10 @@ Run these commands to set up the database tables and sample data:
 
 ```bash
 # Run database migrations (creates tables)
-docker-compose exec app php artisan migrate
+docker compose exec backend php artisan migrate
 
 # Seed the database with test data
-docker-compose exec app php artisan db:seed
+docker compose exec backend php artisan db:seed
 ```
 
 ### Step 5: Verify the backend is working
@@ -255,7 +261,7 @@ EXPO_PUBLIC_APP_ENV=development
 
 ```bash
 cd Egg9_Backend
-docker-compose up -d
+docker compose up -d
 ```
 
 ### Start the frontend
@@ -317,7 +323,7 @@ If you want to start fresh:
 
 ```bash
 cd Egg9_Backend
-docker-compose exec app php artisan migrate:fresh --seed
+docker compose exec backend php artisan migrate:fresh --seed
 ```
 
 This will delete all data and re-create the test data.
@@ -354,7 +360,7 @@ Node.js isn't installed properly. Reinstall it from https://nodejs.org/
 
 ### "Cannot connect to backend"
 
-1. Make sure Docker containers are running: `docker-compose ps`
+1. Make sure Docker containers are running: `docker compose ps`
 2. Check the backend URL in frontend `.env` file
 3. Try accessing http://localhost:8000/api/health in browser
 
@@ -382,7 +388,7 @@ Press `Ctrl + C` in the terminal running `npm start`
 ### Stop the backend
 ```bash
 cd Egg9_Backend
-docker-compose down
+docker compose down
 ```
 
 ---
@@ -401,7 +407,7 @@ cd ../Egg9_Backend
 git pull
 
 # If there are database changes, run migrations
-docker-compose exec app php artisan migrate
+docker compose exec backend php artisan migrate
 ```
 
 ---

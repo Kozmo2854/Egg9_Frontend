@@ -117,7 +117,7 @@ hostname -I | awk '{print $1}'
 # Edit .env: EXPO_PUBLIC_API_URL=http://YOUR_IP:8000/api
 
 # 3. Start Expo
-cd Egg9_Frontend
+cd ../Egg9_Frontend
 npx expo start --dev-client
 
 # 4. Scan QR code with phone
@@ -177,6 +177,9 @@ cd Egg9_Backend && docker compose up -d
 
 # 2. Frontend (from Egg9_Frontend)
 cd ../Egg9_Frontend && docker compose up
+
+# After package.json changes: rebuild and refresh the anonymous node_modules volume
+docker compose up --build -V
 
 # Test production build locally
 docker build -f Dockerfile -t egg9-frontend .
