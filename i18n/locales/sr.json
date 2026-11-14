@@ -72,7 +72,8 @@
     "requestNewLink": "Zatražite novi link",
     "genericError": "Nešto nije u redu. Pokušajte ponovo.",
     "passwordMismatch": "Lozinke se ne poklapaju",
-    "tooManyAttempts": "Previše pokušaja. Molimo sačekajte minut i pokušajte ponovo."
+    "tooManyAttempts": "Previše pokušaja. Molimo sačekajte minut i pokušajte ponovo.",
+    "resettingPasswordFor": "Menjate lozinku za {{email}}"
   },
   "home": {
     "title": "Egg9",

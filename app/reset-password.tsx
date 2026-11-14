@@ -146,6 +146,10 @@ export default function ResetPasswordScreen() {
                 </>
               ) : (
                 <>
+                  {/* Display only: the email comes from the link, never from the server */}
+                  <Text style={styles.accountText}>
+                    {t('auth.resettingPasswordFor', { email })}
+                  </Text>
                   <Text style={styles.cardText}>{t('auth.resetPasswordSubtitle')}</Text>
 
                   <TextInput
@@ -331,6 +335,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: 'center',
     lineHeight: 22,
+  },
+  accountText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#2d3748',
+    marginBottom: 8,
+    textAlign: 'center',
   },
   banner: {
     borderRadius: 12,
