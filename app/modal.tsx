@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { 
   StyleSheet, 
   KeyboardAvoidingView,
@@ -16,7 +16,8 @@ import {
 } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { apiService } from '@/services/api';
-import { useRouter, Link } from 'expo-router';
+import { useRouter, Link, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { registerForPushNotifications } from '@/utils/pushNotifications';
 
 interface FormErrors {
@@ -27,6 +28,8 @@ interface FormErrors {
 export default function LoginScreen() {
   const router = useRouter();
   const theme = useTheme();
+  const { t } = useTranslation();
+  const { reset } = useLocalSearchParams<{ reset?: string }>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<FormErrors>({});
@@ -34,6 +37,13 @@ export default function LoginScreen() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loginSuccess, setLoginSuccess] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+
+  // Coming back from a successful password reset (/modal?reset=success)
+  useEffect(() => {
+    if (reset === 'success') {
+      setLoginSuccess(t('auth.passwordResetSuccess'));
+    }
+  }, [reset, t]);
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -44,15 +54,15 @@ export default function LoginScreen() {
     const newErrors: FormErrors = {};
 
     if (!email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = t('auth.emailRequired');
     } else if (!validateEmail(email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = t('auth.emailInvalid');
     }
 
     if (!password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = t('auth.passwordRequired');
     } else if (password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+      newErrors.password = t('auth.passwordMinLength');
     }
 
     setErrors(newErrors);
@@ -71,7 +81,7 @@ export default function LoginScreen() {
     
     try {
       const response = await apiService.login(email, password);
-      setLoginSuccess(`Welcome ${response.user.name}!`);
+      setLoginSuccess(t('auth.welcome', { name: response.user.name }));
       setEmail('');
       setPassword('');
       
@@ -84,7 +94,7 @@ export default function LoginScreen() {
         router.replace('/(tabs)');
       }, 500);
     } catch (error) {
-      setLoginError('Invalid email or password. Please try again.');
+      setLoginError(t('auth.invalidCredentials'));
     } finally {
       setLoading(false);
     }
@@ -113,15 +123,15 @@ export default function LoginScreen() {
                 <Text style={styles.eggEmoji}>🥚</Text>
               </View>
               <Text style={styles.title}>Egg9</Text>
-              <Text style={styles.subtitle}>Fresh eggs delivered weekly</Text>
+              <Text style={styles.subtitle}>{t('auth.loginSubtitle')}</Text>
             </View>
 
             {/* Login Card */}
             <View style={styles.loginCard}>
-              <Text style={styles.cardTitle}>Welcome Back</Text>
+              <Text style={styles.cardTitle}>{t('auth.welcomeBack')}</Text>
               
               <TextInput
-                label="Email Address"
+                label={t('auth.email')}
                 value={email}
                 onChangeText={(text) => {
                   setEmail(text);
@@ -146,7 +156,7 @@ export default function LoginScreen() {
               )}
 
               <TextInput
-                label="Password"
+                label={t('auth.password')}
                 value={password}
                 onChangeText={(text) => {
                   setPassword(text);
@@ -185,19 +195,33 @@ export default function LoginScreen() {
                 labelStyle={styles.loginButtonLabel}
                 buttonColor={theme.colors.primary}
               >
-                {loading ? 'Logging in...' : 'Login'}
+                {loading ? t('auth.loggingIn') : t('auth.login')}
               </Button>
+
+              {/* Forgot Password Link */}
+              <View style={styles.forgotSection}>
+                <Link href="/forgot-password" asChild>
+                  <Button
+                    mode="text"
+                    compact
+                    disabled={loading}
+                    labelStyle={{ color: theme.colors.primary }}
+                  >
+                    {t('auth.forgotPassword')}
+                  </Button>
+                </Link>
+              </View>
 
               {/* Sign Up Link */}
               <View style={styles.signupSection}>
-                <Text style={styles.signupText}>Don't have an account? </Text>
+                <Text style={styles.signupText}>{t('auth.dontHaveAccount')} </Text>
                 <Link href="/register" asChild>
                   <Button
                     mode="text"
                     compact
                     labelStyle={{ color: theme.colors.primary }}
                   >
-                    Sign Up
+                    {t('auth.signUp')}
                   </Button>
                 </Link>
               </View>
@@ -211,7 +235,7 @@ export default function LoginScreen() {
           onDismiss={() => setLoginError(null)}
           duration={3000}
           action={{
-            label: 'Dismiss',
+            label: t('common.dismiss'),
             textColor: '#fff',
             onPress: () => setLoginError(null),
           }}
@@ -340,6 +364,11 @@ const styles = StyleSheet.create({
   loginButtonLabel: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  forgotSection: {
+    alignItems: 'center',
+    marginTop: 8,
+    backgroundColor: 'transparent',
   },
   signupSection: {
     flexDirection: 'row',
