@@ -18,7 +18,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { apiService } from '@/services/api';
 import { useRouter, Link } from 'expo-router';
 import { registerForPushNotifications } from '@/utils/pushNotifications';
-import { isDevMode } from '@/utils/devMode';
 
 interface FormErrors {
   email?: string;
@@ -35,7 +34,6 @@ export default function LoginScreen() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loginSuccess, setLoginSuccess] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [showCredentials, setShowCredentials] = useState(false);
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -73,35 +71,6 @@ export default function LoginScreen() {
     
     try {
       const response = await apiService.login(email, password);
-      setLoginSuccess(`Welcome ${response.user.name}!`);
-      setEmail('');
-      setPassword('');
-      
-      // Register for push notifications after successful login (customers only)
-      if (response.user.role !== 'admin') {
-        registerForPushNotifications();
-      }
-      
-      setTimeout(() => {
-        router.replace('/(tabs)');
-      }, 500);
-    } catch (error) {
-      setLoginError('Invalid email or password. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const quickLogin = async (userEmail: string, userPassword: string) => {
-    setEmail(userEmail);
-    setPassword(userPassword);
-    setErrors({});
-    setLoginError(null);
-    setLoginSuccess(null);
-    setLoading(true);
-    
-    try {
-      const response = await apiService.login(userEmail, userPassword);
       setLoginSuccess(`Welcome ${response.user.name}!`);
       setEmail('');
       setPassword('');
@@ -232,91 +201,6 @@ export default function LoginScreen() {
                   </Button>
                 </Link>
               </View>
-
-              {/* Quick Login Buttons - Dev Only */}
-              {isDevMode() && (
-                <View style={styles.quickLoginSection}>
-                  <Text style={styles.quickLoginLabel}>Quick Login (Dev)</Text>
-                  <View style={styles.quickLoginButtons}>
-                    <Button
-                      mode="contained"
-                      onPress={() => quickLogin('user1@egg9.com', 'password123')}
-                      disabled={loading}
-                      style={styles.quickLoginButton}
-                      buttonColor="#4ecdc4"
-                      compact
-                    >
-                      User 1
-                    </Button>
-                    <Button
-                      mode="contained"
-                      onPress={() => quickLogin('user2@egg9.com', 'password123')}
-                      disabled={loading}
-                      style={styles.quickLoginButton}
-                      buttonColor="#4ecdc4"
-                      compact
-                    >
-                      User 2
-                    </Button>
-                    <Button
-                      mode="contained"
-                      onPress={() => quickLogin('user3@egg9.com', 'password123')}
-                      disabled={loading}
-                      style={styles.quickLoginButton}
-                      buttonColor="#4ecdc4"
-                      compact
-                    >
-                      User 3
-                    </Button>
-                    <Button
-                      mode="contained"
-                      onPress={() => quickLogin('admin@egg9.com', 'password123')}
-                      disabled={loading}
-                      style={styles.quickLoginButton}
-                      buttonColor="#ff6b35"
-                      compact
-                    >
-                      Admin
-                    </Button>
-                  </View>
-                </View>
-              )}
-
-              {/* Test Credentials - Dev Only */}
-              {isDevMode() && (
-                <View style={styles.credentialsSection}>
-                  <Button
-                    mode="text"
-                    onPress={() => setShowCredentials(!showCredentials)}
-                    icon={showCredentials ? "chevron-up" : "information-outline"}
-                    textColor={theme.colors.onSurfaceVariant}
-                    compact
-                  >
-                    {showCredentials ? 'Hide' : 'Show'} Test Credentials
-                  </Button>
-                  
-                  {showCredentials && (
-                    <View style={styles.credentialsBox}>
-                      <View style={styles.credentialRow}>
-                        <Text style={styles.credentialLabel}>Admin:</Text>
-                        <Text style={styles.credentialValue}>admin@egg9.com / password123</Text>
-                      </View>
-                      <View style={styles.credentialRow}>
-                        <Text style={styles.credentialLabel}>User 1:</Text>
-                        <Text style={styles.credentialValue}>user1@egg9.com / password123</Text>
-                      </View>
-                      <View style={styles.credentialRow}>
-                        <Text style={styles.credentialLabel}>User 2:</Text>
-                        <Text style={styles.credentialValue}>user2@egg9.com / password123</Text>
-                      </View>
-                      <View style={styles.credentialRow}>
-                        <Text style={styles.credentialLabel}>User 3:</Text>
-                        <Text style={styles.credentialValue}>user3@egg9.com / password123</Text>
-                      </View>
-                    </View>
-                  )}
-                </View>
-              )}
             </View>
           </View>
         </ScrollView>
@@ -466,56 +350,5 @@ const styles = StyleSheet.create({
   signupText: {
     fontSize: 14,
     color: '#666',
-  },
-  quickLoginSection: {
-    marginTop: 24,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  quickLoginLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  quickLoginButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  quickLoginButton: {
-    flex: 1,
-    borderRadius: 8,
-  },
-  credentialsSection: {
-    marginTop: 16,
-    alignItems: 'center',
-  },
-  credentialsBox: {
-    backgroundColor: '#fef5f1',
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 8,
-    width: '100%',
-    borderWidth: 1,
-    borderColor: '#ffe5dc',
-  },
-  credentialRow: {
-    marginBottom: 8,
-  },
-  credentialLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#8b2500',
-    marginBottom: 2,
-  },
-  credentialValue: {
-    fontSize: 13,
-    color: '#524541',
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
 });

@@ -5,10 +5,13 @@
 
 /**
  * Check if app is running in development mode
- * Based on EXPO_PUBLIC_APP_ENV environment variable
+ * Fail-closed: only true in a React Native dev/debug build (__DEV__),
+ * never in a production/release build regardless of env vars.
  */
+declare const __DEV__: boolean;
+
 export const isDevMode = (): boolean => {
-  return process.env.EXPO_PUBLIC_APP_ENV === 'development';
+  return typeof __DEV__ !== 'undefined' && __DEV__ === true;
 };
 
 /**
