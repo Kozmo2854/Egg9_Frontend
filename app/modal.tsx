@@ -36,14 +36,15 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loginSuccess, setLoginSuccess] = useState<string | null>(null);
+  const [resetSuccess, setResetSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   // Coming back from a successful password reset (/modal?reset=success)
   useEffect(() => {
     if (reset === 'success') {
-      setLoginSuccess(t('auth.passwordResetSuccess'));
+      setResetSuccess(true);
     }
-  }, [reset, t]);
+  }, [reset]);
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -251,6 +252,16 @@ export default function LoginScreen() {
           style={{ backgroundColor: theme.colors.tertiary }}
         >
           {loginSuccess}
+        </Snackbar>
+
+        {/* Longer duration so the reset confirmation can be read */}
+        <Snackbar
+          visible={resetSuccess}
+          onDismiss={() => setResetSuccess(false)}
+          duration={6000}
+          style={{ backgroundColor: theme.colors.tertiary }}
+        >
+          {t('auth.passwordResetSuccess')}
         </Snackbar>
       </LinearGradient>
     </KeyboardAvoidingView>
