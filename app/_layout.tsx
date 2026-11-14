@@ -239,6 +239,8 @@ function RootLayoutNav() {
           }} />
           <Stack.Screen name="settings" options={{ headerShown: false }} />
           <Stack.Screen name="order-history" options={{ headerShown: false }} />
+          <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
+          <Stack.Screen name="reset-password" options={{ headerShown: false }} />
         </Stack>
       </ThemeProvider>
     </PaperProvider>
