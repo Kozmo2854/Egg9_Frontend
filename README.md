@@ -108,9 +108,9 @@ EXPO_PUBLIC_APP_ENV=production
 
 ### Steps
 ```bash
-# 1. Start backend
-cd Egg9  # Root folder
-docker compose up -d backend mysql
+# 1. Start backend (API + MySQL + Mailpit)
+cd Egg9_Backend
+docker compose up -d
 
 # 2. Get your IP and update .env
 hostname -I | awk '{print $1}'
@@ -166,13 +166,17 @@ Edit `app.json`:
 - Used automatically by Railway
 
 ### Dockerfile.dev (Local Development)
-- Starts Expo development server
-- Hot reload enabled
-- Used by `docker compose up frontend`
+- Starts the Expo development server (web) with hot reload
+- Used by `docker-compose.yml` in this repo (service `frontend`, http://localhost:8081)
+- The container joins the external `egg9_network` network, which is created by the backend compose, so **start the backend first**
+- The app calls the API at `http://localhost:8000/api` (set in `docker-compose.yml`, overrides `.env`)
 
 ```bash
-# Local development
-docker compose up frontend
+# 1. Backend first (creates egg9_network; API on :8000, Mailpit UI on :8025)
+cd Egg9_Backend && docker compose up -d
+
+# 2. Frontend (from Egg9_Frontend)
+cd ../Egg9_Frontend && docker compose up
 
 # Test production build locally
 docker build -f Dockerfile -t egg9-frontend .

@@ -1,0 +1,26 @@
+# Local web development: Expo dev server (web) on http://localhost:8081.
+# Requires the backend stack to be up first (Egg9_Backend: `docker compose up -d`),
+# which creates the shared "egg9_network" network and serves the API on localhost:8000.
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: egg9_frontend
+    restart: unless-stopped
+    ports:
+      - "8081:8081"  # Expo web / Metro
+    volumes:
+      - .:/app
+      - /app/node_modules  # keep the image's node_modules, not the host's
+    environment:
+      # The browser calls the API, so use the host-published backend port
+      - EXPO_PUBLIC_API_URL=http://localhost:8000/api
+      - EXPO_PUBLIC_APP_ENV=development
+      - EXPO_NO_TELEMETRY=1
+    networks:
+      - egg9_network
+
+networks:
+  egg9_network:
+    external: true
