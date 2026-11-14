@@ -121,6 +121,44 @@ class ApiService {
     return data;
   }
 
+  // Public endpoints: no Authorization header (a stale stored token must not be sent).
+  private publicHeaders(): HeadersInit {
+    return {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+  }
+
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    const response = await fetch(`${this.baseUrl}/forgot-password`, {
+      method: 'POST',
+      headers: this.publicHeaders(),
+      body: JSON.stringify({ email }),
+    });
+
+    return this.handleResponse<{ message: string }>(response);
+  }
+
+  async resetPassword(
+    token: string,
+    email: string,
+    password: string,
+    passwordConfirmation: string
+  ): Promise<{ message: string }> {
+    const response = await fetch(`${this.baseUrl}/reset-password`, {
+      method: 'POST',
+      headers: this.publicHeaders(),
+      body: JSON.stringify({
+        token,
+        email,
+        password,
+        password_confirmation: passwordConfirmation,
+      }),
+    });
+
+    return this.handleResponse<{ message: string }>(response);
+  }
+
   async logout(): Promise<void> {
     try {
       await fetch(`${this.baseUrl}/logout`, {
