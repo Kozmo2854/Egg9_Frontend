@@ -71,7 +71,8 @@
     "resetLinkInvalid": "Ovaj link za promenu lozinke nije ispravan ili je istekao.",
     "requestNewLink": "Zatražite novi link",
     "genericError": "Nešto nije u redu. Pokušajte ponovo.",
-    "passwordMismatch": "Lozinke se ne poklapaju"
+    "passwordMismatch": "Lozinke se ne poklapaju",
+    "tooManyAttempts": "Previše pokušaja. Molimo sačekajte minut i pokušajte ponovo."
   },
   "home": {
     "title": "Egg9",

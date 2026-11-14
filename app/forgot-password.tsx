@@ -62,6 +62,8 @@ export default function ForgotPasswordScreen() {
     } catch (error: any) {
       if (error?.statusCode === 422 && error?.data?.errors?.email) {
         setEmailError(t('auth.emailInvalid'));
+      } else if (error?.statusCode === 429) {
+        setRequestError(t('auth.tooManyAttempts'));
       } else {
         setRequestError(t('auth.genericError'));
       }

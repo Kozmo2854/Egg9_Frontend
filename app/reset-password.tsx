@@ -89,6 +89,8 @@ export default function ResetPasswordScreen() {
         setErrors({
           password: password !== passwordConfirm ? t('auth.passwordMismatch') : t('auth.passwordMinLength'),
         });
+      } else if (error?.statusCode === 429) {
+        setRequestError(t('auth.tooManyAttempts'));
       } else {
         setRequestError(t('auth.genericError'));
       }
